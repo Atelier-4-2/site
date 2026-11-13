@@ -12,7 +12,7 @@ import {
 } from "./dgenv.js?v=20261113u";
 import { surfaceOf } from "./dgdefs3.js?v=20261113t";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261113zb";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m1";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [

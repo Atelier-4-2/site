@@ -10,10 +10,10 @@ import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
 } from "./dgenv.js?v=20261113u";
-import { surfaceOf } from "./dgdefs3_v04.js?v=20261113v04b";
+import { surfaceOf } from "./dgdefs3_v04.js?v=20261114m1";
 import { extendGround } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261113zb";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m1";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [

@@ -6,16 +6,17 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261113v04";
+import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261114m1";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261113s";
+import { STYLES } from "./dgsemantic.js?v=20261113s";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
-import { KO } from "./dgstrings.js?v=20261113p";
-import { createTabs } from "./dgtabs_v04.js?v=20261113v04";
+import { KO } from "./dgstrings.js?v=20261114m1";
+import { createTabs } from "./dgtabs_v04.js?v=20261114m1";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v03.js?v=20261113cards2";
 import { toDxf } from "./dgdxf_v02.js?v=20261113y";
 import { buildPdf } from "./dgpdf.js?v=20261113p";
-import { build3dm } from "./dg3dm_v02.js?v=20261113y";
+import { build3dm } from "./dg3dm_v02.js?v=20261114m1";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -61,10 +62,11 @@ function showDgStep(n, focus = false) {
     b.querySelector(".step-state").textContent = cur ? "현재" : (s < n || (s >= 3 && results)) ? "완료" : "대기";
     b.disabled = busy || (s >= 2 && !ignMap.bounds) || (s >= 3 && !results);
   }
-  $("#step-count").textContent = `단계 ${n}/4`;
+  const idx = { 1: 1, 3: 2, 4: 3 }[n];
+  $("#step-count").textContent = `단계 ${idx}/3`;
   if (changed || focus) window.scrollTo({ top: 0, behavior: "auto" });
   if (n === 1) setTimeout(() => ignMap.resize(), 50);
-  if (n === 2) summarizeSite();
+  if (n === 3) summarizeSite();
   if (n === 4 && changed) tabs?.show();
   if (focus) $(n === 1 ? "#dg-step-title-1" : `#dg-step-title-${n}`)?.focus({ preventScroll: true });
 }
@@ -148,11 +150,12 @@ $("#dg-site-next").addEventListener("click", () => {
     err.textContent = "지도에서 분석 대지 범위를 먼저 지정해 주세요."; err.hidden = false; return;
   }
   err.textContent = ""; err.hidden = true;
-  showDgStep(2, true);
+  generate();
 });
 
 // ---- settings -----------------------------------------------------------------
 function previewPalette() {
+  if (!$("#dg-mini")) return;
   const def = DIAGRAMS.find(d => d.num === "03");
   const ring = [[0, 0], [100, 0], [100, 100], [0, 100]];
   const ctx = { extent: [0, 0, 100, 100], center: [50, 50], site: { ring }, shape: { kind: "square" } };
@@ -162,19 +165,14 @@ function previewPalette() {
   const sheet = def.build(ctx, { buildings }, { pal: pal(), lw: baseLw });
   $("#dg-mini").innerHTML = renderSvg(def, sheet, ctx, { card: true, prefix: "mini-", pal: pal() });
 }
-const mini = document.createElement("div");
-mini.id = "dg-mini";
-mini.className = "dg-mini";
-mini.setAttribute("role", "img");
-mini.setAttribute("aria-label", "03 " + KO.titles["03"]);
-$(".dg-settings").append(mini);
-previewPalette();
+
 for (const b of document.querySelectorAll("[data-dg-pal]")) {
   const p = PALETTES[b.dataset.dgPal];
   const strip = document.createElement("span");
   strip.className = "dg-palette-strip";
   strip.setAttribute("aria-hidden", "true");
-  strip.innerHTML = [p.bg, p.text, p.building, p.road, p.site, p.edge]
+  const st = STYLES[b.dataset.dgPal] || {};
+  strip.innerHTML = [...(st.use6 || []).slice(0, 4), st.green, st.water].filter(Boolean)
     .map(c => `<i style="background:${c}"></i>`).join("");
   b.append(strip);
   b.addEventListener("click", () => {
@@ -293,7 +291,7 @@ function retryCard(def) {
 }
 
 // ---- generation -----------------------------------------------------------------
-function setBusy(v) { busy = v; $("#dg-run").disabled = v; $("#dg-radius-apply").disabled = v; if (inMode()) showDgStep(step); }
+function setBusy(v) { busy = v; $("#dg-radius-apply").disabled = v; if (inMode()) showDgStep(step); }
 
 function generate() {
   const ctx = readSite();
@@ -316,7 +314,7 @@ function generate() {
   showDgStep(3, true);
   updateProgress();
 }
-$("#dg-run").addEventListener("click", generate);
+
 
 $("#dg-radius-apply").addEventListener("click", () => {
   const r = Number($("#dg-card-radius").value);
@@ -530,7 +528,7 @@ async function batchExport(label, work) {
   setExportButtons(true);
   const gen0 = generation, snap = currentSnap(), res0 = results;
   const cancelled = () => gen0 !== generation || res0 !== results;
-  $("#dg-run").disabled = $("#dg-radius-apply").disabled = true;
+  $("#dg-radius-apply").disabled = true;
   const stop = () => { if (cancelled()) throw new Error(`대지나 반경이 바뀌어 ${label} 생성을 취소했습니다.`); };
   try {
     await work(snap, stop, cancelled);
@@ -539,7 +537,7 @@ async function batchExport(label, work) {
     $("#dg-progress").textContent = `${label} 실패: ${err.message}`;
   } finally {
     exporting = false;
-    if (!layerWaiting()) { setExportButtons(false); $("#dg-run").disabled = $("#dg-radius-apply").disabled = false; }
+    if (!layerWaiting()) { setExportButtons(false); $("#dg-radius-apply").disabled = false; }
   }
 }
 const readyBuilds = (snap, skipped) => {

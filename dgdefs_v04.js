@@ -6,9 +6,9 @@ import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic.js?v=20
 // opt   = { mono:boolean, color:hex|null, lw:number (line-weight multiplier) }
 import { ringArea, clipRingRect } from "./dgcore.js?v=20261113s";
 import { bands, gaussian } from "./dgcontour.js?v=20261113b";
-import { IMPL2 } from "./dgdefs2_v03.js?v=20261113cards2";
-import { IMPL3 } from "./dgdefs3_v04.js?v=20261113v04b";
-import { KO } from "./dgstrings.js?v=20261113p";
+import { IMPL2 } from "./dgdefs2_v03.js?v=20261114m1";
+import { IMPL3 } from "./dgdefs3_v04.js?v=20261114m1";
+import { KO } from "./dgstrings.js?v=20261114m1";
 import { heightOf, heightEstimated } from "./dganalysis.js?v=20261113p";
 
 const UNK = "정보 없음";
@@ -155,9 +155,9 @@ const IMPL = {
       const pal = P(opt);
       return {
         layers: [{ id: "bati", name: "건물", items: polyItems(data.buildings, () => ({ fill: pal.figure, stroke: pal.figure, sw: lw(opt, .08) })) }],
-        legend: [{ kind: "fill", fill: pal.figure, stroke: pal.figure, sw: .08, label: "건물 (피겨)", count: data.buildings.length },
-          { kind: "fill", fill: pal.bg, stroke: pal.edge, sw: .15, label: "외부공간 (그라운드)" }, { kind: "site", label: "대지 경계" }],
-        notes: ["놀리(Nolli)식 피겨-그라운드 다이어그램입니다. 건물 외곽선은 IGN BD TOPO 데이터를 바탕으로 제작했습니다."]
+        legend: [{ kind: "fill", fill: pal.figure, stroke: pal.figure, sw: .08, label: "건물", count: data.buildings.length },
+          { kind: "fill", fill: pal.bg, stroke: pal.edge, sw: .15, label: "외부공간" }, { kind: "site", label: "대지 경계" }],
+        notes: ["놀리(Nolli)식 건물·외부공간 다이어그램입니다. 건물 외곽선은 IGN BD TOPO 데이터를 바탕으로 제작했습니다."]
       };
     }
   },

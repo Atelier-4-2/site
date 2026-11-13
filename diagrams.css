@@ -193,8 +193,54 @@ body[data-mode="diagrams"] {
   & .dg-results, & #dg-panel-3, & #dg-panel-4 { width: 100%; max-width: none; }
 }
 
+body[data-mode="diagrams"] .dg-settings-inline {
+  max-width: 960px; margin: 8px auto 20px; display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 12px 28px;
+}
+.dg-settings-inline > div { min-width: 0; }
+.dg-settings-inline > div:last-child { display: flex; align-items: center; gap: 12px; }
+.dg-settings-inline label { margin: 0; white-space: nowrap; }
+body[data-mode="diagrams"] .dg-settings-inline .dg-palettes { display: flex; }
+.dg-settings-inline .dg-palettes button { min-height: 36px; font-size: 13px; }
+.dg-settings-inline input[type="range"] { width: 160px; }
+@media (max-width: 640px) {
+  body[data-mode="diagrams"] .dg-settings-inline { flex-direction: column; width: 100%; }
+  .dg-settings-inline > div { width: 100%; }
+  .dg-settings-inline .dg-palettes { width: 100%; }
+  .dg-settings-inline .dg-palettes button { flex: 1; }
+}
+
 /* Director fix: side gutters inside the fixed 1680 canvas */
 body[data-mode="diagrams"] { box-sizing: border-box; padding-inline: 48px; overflow-x: hidden; }
 body[data-mode="diagrams"] #top, body[data-mode="diagrams"] .nav-inner { width: 100%; }
 body[data-mode="diagrams"] #panel-ign .inline { gap: 8px; }
 body[data-mode="diagrams"] #map-style { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden; clip-path: inset(50%); }
+
+/* Director fix 2026-11-14: palette row must stay horizontal inside the inline settings bar */
+body[data-mode="diagrams"] .dg-settings-inline > div:first-child { flex: 1 1 560px; max-width: 680px; }
+body[data-mode="diagrams"] .dg-settings-inline .dg-palettes { flex-wrap: nowrap; width: 100%; }
+body[data-mode="diagrams"] .dg-settings-inline .dg-palettes > button { flex: 1 1 0; width: auto; min-width: 0; }
+@media (max-width: 640px) {
+  body[data-mode="diagrams"] .dg-settings-inline > div:first-child { flex-basis: auto; max-width: none; }
+  body[data-mode="diagrams"] .dg-settings-inline .dg-palettes { flex-wrap: wrap; }
+  body[data-mode="diagrams"] .dg-settings-inline .dg-palettes > button { flex: 1 1 45%; }
+}
+
+/* Director fix 2026-11-14 (owner: "축이 안 맞는데"): settings bar and toolbar share one axis —
+   same width, same left and right edges; theme + downloads on the left, line weight + radius/analysis on the right. */
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline,
+body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar {
+  width: 100%; max-width: none; margin: 0; box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px;
+}
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline { margin-top: 8px; margin-bottom: 16px; }
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div:first-child { flex: 0 1 640px; max-width: 640px; text-align: left; }
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div:last-child { flex: 0 0 auto; padding-bottom: 10px; }
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-label { display: block; margin-bottom: 8px; }
+body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin-left: auto; }
+@media (max-width: 640px) {
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div:first-child { flex-basis: 100%; max-width: none; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div:last-child { width: 100%; padding-bottom: 0; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar { justify-content: center; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin-left: 0; }
+}

@@ -10,12 +10,12 @@ import { DIAGRAMS, isReady } from "./dgdefs_v03.js?v=20261113cards2";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261113s";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
-import { KO } from "./dgstrings.js?v=20261113p";
+import { KO } from "./dgstrings.js?v=20261114m1";
 import { createTabs } from "./dgtabs_v03.js?v=20261113wind";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v03.js?v=20261113cards2";
 import { toDxf } from "./dgdxf_v02.js?v=20261113y";
 import { buildPdf } from "./dgpdf.js?v=20261113p";
-import { build3dm } from "./dg3dm_v02.js?v=20261113y";
+import { build3dm } from "./dg3dm_v02.js?v=20261114m1";
 
 const $ = s => document.querySelector(s);
 const body = document.body;

@@ -8,7 +8,7 @@ import { ringArea, clipRingRect } from "./dgcore.js?v=20261113s";
 import { bands, gaussian } from "./dgcontour.js?v=20261113b";
 import { IMPL2 } from "./dgdefs2.js?v=20261113v";
 import { IMPL3 } from "./dgdefs3.js?v=20261113t";
-import { KO } from "./dgstrings.js?v=20261113p";
+import { KO } from "./dgstrings.js?v=20261114m1";
 import { heightOf, heightEstimated } from "./dganalysis.js?v=20261113p";
 
 const UNK = "정보 없음";
