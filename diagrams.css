@@ -280,3 +280,15 @@ body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin-left
   body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar { justify-content: center; }
   body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin-left: 0; }
 }
+
+/* Director fix 2026-11-14: 10 themes overlapped in one nowrap row — use a 5-column grid (2 rows) */
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div:first-child { flex: 1 1 760px; max-width: 980px; }
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes {
+  display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; grid-auto-flow: row !important; gap: 6px; height: auto; flex-wrap: initial;
+}
+body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes > button {
+  width: auto; min-width: 0; min-height: 44px; padding: 6px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
