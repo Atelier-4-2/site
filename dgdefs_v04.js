@@ -157,7 +157,7 @@ const IMPL = {
         layers: [{ id: "bati", name: "건물", items: polyItems(data.buildings, () => ({ fill: pal.figure, stroke: pal.figure, sw: lw(opt, .08) })) }],
         legend: [{ kind: "fill", fill: pal.figure, stroke: pal.figure, sw: .08, label: "건물 (피겨)", count: data.buildings.length },
           { kind: "fill", fill: pal.bg, stroke: pal.edge, sw: .15, label: "외부공간 (그라운드)" }, { kind: "site", label: "대지 경계" }],
-        notes: ["놀리(Nolli)식 피겨-그라운드 도판입니다. 건물 외곽선은 IGN BD TOPO 데이터를 바탕으로 제작했습니다."]
+        notes: ["놀리(Nolli)식 피겨-그라운드 다이어그램입니다. 건물 외곽선은 IGN BD TOPO 데이터를 바탕으로 제작했습니다."]
       };
     }
   },

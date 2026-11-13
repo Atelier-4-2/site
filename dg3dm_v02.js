@@ -70,7 +70,7 @@ export async function build3dm(jobs, { title = "SiteLaser", origin = null, custo
     const mpm = ctx0.paperMm ? 1 : Math.max(x1 - x0, y1 - y0) / 255;
     doc.settings().modelUnitSystem = ctx0.paperMm ? rh.UnitSystem.Millimeters : rh.UnitSystem.Meters;
     doc.applicationName = "SiteLaser";
-    const note = `SiteLaser 대지 도판 · ${ctx0.address} · ${ctx0.radiusLabel} · 조회일 ${ctx0.date}\n` +
+    const note = `SiteLaser 대지 다이어그램 · ${ctx0.address} · ${ctx0.radiusLabel} · 조회일 ${ctx0.date}\n` +
       (custom
         ? `도면 좌표(${unit}). 모델 원점 = 도면 범위 중심: 원래 좌표 = 모델 좌표 + (x ${offE}, y ${offN}).\n`
         : `좌표계 RGF93 / Lambert-93 (EPSG:2154), 단위 m. 모델 원점 = 대지 중심: 원래 좌표 = 모델 좌표 + (E ${offE}, N ${offN}).\n`) +

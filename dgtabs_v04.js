@@ -18,7 +18,7 @@ import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHA
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [
   ["A1", "3D 볼륨"], ["A2", "일조·그림자"], ["A3", "바람"], ["A4", "열쾌적성"],
-  ["A5", "단면"], ["A6", "컨텍스트 맵"], ["A7", "도판 오버레이"], ["A8", "3D 액소노메트릭"]
+  ["A5", "단면"], ["A6", "컨텍스트 맵"], ["A7", "다이어그램 오버레이"], ["A8", "3D 액소노메트릭"]
 ];
 const RAD = Math.PI / 180;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -632,7 +632,7 @@ export function createTabs(api) {
   }
   const utciNote = (st, stKm) => (stKm > 60 ? `⚠ 기상 관측소 이격 거리 약 ${stKm.toFixed(0)} km (원거리 관측 데이터). ` : "") + `${KO_PLATE["plate.utci.note"]}. 기상: EPW(${st.name}). ${SIM}`;
 
-  // ---- climate plates (A2 / A3 / A4 "도판" view): vector SVG axonometric, see dgclimplate.js ------------------------------
+  // ---- climate plates (A2 / A3 / A4 "다이어그램" view): vector SVG axonometric, see dgclimplate.js ------------------------------
   let shadowDay = SHADOW_DAYS[0].id, shadowHour = 12;
   function plateTab(id) {
     const ctx = api.ctx(), data = api.data();
@@ -670,9 +670,9 @@ export function createTabs(api) {
     };
     draw();
     const notes = {
-      A2: "도판: 청회색 면은 선택한 날짜와 시각에 건물 그림자를 평평한 지면에 투영한 결과입니다. 실제 지형의 고저차와 수목은 제외합니다. ",
-      A3: "도판: 연간 풍배도(대지 바깥 링)와 계절 풍배도. 풍속 색은 구간 값(m/s)이며 광역 통계로 국소 CFD가 아닙니다. ",
-      A4: `도판: ${KO_PLATE["plate.utci.note"]}. `
+      A2: "다이어그램: 청회색 면은 선택한 날짜와 시각에 건물 그림자를 평평한 지면에 투영한 결과입니다. 실제 지형의 고저차와 수목은 제외합니다. ",
+      A3: "다이어그램: 연간 풍배도(대지 바깥 링)와 계절 풍배도. 풍속 색은 구간 값(m/s)이며 광역 통계로 국소 CFD가 아닙니다. ",
+      A4: `다이어그램: ${KO_PLATE["plate.utci.note"]}. `
     };
     note.textContent = notes[id] + SIM;
   }
@@ -906,7 +906,7 @@ export function createTabs(api) {
       if (!chosen.length) {
         state.mergedSheet = null; state.mergedDef = null;
         controls.querySelectorAll("[data-a7]").forEach(b => { b.disabled = true; });
-        preview.innerHTML = `<p class="note" style="padding:24px">중첩할 도판 레이어를 선택해 주세요.</p>`; return;
+        preview.innerHTML = `<p class="note" style="padding:24px">중첩할 다이어그램 레이어를 선택해 주세요.</p>`; return;
       }
       controls.querySelectorAll("[data-a7]").forEach(b => { b.disabled = false; });
       const sheets = chosen.map(d => ({ d, s: api.sheetFor(d) })).filter(x => x.s);
@@ -926,7 +926,7 @@ export function createTabs(api) {
       legend.push({ kind: "site", label: "대지 경계" });
       const merged = { layers, legend: legend.slice(0, 26), notes: notes.slice(0, 4), sources: [...new Set(sources)] };
       state.mergedSheet = merged;
-      const def = { num: "A7", ko: "도판 오버레이", fr: "도판 합치기", en: "merged " + chosen.map(d => d.num).join("+") };
+      const def = { num: "A7", ko: "다이어그램 오버레이", fr: "다이어그램 합치기", en: "merged " + chosen.map(d => d.num).join("+") };
       preview.innerHTML = renderSvg(def, merged, api.ctx(), { prefix: "a7-", pal: api.pal() });
       state.mergedDef = def;
     };
@@ -942,7 +942,7 @@ export function createTabs(api) {
       else api.download(await api.png(state.mergedDef, state.mergedSheet), "a7_merged.png");
     };
     draw();
-    note.textContent = "선택한 도판 레이어들을 한 도면에 중첩합니다 (주변 건물 레이어는 1회만 반영). 레이어명은 [도판 번호_원래 레이어명]으로 구분되며 범례는 최대 26행까지 표시됩니다.";
+    note.textContent = "선택한 다이어그램 레이어들을 한 도면에 중첩합니다 (주변 건물 레이어는 1회만 반영). 레이어명은 [다이어그램 번호_원래 레이어명]으로 구분되며 범례는 최대 26행까지 표시됩니다.";
   }
 
   // ---- A8 axonometric diagram ----------------------------------------------------------------------------------
@@ -1091,7 +1091,7 @@ export function createTabs(api) {
     bar.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", String(b.dataset.tab === id)); b.tabIndex = b.dataset.tab === id ? 0 : -1; });
     stage.setAttribute("aria-label", TABS.find(t => t[0] === id)?.[1] || id);
     clearStage();
-    if (!ready()) return missing("도판 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
+    if (!ready()) return missing("다이어그램 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
     try {
       if (state.view[id] === "plate") plateTab(id);
       else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8 })[id]();

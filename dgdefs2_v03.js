@@ -115,7 +115,7 @@ function pluSheet(ctx, data, opt) {
   return {
     layers: [ctxBuildings(opt, data), ...layers], legend,
     notes: [data.plu.length
-      ? `GPU(Géoportail de l'Urbanisme) zone_urba 기준으로 표시됩니다. 관련 문서: ${docs.slice(0, 2).join(", ")}. 구역 코드(libelle)는 도판에 표기되어 있으며, 상세 규정은 관할 PLU 조례를 확인하세요. ${SIM}`
+      ? `GPU(Géoportail de l'Urbanisme) zone_urba 기준으로 표시됩니다. 관련 문서: ${docs.slice(0, 2).join(", ")}. 구역 코드(libelle)는 다이어그램에 표기되어 있으며, 상세 규정은 관할 PLU 조례를 확인하세요. ${SIM}`
       : "해당 범위에 GPU 등록 PLU 구역이 없습니다 (RNU 적용 또는 미등록 지역). " + SIM],
     sources: ["GPU — Géoportail de l'Urbanisme, wfs_du:zone_urba"]
   };
@@ -186,7 +186,7 @@ function supSheet(ctx, data, opt) {
     layers: [...layers, context, { id: "sup_code", name: "지구 코드", items: labels }], legend,
     notes: [inside.size ? `대지 중심이 ${[...inside].join(" · ")} 구역 안에 있습니다.` : "",
       data.sup.length
-      ? "GPU에 등록된 SUP 면형입니다. 분석 범위보다 넓은 구역은 경계 일부가 도판 밖에 있습니다."
+      ? "GPU에 등록된 SUP 면형입니다. 분석 범위보다 넓은 구역은 경계 일부가 다이어그램 밖에 있습니다."
       : "해당 범위에 GPU 등록 SUP(공공유용지역지구) 면형 데이터가 없습니다 (점·선형 SUP 및 미등록 지구 제외).",
       mh ? `AC1 ${mh}건` : ""].filter(Boolean),
     sources: ["GPU — Géoportail de l'Urbanisme, wfs_sup:assiette_sup_s"]
@@ -368,7 +368,7 @@ export const IMPL2 = {
         })), ctxBuildings(opt, data)],
         legend: [...[5, 10, 15].map(m => ({ kind: "fill", fill: fills[m], stroke: line, sw: .4, dash: "1.8 1.2", label: `도보 ${m}분 (약 ${Math.round(m * 80)} m 보행)` })),
           ctxLegend(opt), SITE],
-        notes: ["IGN 경로 서비스(isochrone, bdtopo-valhalla, 보행)로 대지 중심에서 산출한 보행 등시간권입니다. 도판 범위를 벗어나는 영역은 생략될 수 있습니다.",
+        notes: ["IGN 경로 서비스(isochrone, bdtopo-valhalla, 보행)로 대지 중심에서 산출한 보행 등시간권입니다. 다이어그램 범위를 벗어나는 영역은 생략될 수 있습니다.",
           "보행 속도 및 도로망 모델은 기본값 기준이며, 지형 경사나 횡단 대기 시간은 반영되지 않습니다. " + SIM],
         sources: ["IGN Géoplateforme — navigation/isochrone (bdtopo-valhalla)"]
       };
@@ -407,7 +407,7 @@ export const IMPL2 = {
           items: featPolys(buckets[i], () => ({ fill: cols[i], stroke: pal.edge, sw: lw(opt, .12), op: .9 }), ctx.extent)
         })), { id: "bati_line", name: "건물 윤곽", items: polyItems(data.buildings, () => ({ fill: "none", stroke: pal.buildingLine, sw: lw(opt, .06) })) }],
         legend: [...PLOTS.map((c, i) => ({ kind: "fill", fill: cols[i], stroke: pal.edge, sw: .12, label: c.label, count: buckets[i].length })), ctxLegend(opt), SITE],
-        notes: ["필지 규모별 단계 구분입니다 (도판 내 면적 수치 생략). 필지: IGN Parcellaire Express (PCI) · 참고용 도면 · 법적 효력 없음"],
+        notes: ["필지 규모별 단계 구분입니다 (다이어그램 내 면적 수치 생략). 필지: IGN Parcellaire Express (PCI) · 참고용 도면 · 법적 효력 없음"],
         sources: ["CADASTRALPARCELS.PARCELLAIRE_EXPRESS"]
       };
     }
@@ -441,7 +441,7 @@ export const IMPL2 = {
         legend: [...[0, 1, 2, 3, 4].map(i => ({
           kind: "line", stroke: pal.syntax[i], sw: W[i], label: i === 0 ? "선택도 낮음" : i === 4 ? "선택도 높음" : `선택도 ${i + 1}단계`, count: buckets[i].length
         })), { kind: "line", stroke: pal.roadLine, sw: .15, label: "통과 경로 없음", count: zero.length }, ctxLegend(opt), SITE],
-        notes: [`가로 선택도(Space Syntax Choice): 도로망 네트워크 내 최단 경로 통과 빈도(반경 ${CUT} m 기준 매개중심성)입니다. 도판 외곽 ${CUT} m 완충 구역 도로도 계산에 반영했습니다.`,
+        notes: [`가로 선택도(Space Syntax Choice): 도로망 네트워크 내 최단 경로 통과 빈도(반경 ${CUT} m 기준 매개중심성)입니다. 다이어그램 외곽 ${CUT} m 완충 구역 도로도 계산에 반영했습니다.`,
           "5단계 구분은 분위수 기준이며, 각도(angular) 기준이 아닌 최단 거리 기준 분석값입니다. " + SIM],
         sources: ["IGN BD TOPO® V3 troncon_de_route"]
       };

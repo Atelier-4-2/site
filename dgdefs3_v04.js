@@ -177,7 +177,7 @@ function svfSheet(ctx, data, opt) {
   return {
     layers: [...layers, solidCtx(opt, data)],
     legend: [...SVF_CLASSES.map((c, i) => ({ kind: "fill", fill: pal.svf[i], stroke: pal.edge, sw: .1, label: `SVF ${c}` })), solidLegend(opt), SITE],
-    notes: ["천공률(Sky View Factor, SVF): 지상 1.5 m 높이에서 32방향 수평 차폐각(반경 150 m 이내)으로 산출한 비율 (1 = 완전 개방). 도판 가장자리 150 m 안쪽은 바깥 건물이 빠져 실제보다 높게 나올 수 있습니다.", ...surfNote(S, data)],
+    notes: ["천공률(Sky View Factor, SVF): 지상 1.5 m 높이에서 32방향 수평 차폐각(반경 150 m 이내)으로 산출한 비율 (1 = 완전 개방). 다이어그램 가장자리 150 m 안쪽은 바깥 건물이 빠져 실제보다 높게 나올 수 있습니다.", ...surfNote(S, data)],
     sources: ["IGN BD TOPO® V3 batiment, RGE ALTI®"]
   };
 }

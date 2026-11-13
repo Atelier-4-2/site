@@ -1,4 +1,4 @@
-// Climate plates (도판 보기) for the analysis tabs A2 sun / A3 wind / A4 thermal comfort.
+// Climate plates (다이어그램 보기) for the analysis tabs A2 sun / A3 wind / A4 thermal comfort.
 // Vector SVG, orthographic axonometric from the south-east (azimuth 135 deg, elevation 35 deg), A3 landscape (420 x 297 mm).
 // Ported from SiteLaser/web/drafts/climate (common.js, draft-a2/a3/a4.js), re-targeted at the real site (ctx, buildings, DEM
 // surface, EPW station) with the climate-only colour set (briefs/sitelaser_climate_build_v01.md).
@@ -23,9 +23,9 @@ export const SPEED_LABELS = ["0.5–2", "2–4", "4–6", "6–8", "8 이상"];
 const SEASONS = [{ ko: "연간", fr: "Annuel" }, { ko: "겨울", fr: "Hiver" }, { ko: "봄", fr: "Printemps" }, { ko: "여름", fr: "Été" }, { ko: "가을", fr: "Automne" }];
 const DIRS16 = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 
-// ---- Korean strings (temporary, listed in briefs/sitelaser_ko_strings.md section "기후 도판") ------------------------------
+// ---- Korean strings (temporary, listed in briefs/sitelaser_ko_strings.md section "기후 다이어그램") ------------------------------
 export const KO_PLATE = {
-  "plate.view3d": "3D 보기", "plate.viewPlate": "도판",
+  "plate.view3d": "3D 보기", "plate.viewPlate": "다이어그램",
   "plate.sun.title": "태양 경로와 그림자 — 하지·춘분·동지", "plate.sun.fr": "Trajectoires solaires et ombres portées",
   "plate.wind.title": "바람장미 — 대지 바깥 링과 주풍향", "plate.wind.fr": "Rose des vents annulaire et vents dominants",
   "plate.utci.title": "미기후 점 격자", "plate.utci.fr": "Grille de points : UTCI estimé",
@@ -354,7 +354,7 @@ function plateA2(env) {
   d.line([X, y - 1], [X + 8, y - 1], { stroke: CLIMATE.ring, w: .3, layer: "ring" }); d.text(X + 11, y, `방위 링 · 15° 눈금 · 반경 ${Math.round(R)} m`, { size: 2.5 });
   scaleBar(d, X + 4, 252, ax.s); northArrow(d, X + 74, 250, ax.north());
   const out = frame(d, ctx, {
-    id: "A2 · 도판", ko: KO_PLATE["plate.sun.title"], fr: KO_PLATE["plate.sun.fr"], ref: "Andrew Marsh 3D Sun-Path · Ladybug Sunpath",
+    id: "A2 · 다이어그램", ko: KO_PLATE["plate.sun.title"], fr: KO_PLATE["plate.sun.fr"], ref: "Andrew Marsh 3D Sun-Path · Ladybug Sunpath",
     src: srcLine(ctx, list, " · 태양: Meeus/SunCalc 식(dgenv.js), 파리 시간"),
     honest: "그림자는 표시된 건물의 외곽과 높이를 평평한 지면에 투영한 결과. 실제 지형의 고저차와 수목은 제외. 태양 궤적은 대지 중심에서 본 천구 투영. 방위는 Lambert-93 격자 북 기준."
   });
@@ -445,7 +445,7 @@ function plateA3(env) {
   d.wrap(X, y, stationLine(st, km), 86, { size: 2, fill: CLIMATE.sub });
   scaleBar(d, 14, 252, ax.s); northArrow(d, 90, 250, ax.north());
   const out = frame(d, ctx, {
-    id: "A3 · 도판", ko: KO_PLATE["plate.wind.title"], fr: KO_PLATE["plate.wind.fr"], ref: "Eddy3D 원형 도메인 · Ladybug Wind Rose",
+    id: "A3 · 다이어그램", ko: KO_PLATE["plate.wind.title"], fr: KO_PLATE["plate.wind.fr"], ref: "Eddy3D 원형 도메인 · Ladybug Wind Rose",
     src: srcLine(ctx, list),
     honest: `기상 데이터: EPW ${st.name}(WMO ${st.wmo}, 대지에서 약 ${km.toFixed(1)} km, 지상 10 m 풍속). 풍배도는 광역 통계이며 국소 CFD 유동 해석이 아님. 풍속 구간 이름(보퍼트 등급)은 구간 경계가 달라 m/s 값만 표기.`
   });
@@ -540,7 +540,7 @@ function plateA4(env) {
   scaleBar(d, 300, 220, ax.s); northArrow(d, 396, 214, ax.north(), 11);
   d.text(300, 233, `중심 반경 ${Math.round(focusRadius)} m · 점 간격 ${S.step * stride} m`, { size: 2.2, fill: CLIMATE.sub });
   const out = frame(d, ctx, {
-    id: "A4 · 도판", ko: `${KO_PLATE["plate.utci.title"]} — ${month}월 ${e.hr}시 추정 UTCI`, fr: KO_PLATE["plate.utci.fr"], ref: "Infrared.city · Buro Happold UTCI",
+    id: "A4 · 다이어그램", ko: `${KO_PLATE["plate.utci.title"]} — ${month}월 ${e.hr}시 추정 UTCI`, fr: KO_PLATE["plate.utci.fr"], ref: "Infrared.city · Buro Happold UTCI",
     src: srcLine(ctx, list, " · 태양: Meeus/SunCalc 식(dgenv.js)", " · 지형: IGN RGE ALTI(그늘 계산)"),
     honest: KO_PLATE["plate.utci.note"] + ". 점 색은 EPW 월·시간 평균과 해당 월 15일 그늘로 계산한 값이며 실제 날씨의 하루가 아님. 기상: " + stationLine(e.st, e.km)
   });
@@ -553,8 +553,8 @@ function plateA4(env) {
 export function buildPlate(kind, env) {
   const r = ({ A2: plateA2, A3: plateA3, A4: plateA4 })[kind](env);
   const ko = { A2: KO_PLATE["plate.sun.title"], A3: KO_PLATE["plate.wind.title"], A4: KO_PLATE["plate.utci.title"] }[kind];
-  const ctx2 = { extent: [0, 0, W, H], center: [W / 2, H / 2], site: { ring: [] }, address: env.ctx.address, radiusLabel: "도판 A3 가로 (좌표 단위 mm)", date: env.ctx.date, paperMm: true };
-  const def = { num: kind, ko: ko + " (도판)", en: kind.toLowerCase() + "-plate" };
+  const ctx2 = { extent: [0, 0, W, H], center: [W / 2, H / 2], site: { ring: [] }, address: env.ctx.address, radiusLabel: "다이어그램 A3 가로 (좌표 단위 mm)", date: env.ctx.date, paperMm: true };
+  const def = { num: kind, ko: ko + " (다이어그램)", en: kind.toLowerCase() + "-plate" };
   const notes = ["정투영 축측 · 남동 135° · 고도 35° · 좌표 단위 mm(A3 용지)"];
   const sheet = r.d.sheet(def, notes, ["BD TOPO® V3", "RGE ALTI", "EPW TMYx (climate.onebuilding.org)"]);
   return { svg: r.svg, sheet, ctx2, def, stats: r.stats };

@@ -19,9 +19,9 @@ export const KO = {
     "08": "rules", "11": "rules", "12": "rules", "20": "rules", "21": "rules"
   },
   ui: {
-    detail: "상세", detailTitle: "A3 도판", close: "닫기", lineWeight: "선 두께", retry: "다시 시도",
-    openCard: "도판 상세 보기", analysis: "대지 분석 보기 · 3D · 일조 · 바람 · 단면 ›", back: "‹ 이전",
-    backToSettings: "‹ 설정으로", backToSite: "‹ 대지 선택으로", backToSheets: "‹ 도판 목록",
+    detail: "상세", detailTitle: "A3 다이어그램", close: "닫기", lineWeight: "선 두께", retry: "다시 시도",
+    openCard: "다이어그램 상세 보기", analysis: "대지 분석 보기 · 3D · 일조 · 바람 · 단면 ›", back: "‹ 이전",
+    backToSettings: "‹ 설정으로", backToSite: "‹ 대지 선택으로", backToSheets: "‹ 다이어그램 목록",
     pending: "준비 중", loading: "조회 중", failed: "불러오기 실패"
   }
 };

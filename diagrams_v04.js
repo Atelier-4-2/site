@@ -569,7 +569,7 @@ async function all3dm(builds, snap, tag, stop) {
 
 $("#dg-pdf-all").addEventListener("click", () => batchExport("PDF", async (snap, stop, cancelled) => {
   const skipped = [], builds = readyBuilds(snap, skipped);
-  if (!builds.length) throw new Error("저장할 수 있는 도판이 없습니다.");
+  if (!builds.length) throw new Error("저장할 수 있는 다이어그램이 없습니다.");
   const blob = await allPdf(builds, snap, "PDF", cancelled);
   stop();
   download(blob, "sitelaser_all.pdf");
@@ -578,7 +578,7 @@ $("#dg-pdf-all").addEventListener("click", () => batchExport("PDF", async (snap,
 
 $("#dg-3dm-all").addEventListener("click", () => batchExport("3dm", async (snap, stop) => {
   const skipped = [], builds = readyBuilds(snap, skipped);
-  if (!builds.length) throw new Error("저장할 수 있는 도판이 없습니다.");
+  if (!builds.length) throw new Error("저장할 수 있는 다이어그램이 없습니다.");
   const blob = await all3dm(builds, snap, "3dm", stop);
   stop();
   download(blob, "sitelaser_all.3dm");
@@ -589,7 +589,7 @@ $("#dg-zip").addEventListener("click", () => batchExport("ZIP", async (snap, sto
   const files = {}, skipped = [];
   const builds = readyBuilds(snap, skipped);
   const n = builds.length;
-  if (!n) throw new Error("저장할 수 있는 도판이 없습니다.");
+  if (!n) throw new Error("저장할 수 있는 다이어그램이 없습니다.");
   let i = 0;
   for (const { def, sheet } of builds) {
     stop();
@@ -618,17 +618,17 @@ $("#dg-zip").addEventListener("click", () => batchExport("ZIP", async (snap, sto
 
 function readme(snap, skipped) {
   const c = snap.ctx, off = c.center.map(v => Math.round(v * 1000) / 1000);
-  return `SiteLaser 대지 도판\n${c.address} · ${c.radiusLabel}\n조회일 ${c.date}\n\n` +
+  return `SiteLaser 대지 다이어그램\n${c.address} · ${c.radiusLabel}\n조회일 ${c.date}\n\n` +
     "파일 형식\n" +
-    "- *.pdf : A3 가로 벡터 PDF(글자 포함). sitelaser_all.pdf = 전체 도판을 한 파일에 묶은 쪽 모음\n" +
+    "- *.pdf : A3 가로 벡터 PDF(글자 포함). sitelaser_all.pdf = 전체 다이어그램을 한 파일에 묶은 쪽 모음\n" +
     "- *.png : 3175 x 2245 px 래스터\n- *.svg : A3 벡터(Illustrator·Inkscape 등)\n" +
-    "- *.dxf : AutoCAD DXF R2000. 도판 레이어 1개 = DXF 레이어 1개, 닫힌 폴리선(해치 없음), 글자는 TEXT/TITLE/LEGEND 레이어. DWG가 필요하면 AutoCAD에서 열어 '다른 이름으로 저장'\n" +
-    "- *.3dm / sitelaser_all.3dm : Rhino 파일(rhino3dm). 도판마다 부모 레이어 'NN 제목', 아래에 도판 레이어. sitelaser_all.3dm에는 3D_건물·3D_지형 레이어(3D 볼륨)가 함께 들어 있음\n\n" +
+    "- *.dxf : AutoCAD DXF R2000. 다이어그램 레이어 1개 = DXF 레이어 1개, 닫힌 폴리선(해치 없음), 글자는 TEXT/TITLE/LEGEND 레이어. DWG가 필요하면 AutoCAD에서 열어 '다른 이름으로 저장'\n" +
+    "- *.3dm / sitelaser_all.3dm : Rhino 파일(rhino3dm). 다이어그램마다 부모 레이어 'NN 제목', 아래에 다이어그램 레이어. sitelaser_all.3dm에는 3D_건물·3D_지형 레이어(3D 볼륨)가 함께 들어 있음\n\n" +
     "좌표\n" +
     "- DXF: 좌표계 RGF93 / Lambert-93 (EPSG:2154) 실좌표 그대로, 단위 m (다른 IGN 자료와 겹쳐 쓸 수 있음)\n" +
     `- 3dm: 단위 m, 모델 원점 = 대지 중심. 원래 좌표(Lambert-93) = 모델 좌표 + (E ${off[0]}, N ${off[1]}). 이동량은 문서 UserText와 각 객체 UserText(L93_offset_E / L93_offset_N)에도 기록. 3D 높이는 대지 중심 지면(IGN RGE ALTI)을 0으로 한 상대 높이\n` +
-    "- 데이터 © IGN 등(각 도판의 출처 참조). 참고용 시뮬레이션이며 법적 효력이 없습니다.\n" +
-    (skipped.length ? `\n포함되지 않은 도판 ${skipped.length}장:\n${skipped.join("\n")}\n` : "");
+    "- 데이터 © IGN 등(각 다이어그램의 출처 참조). 참고용 시뮬레이션이며 법적 효력이 없습니다.\n" +
+    (skipped.length ? `\n포함되지 않은 다이어그램 ${skipped.length}장:\n${skipped.join("\n")}\n` : "");
 }
 
 // ---- detail dialog ------------------------------------------------------------------------

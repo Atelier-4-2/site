@@ -116,7 +116,7 @@
         <ol>
           <li><button id="dg-step-button-1" type="button" data-dgstep="1" aria-current="step"><span class="step-number" aria-hidden="true">1</span><span class="step-label">대지</span><span class="step-state">현재</span></button></li>
           <li><button id="dg-step-button-2" type="button" data-dgstep="2" disabled><span class="step-number" aria-hidden="true">2</span><span class="step-label">설정</span><span class="step-state">대기</span></button></li>
-          <li><button id="dg-step-button-3" type="button" data-dgstep="3" disabled><span class="step-number" aria-hidden="true">3</span><span class="step-label">도판</span><span class="step-state">대기</span></button></li>
+          <li><button id="dg-step-button-3" type="button" data-dgstep="3" disabled><span class="step-number" aria-hidden="true">3</span><span class="step-label">다이어그램</span><span class="step-state">대기</span></button></li>
           <li><button id="dg-step-button-4" type="button" data-dgstep="4" disabled><span class="step-number" aria-hidden="true">4</span><span class="step-label">분석</span><span class="step-state">대기</span></button></li>
         </ol>
       </nav>
@@ -307,18 +307,18 @@
         <div class="section-intro">
           <p class="eyebrow">02 · 설정</p>
           <h3 id="dg-step-title-2" tabindex="-1">어떻게 표현할까요?</h3>
-          <p class="subhead">도판 테마와 기본 선 두께를 선택하세요.</p>
+          <p class="subhead">다이어그램 테마와 기본 선 두께를 선택하세요.</p>
         </div>
         <div class="dg-settings">
           <div>
-            <span class="dg-label" id="dg-color-label">도판 테마</span>
+            <span class="dg-label" id="dg-color-label">다이어그램 테마</span>
             <div class="segmented dg-palettes" role="radiogroup" aria-labelledby="dg-color-label">
               <button type="button" role="radio" aria-checked="true" data-dg-pal="atlas">아틀라스형(기본)</button>
               <button type="button" role="radio" aria-checked="false" data-dg-pal="dutch">데이터형</button>
               <button type="button" role="radio" aria-checked="false" data-dg-pal="minimal">미니멀</button>
               <button type="button" role="radio" aria-checked="false" data-dg-pal="eco">생태형</button>
             </div>
-            <p class="note">기본 도판 테마는 아틀라스형입니다. 각 스타일은 도판별 의미 색상을 함께 적용하며, PLU 용도지역 색상은 공통입니다.</p>
+            <p class="note">기본 다이어그램 테마는 아틀라스형입니다. 각 스타일은 다이어그램별 의미 색상을 함께 적용하며, PLU 용도지역 색상은 공통입니다.</p>
           </div>
           <div>
             <label for="dg-lw">기본 선 두께 <output id="dg-lw-out">1.0×</output></label>
@@ -328,15 +328,15 @@
         <p id="dg-site-summary" class="note"></p>
         <div class="section-actions dg-nav">
           <button id="dg-back-1" type="button" class="secondary-action" data-dgstep-go="1">‹ 이전 · 대지</button>
-          <button id="dg-run" type="button" class="primary">도판 생성</button>
+          <button id="dg-run" type="button" class="primary">다이어그램 생성</button>
         </div>
         <p id="dg-error" class="note error" aria-live="polite" hidden></p>
       </section>
 
       <section id="dg-panel-3" class="step-panel content-section dg-results" aria-labelledby="dg-step-title-3">
         <div class="section-intro">
-          <p class="eyebrow">03 · 도판</p>
-          <h3 id="dg-step-title-3" tabindex="-1">대지 도판</h3>
+          <p class="eyebrow">03 · 다이어그램</p>
+          <h3 id="dg-step-title-3" tabindex="-1">대지 다이어그램</h3>
           <p id="dg-progress" class="subhead dg-progress" aria-live="polite"></p>
         </div>
         <div class="toolbar dg-toolbar">
@@ -348,8 +348,8 @@
           <button id="dg-radius-apply" type="button">반경 변경</button>
           <button id="dg-to-analysis-top" type="button" data-dgstep-go="4">대지 분석 보기 ›</button>
         </div>
-        <div id="dg-filters" class="dg-filters" role="group" aria-label="도판 분류"></div>
-        <p id="dg-radius-help" class="note">설정한 반경은 모든 도판에 일괄 적용됩니다 · 참고용 도면 · 법적 효력 없음</p>
+        <div id="dg-filters" class="dg-filters" role="group" aria-label="다이어그램 분류"></div>
+        <p id="dg-radius-help" class="note">설정한 반경은 모든 다이어그램에 일괄 적용됩니다 · 참고용 도면 · 법적 효력 없음</p>
         <div id="dg-grid" class="dg-grid"></div>
         <div class="section-actions dg-to-analysis dg-nav">
           <button id="dg-back-2" type="button" class="secondary-action" data-dgstep-go="2">‹ 이전 · 설정</button>
@@ -368,7 +368,7 @@
         <div id="dg-stage" class="dg-stage"></div>
         <p id="dg-tabnote" class="note"></p>
         <div class="section-actions">
-          <button id="dg-back-to-sheets" type="button" class="full-width secondary-action"><span aria-hidden="true">‹</span> 도판으로 돌아가기</button>
+          <button id="dg-back-to-sheets" type="button" class="full-width secondary-action"><span aria-hidden="true">‹</span> 다이어그램으로 돌아가기</button>
         </div>
       </section>
 
