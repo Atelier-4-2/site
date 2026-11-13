@@ -406,19 +406,80 @@ function plateA3(env) {
   const d = new Dwg(), ax = new Axo(ctx), half = extentHalf(ctx), R = half * .9, maxH = Math.max(10, ...list.map(b => b.h));
   const [cx, cy] = ctx.center;
   const roses = Object.fromEntries([0, 1, 2, 3, 4].map(p => [p, roseOf(st, p)])), ann = roses[0];
-  const len = (half * .2) / ann.max, outer = R + half * .2;
-  const ext = fitPoints(ctx, maxH);
-  for (let a = 0; a < 360; a += 15) ext.push([cx + (outer + half * .36) * Math.sin(a * RAD), cy + (outer + half * .36) * Math.cos(a * RAD), 0]);
-  ax.fit(ext, { x: 12, y: 36, w: 298, h: 218 });
-  drawExtent(d, ax, ctx);
-  drawBuildings(d, ax, list);
-  drawRing(d, ax, ctx, R);
-  const map = (r, a) => ax.P(cx + r * Math.sin(a * RAD), cy + r * Math.cos(a * RAD), 0);
-  drawRose(d, map, ann, R, len, .12);
+  const box = { x: 18, y: 40, w: 286, h: 196 };
+  const [xmin, ymin, xmax, ymax] = ctx.extent;
+  ax.s = Math.min(box.w / (xmax - xmin), box.h / (ymax - ymin));
+  ax.P = (x, y) => [
+    box.x + box.w / 2 + (x - cx) * ax.s,
+    box.y + box.h / 2 - (y - cy) * ax.s
+  ];
+  ax.north = () => [0, -1];
+  const clip = ring => {
+    let points = openRing(ring);
+    const edges = [
+      [0, xmin, 1], [0, xmax, -1],
+      [1, ymin, 1], [1, ymax, -1]
+    ];
+    for (const [axis, bound, sign] of edges) {
+      const input = points;
+      points = [];
+      input.forEach((b, i) => {
+        const a = input[(i + input.length - 1) % input.length];
+        const insideA = sign * (a[axis] - bound) >= 0;
+        const insideB = sign * (b[axis] - bound) >= 0;
+        if (insideA !== insideB) {
+          const t = (bound - a[axis]) / (b[axis] - a[axis]);
+          points.push([
+            a[0] + t * (b[0] - a[0]),
+            a[1] + t * (b[1] - a[1])
+          ]);
+        }
+        if (insideB) points.push(b);
+      });
+    }
+    return points.map(p => ax.P(...p));
+  };
+  for (const building of data.buildings) {
+    const outer = clip(building.polygon);
+    if (outer.length < 3) continue;
+    const holes = (building.holes || []).map(clip).filter(r => r.length >= 3);
+    d.area([[outer, ...holes]], "#EEF0F2");
+    for (const ring of [outer, ...holes]) {
+      d.poly(ring, {
+        stroke: CLIMATE.bld, w: .08, layer: "bld"
+      });
+    }
+  }
+  const radius = box.h * .35;
+  const pctMax = Math.max(20, Math.ceil(ann.max / 20) * 20);
+  const len = radius / pctMax;
+  const centre = ax.P(cx, cy);
+  const map = (r, a) => [
+    centre[0] + r * Math.sin(a * RAD),
+    centre[1] - r * Math.cos(a * RAD)
+  ];
+  const firstPetal = d.items.length;
+  drawRose(d, map, ann, 0, len, .08);
+  d.items.slice(firstPetal).forEach(item => { item.op = .72; });
+  for (let i = 1; i <= 4; i++) {
+    const pct = pctMax * i / 4;
+    d.circ(...centre, pct * len, {
+      stroke: CLIMATE.ring, w: .15, layer: "rose"
+    });
+    const label = map(pct * len, 45);
+    d.text(...label, `${pct} %`, { size: 2.3, halo: true });
+  }
+  ["N", "E", "S", "W"].forEach((label, i) => {
+    const p = map(radius + 7, i * 90);
+    d.text(p[0], p[1] + 1, label, {
+      size: 3.2, weight: 600, anchor: "middle", halo: true
+    });
+  });
   const tops = topDirs(ann, 2);
-  tops.forEach((t, i) => {
-    const a = t.d * 22.5, s0 = map(R, a), s1 = map(half * .2, a), col = i ? CLIMATE.wind.arrow2 : CLIMATE.wind.arrow1;
-    d.line(s0, s1, { stroke: col, w: (i ? 1.8 : 2.5) * PT, dash: i ? [6, 3] : null, layer: "arrow" }).arrow(s0, s1, 4.4, 1.6, col, "arrow");
+  const dominant = tops[0];
+  const tip = map(dominant.tot * len + 6, dominant.d * 22.5);
+  d.text(tip[0], tip[1], `주풍 ${DIRS16[dominant.d]} ${dominant.tot.toFixed(1)} %`, {
+    size: 3, weight: 600, anchor: "middle", halo: true
   });
   siteMarker(d, ...ax.P(cx, cy));
   // right column: seasonal mini roses (same scale), label dots in the season colours

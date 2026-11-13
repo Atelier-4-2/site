@@ -259,9 +259,58 @@ const IMPL = {
     }
   },
   "17": {
-    needs: ["buildings"],
+    needs: ["parcels", "buildings"],
     build(ctx, data, opt) {
       const pal = P(opt);
+      if (data.parcels?.length) {
+        const inRing = ([x, y], ring) => {
+          let inside = false;
+          for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const [xi, yi] = ring[i], [xj, yj] = ring[j];
+            if ((yi > y) !== (yj > y) &&
+                x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+          }
+          return inside;
+        };
+        const area = rings => ringArea(rings[0]) -
+          rings.slice(1).reduce((s, h) => s + ringArea(h), 0);
+        const parcels = data.parcels.map(f => ({
+          f, area: f.polygons.reduce((s, rings) => s + area(rings), 0), built: 0
+        })).filter(p => p.area >= 20);
+        for (const b of data.buildings) {
+          const ring = b.polygon;
+          const n = ring.length - (ring.length > 1 &&
+            ring[0][0] === ring[ring.length - 1][0] &&
+            ring[0][1] === ring[ring.length - 1][1] ? 1 : 0);
+          if (n < 3) continue;
+          const c = ring.slice(0, n).reduce((s, p) =>
+            [s[0] + p[0] / n, s[1] + p[1] / n], [0, 0]);
+          const parcel = parcels.find(p =>
+            p.f.polygons.some(rings => inRing(c, rings[0])));
+          if (parcel) parcel.built += Math.max(0, area([ring, ...b.holes]));
+        }
+        const BANDS = [
+          { id: "d0", label: "0–10 %", max: .10 }, { id: "d1", label: "10–25 %", max: .25 },
+          { id: "d2", label: "25–40 %", max: .40 }, { id: "d3", label: "40–60 %", max: .60 },
+          { id: "d4", label: "60 % 이상", max: 9 }];
+        const cols = pal.density, buckets = BANDS.map(() => []);
+        for (const p of parcels) {
+          const ratio = Math.min(1, p.built / p.area);
+          buckets[BANDS.findIndex(b => ratio < b.max)].push(p.f);
+        }
+        return {
+          layers: [...BANDS.map((b, k) => ({
+            id: b.id, name: b.label,
+            items: featPolys(buckets[k], () => ({
+              fill: cols[k], stroke: "#FFFFFF", sw: lw(opt, .4)
+            }))
+          })), { id: "bati_line", name: "건물 외곽선", items: polyItems(data.buildings, () => ({ fill: "none", stroke: pal.edge, sw: lw(opt, .08) })) }],
+          legend: [...BANDS.map((b, k) => ({ kind: "fill", fill: cols[k], stroke: "#FFFFFF", sw: .4, label: `건폐율 ${b.label}`, count: buckets[k].length })),
+            { kind: "site", label: "대지 경계" }],
+          notes: ["필지별 건폐율 = 필지 안 건물 면적 ÷ 필지 면적 (건물은 중심점이 놓인 필지에 귀속) · 필지: IGN Parcellaire Express (PCI) · 참고용 · 법적 효력 없음"],
+          sources: ["CADASTRALPARCELS.PARCELLAIRE_EXPRESS"]
+        };
+      }
       const CELL = 10;
       const [x0, y0, x1, y1] = ctx.extent;
       const nx = Math.ceil((x1 - x0) / CELL), ny = Math.ceil((y1 - y0) / CELL);
@@ -295,7 +344,7 @@ const IMPL = {
         })), { id: "bati_line", name: "건물 외곽선", items: polyItems(data.buildings, () => ({ fill: "none", stroke: pal.edge, sw: lw(opt, .08) })) }],
         legend: [...BANDS.map((b, k) => ({ kind: "fill", fill: cols[k], stroke: pal.edge, sw: .1, label: `건폐율 ${b.label}` })),
           { kind: "site", label: "대지 경계" }],
-        notes: ["건폐율 근사치 · 10 m 격자 · Gaussian σ 40 m"]
+        notes: ["필지 데이터가 없어 10 m 격자 근사로 표시"]
       };
     }
   },

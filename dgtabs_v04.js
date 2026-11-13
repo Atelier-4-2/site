@@ -13,7 +13,7 @@ import {
 import { surfaceOf } from "./dgdefs3_v04.js?v=20261114m1";
 import { extendGround } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m1";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m5";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [
@@ -60,7 +60,8 @@ export function createTabs(api) {
   });
 
   // 3D view | plate (vector SVG axonometric) switch for the climate tabs A2 / A3 / A4
-  const viewToggle = id => `<span role="group" aria-label="보기">${[["3d", KO_PLATE["plate.view3d"]], ["plate", KO_PLATE["plate.viewPlate"]]].map(([v, t]) => `<button type="button" data-view="${v}" aria-pressed="${state.view[id] === v}">${t}</button>`).join("")}</span>`;
+  const saveGroup = html => `<span class="dg-save" role="group" aria-label="저장"><span class="dg-save-label">저장</span>${html}</span>`;
+  const viewToggle = id => `<span class="dg-view segmented" role="group" aria-label="보기">${[["3d", KO_PLATE["plate.view3d"]], ["plate", KO_PLATE["plate.viewPlate"]]].map(([v, t]) => `<button type="button" data-view="${v}" aria-pressed="${state.view[id] === v}">${t}</button>`).join("")}</span>`;
   controls.addEventListener("click", e => {
     const b = e.target.closest("[data-view]");
     if (b && state.view[active]) { state.view[active] = b.dataset.view; show(active); }
@@ -321,7 +322,7 @@ export function createTabs(api) {
     const dir = new THREE.Vector3(.5, 1, .6).normalize();
     g.sun.position.copy(dir.multiplyScalar(g.side * 2)); g.sun.intensity = .8;
     badge("건물 " + api.data().buildings.length + "동 · 높이 미상 건물은 3 m 기본값(연한 색상)으로 표시됩니다.");
-    controls.innerHTML = `<button type="button" data-a1="png">PNG 저장</button><button type="button" data-a1="3dm">3dm 저장</button>`;
+    controls.innerHTML = saveGroup(`<button type="button" data-a1="png">PNG</button><button type="button" data-a1="3dm">3dm</button>`);
     controls.onclick = e => {
       if (e.target.dataset.a1 === "png") savePng();
       else if (e.target.dataset.a1 === "3dm") {   // extruded buildings + terrain mesh (3D_건물 / 3D_지형) with the site outline
@@ -441,7 +442,7 @@ export function createTabs(api) {
       <label>시각 <input id="a2-hour" type="range" min="0" max="24" step="0.25" value="${state.hour}"> <output id="a2-hour-out">${fmtHour(state.hour)}</output></label>
       <span id="a2-overlays">${[["none", "음영 단일"], ["hours", "일조 분석"], ["shadows", "시간대별 음영 (9·12·15시)"]].map(([v, t]) => `<button type="button" data-ov="${v}" aria-pressed="${state.overlay === v}">${t}</button>`).join("")}</span>
       <button type="button" data-a2="play">▶ 시뮬레이션 재생</button>
-      <button type="button" data-a2="png">PNG 저장</button>
+      ${saveGroup(`<button type="button" data-a2="png">PNG</button>`)}
       <span id="a2-info" class="note"></span> <span id="a2-overlay-note" class="note"></span> <div id="a2-legend" class="note"></div>`;
     let playing = null;
     g.stopPlay = () => { if (playing) { clearInterval(playing); playing = null; } };
@@ -569,7 +570,7 @@ export function createTabs(api) {
     };
     controls.innerHTML = viewToggle("A3") + `<button type="button" data-wind="rose" aria-pressed="${windView === "rose"}">지면 바람장미</button><button type="button" data-wind="arrows" aria-pressed="${windView === "arrows"}">주풍향</button>` +
       PERIODS.map((t, i) => `<button type="button" data-s="${i}" aria-pressed="${state.season === i}">${t}</button>`).join("") +
-      `<button type="button" data-a3="png">PNG 저장</button><span id="a3-directions" class="note"></span><div id="a3-speeds" class="note"${windView === "rose" ? "" : " hidden"}>${CLIMATE.wind.bins.map((c, i) =>
+      `${saveGroup(`<button type="button" data-a3="png">PNG</button>`)}<span id="a3-directions" class="note"></span><div id="a3-speeds" class="note"${windView === "rose" ? "" : " hidden"}>${CLIMATE.wind.bins.map((c, i) =>
         `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px"><i style="width:12px;height:12px;background:${c};display:inline-block"></i>${SPEED_LABELS[i]} m/s</span>`).join("")} · 동심원 간격 5% · 중앙 원은 정온(&lt; 0.5 m/s)</div>`;
     controls.onclick = e => {
       if (e.target.dataset.s) { state.season = Number(e.target.dataset.s); controls.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", String(b === e.target))); draw(); }
@@ -622,7 +623,7 @@ export function createTabs(api) {
     }
     controls.innerHTML = `${viewToggle("A4")}<label>월 <select id="a4-month">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}"${state.month === i + 1 ? " selected" : ""}>${i + 1}월</option>`).join("")}</select></label>
       <label>시각 <input id="a4-hour" type="range" min="0" max="23" step="1" value="${state.utciHour}"> <output id="a4-hour-out">${state.utciHour}:00</output></label>
-      <button type="button" data-a4="png">PNG 저장</button><span id="a4-info" class="note"></span><div id="a4-legend" class="note"></div>`;
+      ${saveGroup(`<button type="button" data-a4="png">PNG</button>`)}<span id="a4-info" class="note"></span><div id="a4-legend" class="note"></div>`;
     $("a4-month").addEventListener("change", e => { state.month = Number(e.target.value); draw(); });
     $("a4-hour").addEventListener("input", e => { state.utciHour = Number(e.target.value); $("a4-hour-out").textContent = `${state.utciHour}:00`; draw(); });
     controls.onclick = e => { if (e.target.dataset.a4) savePng(); };
@@ -648,7 +649,7 @@ export function createTabs(api) {
       <label>시각 <input id="a4-hour" type="range" min="0" max="23" step="1" value="${state.utciHour}"> <output id="a4-hour-out">${state.utciHour}:00</output></label>` : "";
     const shadow = id === "A2" ? `<label>그림자 날짜 <select id="a2-shadow-day">${SHADOW_DAYS.map(day => `<option value="${day.id}"${day.id === shadowDay ? " selected" : ""}>${day.label}</option>`).join("")}</select></label>
       <label>그림자 시각 <select id="a2-shadow-hour">${SHADOW_HOURS.map(hour => `<option value="${hour}"${hour === shadowHour ? " selected" : ""}>${hour}시</option>`).join("")}</select></label>` : "";
-    controls.innerHTML = `${viewToggle(id)}${shadow}${month}<button type="button" data-pl="svg">SVG 저장</button><button type="button" data-pl="png">PNG 저장</button><button type="button" data-pl="pdf">PDF 저장</button><button type="button" data-pl="dxf">DXF 저장</button><button type="button" data-pl="3dm">3dm 저장</button><span id="a4-info" class="note"></span>`;
+    controls.innerHTML = `${viewToggle(id)}${shadow}${month}${saveGroup(`<button type="button" data-pl="svg">SVG</button><button type="button" data-pl="png">PNG</button><button type="button" data-pl="pdf">PDF</button><button type="button" data-pl="dxf">DXF</button><button type="button" data-pl="3dm">3dm</button>`)}<span id="a4-info" class="note"></span>`;
     if (id === "A2") {
       $("a2-shadow-day").addEventListener("change", e => { shadowDay = e.target.value; draw(); });
       $("a2-shadow-hour").addEventListener("change", e => { shadowHour = Number(e.target.value); draw(); });
@@ -813,8 +814,8 @@ export function createTabs(api) {
     });
     controls.innerHTML = `<button type="button" data-a5="reset">단면선 초기화</button>` +
       [1, 2, 3].map(v => `<button type="button" data-a5ve="${v}" aria-pressed="${(section.ve || 1) === v}">수직 ×${v}</button>`).join("") +
-      `<button type="button" data-a5="svg">단면 SVG 저장</button>` +
-      ["pdf", "dxf", "3dm"].map(k => `<button type="button" data-a5="${k}">${k === "pdf" ? "PDF" : k === "dxf" ? "DXF" : "3dm"} 저장</button>`).join("");
+      saveGroup(`<button type="button" data-a5="svg">단면 SVG</button>` +
+      ["pdf", "dxf", "3dm"].map(k => `<button type="button" data-a5="${k}">${k === "pdf" ? "PDF" : k === "dxf" ? "DXF" : "3dm"}</button>`).join(""));
     controls.onclick = e => {
       if (e.target.dataset.a5ve) {
         section.ve = Number(e.target.dataset.a5ve);
@@ -887,7 +888,7 @@ export function createTabs(api) {
     });
     wrap.addEventListener("pointerup", () => { drag = null; });
     controls.innerHTML = layers.map(([k, t, ok]) => `<label><input type="checkbox" data-l="${k}" ${on[k] ? "checked" : ""} ${ok ? "" : "disabled"}> ${t}${ok ? "" : " (없음)"}</label>`).join("") +
-      `<button type="button" data-a6="fit">전체 보기</button><button type="button" data-a6="svg">SVG 저장</button>`;
+      `<button type="button" data-a6="fit">전체 보기</button>${saveGroup(`<button type="button" data-a6="svg">SVG</button>`)}`;
     controls.onchange = e => { if (e.target.dataset.l) { on[e.target.dataset.l] = e.target.checked; wrap.innerHTML = svg(); } };
     controls.onclick = e => {
       if (e.target.dataset.a6 === "fit") { vb = [0, 0, VW, VH]; apply(); }
@@ -932,7 +933,7 @@ export function createTabs(api) {
     };
     stage.innerHTML = `<div class="dg-2d" id="a7-preview" style="padding:8px"></div>`;
     controls.innerHTML = defs.map(d => `<label><input type="checkbox" data-m="${d.num}" ${state.merge.has(d.num) ? "checked" : ""}> ${d.num} ${d.ko}</label>`).join("") +
-      `<button type="button" data-a7="svg">SVG 저장</button><button type="button" data-a7="png">PNG 저장</button><button type="button" data-a7="pdf">PDF 저장</button><button type="button" data-a7="dxf">DXF 저장</button><button type="button" data-a7="3dm">3dm 저장</button>`;
+      `${saveGroup(`<button type="button" data-a7="svg">SVG</button><button type="button" data-a7="png">PNG</button><button type="button" data-a7="pdf">PDF</button><button type="button" data-a7="dxf">DXF</button><button type="button" data-a7="3dm">3dm</button>`)}`;
     controls.onchange = e => { if (e.target.dataset.m) { e.target.checked ? state.merge.add(e.target.dataset.m) : state.merge.delete(e.target.dataset.m); draw(); } };
     controls.onclick = async e => {
       const k = e.target.dataset.a7;
@@ -1060,7 +1061,7 @@ export function createTabs(api) {
     controls.innerHTML = `<span>방위 ${[45, 135, 225, 315].map(a => `<button type="button" data-az="${a}" aria-pressed="${state.axoAz === a}">${a}°</button>`).join("")}</span>
       <span>고도 ${[30, 45, 60].map(a => `<button type="button" data-el="${a}" aria-pressed="${state.axoEl === a}">${a}°</button>`).join("")}</span>
       <span>표현 ${[["site", "대지 강조"], ["height", "높이 단계"], ["plain", "단색"]].filter(([v]) => v !== "site" || siteIsSmallNow()).map(([v, t]) => `<button type="button" data-mode="${v}" aria-pressed="${state.axoMode === v}">${t}</button>`).join("")}</span>
-      <button type="button" data-a8="svg">SVG 저장</button><button type="button" data-a8="png">PNG 저장</button><button type="button" data-a8="pdf">PDF 저장</button><button type="button" data-a8="dxf">DXF 저장</button><button type="button" data-a8="3dm">3dm 저장</button>`;
+      ${saveGroup(`<button type="button" data-a8="svg">SVG</button><button type="button" data-a8="png">PNG</button><button type="button" data-a8="pdf">PDF</button><button type="button" data-a8="dxf">DXF</button><button type="button" data-a8="3dm">3dm</button>`)}`;
     controls.onclick = async e => {
       const t = e.target;
       if (t.dataset.az) { state.axoAz = Number(t.dataset.az); }

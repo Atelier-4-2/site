@@ -6,13 +6,13 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261114m1";
+import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261114m5";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261113s";
 import { STYLES } from "./dgsemantic.js?v=20261113s";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114m1";
-import { createTabs } from "./dgtabs_v04.js?v=20261114m1";
+import { createTabs } from "./dgtabs_v04.js?v=20261114m5";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v03.js?v=20261113cards2";
 import { toDxf } from "./dgdxf_v02.js?v=20261113y";
 import { buildPdf } from "./dgpdf.js?v=20261113p";

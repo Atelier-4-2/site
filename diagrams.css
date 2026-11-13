@@ -216,6 +216,42 @@ body[data-mode="diagrams"] #top, body[data-mode="diagrams"] .nav-inner { width: 
 body[data-mode="diagrams"] #panel-ign .inline { gap: 8px; }
 body[data-mode="diagrams"] #map-style { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden; clip-path: inset(50%); }
 
+/* Separate view selection from saving. */
+.dg-controls { flex-direction:row; justify-content:flex-start; }
+.dg-controls > .note { flex-basis:100%; order:2; }
+.dg-controls .dg-view {
+  display:inline-flex; flex:0 0 auto; width:auto;
+  gap:2px; padding:3px; border:0; border-radius:12px;
+  background:#f2f2f7;
+}
+.dg-controls .dg-view button {
+  min-height:34px; padding:2px 12px; border:1px solid transparent;
+  border-radius:9px; background:transparent; color:var(--ink);
+}
+.dg-controls .dg-view button[aria-pressed="true"] {
+  background:#fff; border-color:#d2d2d7; color:var(--ink);
+}
+.dg-controls .dg-save {
+  display:inline-flex; flex-wrap:wrap; align-items:center;
+  justify-content:flex-start; gap:6px; margin-left:auto;
+  max-width:100%;
+}
+.dg-controls .dg-save-label {
+  color:var(--muted); font-size:12px; margin-right:2px;
+}
+.dg-controls .dg-save button {
+  background:transparent; color:var(--ink); border:1px solid #d2d2d7;
+  font-size:13px; min-height:34px; padding:2px 10px; border-radius:8px;
+}
+.dg-controls .dg-save button:hover:not(:disabled) {
+  background:transparent; border-color:#1d1d1f; color:var(--ink);
+}
+@media (max-width:640px) {
+  .dg-controls .dg-save {
+    flex-basis:100%; width:100%; margin-left:0; order:1;
+  }
+}
+
 /* Director fix 2026-11-14: palette row must stay horizontal inside the inline settings bar */
 body[data-mode="diagrams"] .dg-settings-inline > div:first-child { flex: 1 1 560px; max-width: 680px; }
 body[data-mode="diagrams"] .dg-settings-inline .dg-palettes { flex-wrap: nowrap; width: 100%; }
