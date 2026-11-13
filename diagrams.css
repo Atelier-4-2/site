@@ -1,0 +1,200 @@
+/* Site-diagram mode. Reuses style.css tokens; only adds what the laser flow lacks. */
+.dg-only { display: none; }
+body[data-mode="diagrams"] .dg-only { display: revert; }
+body[data-mode="diagrams"] .section-actions.dg-only { display: flex; }
+body[data-mode="diagrams"] .grid.dg-only { display: grid; }
+body[data-mode="diagrams"] .laser-only { display: none !important; }
+body[data-mode="diagrams"] #step-panel-2,
+body[data-mode="diagrams"] #step-panel-3,
+body[data-mode="diagrams"] #step-panel-4,
+body[data-mode="diagrams"] #step-panel-5 { display: none !important; }
+body[data-mode="diagrams"] .step-count { display: block; }
+body[data-mode="diagrams"][data-page="2"] #dg-panel-2,
+body[data-mode="diagrams"][data-page="3"] #dg-panel-3,
+body[data-mode="diagrams"][data-page="4"] #dg-panel-4 { display: block; animation: page-in .35s ease both; }
+#dg-stepper[hidden], #laser-stepper[hidden] { display: none; }
+
+/* landing: two equal choices */
+.mode-choice { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 40px; }
+.mode-choice .start-button { margin-top: 0; }
+.start-secondary { background: var(--surface); color: var(--ink); }
+.start-secondary:hover:not(:disabled) { background: var(--line); }
+
+.dg-settings { display: grid; gap: 28px; max-width: 560px; margin: 24px auto 0; }
+.dg-label { display: block; margin-bottom: 8px; font-weight: 600; }
+.dg-shape { max-width: 720px; margin-inline: auto; }
+#dg-panel-2 .section-actions { margin-top: 16px; }
+
+.dg-toolbar { justify-content: center; }
+.dg-toolbar input { width: 110px; }
+.dg-results .note { text-align: center; }
+#dg-progress:empty { display: none; }
+
+.dg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 40px 24px;
+  margin-top: 16px;
+}
+.dg-card { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.dg-disc {
+  width: 100%; max-width: 240px; aspect-ratio: 1; border-radius: 50%;
+  overflow: hidden; background: #fff; border: 1px solid var(--line);
+  display: grid; place-items: center;
+}
+.dg-disc svg { display: block; width: 100%; height: 100%; }
+.dg-disc.is-empty { background: var(--surface); border-style: dashed; color: var(--muted); font-size: 14px; }
+.dg-meta { display: grid; gap: 2px; }
+.dg-meta h4 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.dg-num { color: var(--muted); font: 400 13px/1 "Noto Sans Mono", ui-monospace, monospace; }
+.dg-en { margin: 0; color: var(--muted); font: 400 12px/1.4 "Noto Sans Mono", ui-monospace, monospace; }
+.dg-ctl { display: flex; align-items: center; gap: 10px; }
+.dg-swatch { display: inline-block; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); }
+.dg-palettes { flex-wrap: wrap; height: auto; }
+.dg-lwlabel input[type="range"] { width: 90px; }
+.dg-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.dg-actions button { min-height: 36px; padding: 4px 12px; border-radius: 980px; font-size: 13px; }
+.dg-card[data-ready="false"] { opacity: .55; }
+
+.dg-detail { width: min(1400px, 96vw); max-height: 94vh; padding: 16px; border: 0; border-radius: 20px; background: var(--paper); color: var(--ink); }
+.dg-detail::backdrop { background: rgb(0 0 0 / 45%); }
+.dg-detail-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dg-detail-head h3 { margin: 0; font-size: 20px; }
+.dg-sheet { overflow: auto; border: 1px solid var(--line); background: #fff; }
+.dg-sheet svg { display: block; width: 100%; height: auto; }
+
+.dg-param { display: grid; gap: 4px; justify-items: center; font-size: 12px; color: var(--muted); }
+.dg-param input { width: 88px; min-height: 32px; padding: 2px 8px; text-align: center; }
+
+.dg-disc.is-empty span { padding: 0 16px; line-height: 1.6; text-align: center; }
+.dg-retry { min-height: 28px; padding: 2px 10px; border-radius: 980px; font-size: 13px; }
+
+/* the laser step-1 "next" button is moved into a .step-nav row by app.js; hide that row in diagram mode */
+body[data-mode="diagrams"] #step-panel-1 .step-nav { display: none !important; }
+.dg-param select { min-height: 32px; padding: 2px 8px; }
+
+/* analysis tabs */
+.dg-to-analysis { margin-top: 32px; }
+.dg-tabbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 8px 0 12px; }
+.dg-tabbar button { min-height: 36px; padding: 4px 14px; border-radius: 980px; font-size: 13px; }
+.dg-tabbar button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.dg-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; margin-bottom: 10px; font-size: 13px; }
+.dg-controls button { min-height: 32px; padding: 2px 12px; border-radius: 980px; font-size: 13px; }
+.dg-controls button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.dg-controls select, .dg-controls input[type="number"] { min-height: 32px; padding: 2px 8px; }
+.dg-controls input[type="range"] { width: 200px; }
+.dg-controls label { display: inline-flex; align-items: center; gap: 6px; }
+.dg-stage { position: relative; width: 100%; height: min(70vh, 640px); min-height: 360px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #fff; }
+.dg-stage canvas { display: block; width: 100%; height: 100%; }
+.dg-stage .dg-2d { width: 100%; height: 100%; overflow: auto; display: grid; place-items: center; background: #fff; }
+.dg-stage .dg-2d svg { max-width: 100%; max-height: 100%; }
+.dg-stage .dg-badge { position: absolute; left: 12px; bottom: 10px; padding: 3px 10px; border-radius: 980px; background: rgb(255 255 255 / 85%); color: #555; font-size: 12px; pointer-events: none; }
+
+/* ---- card diet: preview, Korean title, three actions ---- */
+.dg-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); align-items: start; }
+.dg-card { display: grid; grid-template-rows: 240px auto auto; justify-items: center; align-items: start; gap: 10px; text-align: center; }
+.dg-card[hidden] { display: none; }
+.dg-card .dg-disc { align-self: center; }
+.dg-disc[role="button"] { cursor: pointer; }
+.dg-disc[role="button"]:hover, .dg-disc[role="button"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.dg-title { margin: 0; min-height: 2.8em; font-size: 16px; font-weight: 600; letter-spacing: -.01em; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
+.dg-title .dg-num { display: block; margin-bottom: 2px; }
+.dg-card[data-ready="false"] { opacity: .55; }
+.dg-card .dg-actions button:disabled { opacity: .4; }
+
+/* theme filter chips */
+.dg-filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 12px 0 4px; }
+.dg-filters button { min-height: 36px; padding: 4px 14px; border-radius: 980px; font-size: 13px; }
+.dg-filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* progress line: always visible on diagram step 3 */
+.dg-progress { min-height: 28px; }
+
+/* back / next rows on diagram steps 2 and 3 */
+.dg-nav { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
+.dg-nav .primary { flex: 1 1 auto; max-width: 420px; }
+.dg-nav .secondary-action { background: none; border: 0; color: var(--muted); padding: 8px 4px; }
+.dg-nav .secondary-action:hover { color: var(--ink); }
+
+/* detail dialog header controls */
+.dg-detail-head h3 small { margin-left: 8px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.dg-detail-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 13px; }
+.dg-detail-ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.dg-detail-ctl input[type="number"], .dg-detail-ctl select { min-height: 32px; padding: 2px 8px; }
+.dg-detail-ctl input[type="range"] { width: 120px; }
+
+/* distinct error colour (the shared token equals the text colour) */
+.note.error, .error { color: var(--dg-error, #c93b2b); }
+@media (prefers-color-scheme: dark) { .note.error, .error { color: #ff6961; } }
+
+/* landing: no laser stepper before a mode is chosen */
+body[data-page="0"] #laser-stepper { visibility: hidden; }
+
+/* mobile: current step must stay readable when the stepper is hidden */
+@media (max-width: 799px) {
+  body[data-mode="diagrams"] .step-count { display: block; text-align: center; font-weight: 600; }
+}
+
+body[data-mode="diagrams"] #range-note { display: none; }
+body[data-mode="diagrams"] .dg-shape { max-width: none; margin-inline: 0; }
+body[data-mode="diagrams"] #panel-ign > .grid,
+body[data-mode="diagrams"] .map-tools { padding-inline: 0; margin-inline: 0; }
+body[data-mode="diagrams"] .map-tools { justify-content: flex-start; }
+.dg-grid { grid-template-columns: repeat(2, 1fr); }
+.dg-card { min-width: 0; grid-template-rows: auto auto auto; }
+.dg-title { min-height: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dg-title .dg-num { display: inline; margin: 0; }
+.dg-palettes button { display: grid; gap: 6px; }
+.dg-palette-strip { display: flex; height: 12px; overflow: hidden; }
+.dg-palette-strip i { flex: 1; }
+.dg-mini { width: 180px; margin-inline: auto; }
+.dg-mini svg { display: block; width: 100%; }
+@media (min-width: 900px) { .dg-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1280px) { .dg-grid { grid-template-columns: repeat(6, 1fr); } }
+
+/* Fixed diagram canvas; nested rules never apply to laser mode. */
+body[data-mode="diagrams"] {
+  width: 1680px; min-width: 0; max-width: none; margin-inline: auto;
+  & #top, & .nav-inner { box-sizing: border-box; width: 1680px; max-width: none; margin-inline: auto; padding-inline: 0; }
+  & #input-controls { width: 100%; min-width: 0; max-width: none; margin: 0; padding: 0; border: 0; }
+  & .content-section { box-sizing: border-box; width: 100%; max-width: none; margin-inline: 0; padding-inline: 0; }
+  & .section-intro { width: 100%; max-width: none; margin-inline: 0; text-align: left; }
+  & #panel-ign { display: grid !important; grid-template-columns: 7fr 5fr !important; grid-template-rows: repeat(5, auto) 1fr auto; gap: 16px 24px; align-items: start; min-height: 560px; }
+  & #panel-ign :is(div, section):has(#map, .search-area, .map-tools, .map-appearance) { display: contents !important; }
+  & #panel-ign :is(div, section):has(#building-list):not(:has(#map, #search)),
+  & #panel-ign :is(h3, h4), & #load-buildings, & #select-all, & #select-none, & #building-list, & #building-note { display: none !important; }
+  & #map { grid-column: 1; grid-row: 1 / 7; width: 100%; height: 100% !important; min-height: 560px; margin: 0; align-self: stretch; }
+  & #panel-ign .search-area { grid-column: 2; grid-row: 1; width: 100%; max-width: none; margin: 0; }
+  & #panel-ign .grid:has(#radius) { display: block !important; grid-column: 2; grid-row: 2; width: calc(50% - 6px); margin: 0; }
+  & .dg-shape { display: contents !important; }
+  & .dg-shape > div:first-child { grid-column: 2; grid-row: 2; width: calc(50% - 6px); justify-self: end; }
+  & #dg-rect-field { grid-column: 2; grid-row: 3; width: 100%; }
+  & #panel-ign :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; max-width: none; }
+  & #panel-ign .inline { display: flex; flex-wrap: nowrap; width: 100%; }
+  & #search { flex: 1; }
+  & .map-tools { grid-column: 2; grid-row: 4; display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 0; width: 100%; margin: 0; }
+  & .map-tools button { width: 100%; min-width: 0; }
+  & #range-view { grid-column: 1 / -1; }
+  & .map-appearance { grid-column: 2; grid-row: 5; display: grid !important; grid-template-columns: 1fr !important; width: 100%; margin: 0; }
+  & .map-appearance .segmented { display: flex; width: 100%; }
+  & .map-appearance .segmented button { flex: 1; min-width: 0; }
+  & #map-note { grid-column: 1; grid-row: 7; }
+  & #step-panel-1 > .section-actions.dg-only { justify-content: flex-end; }
+  & #dg-site-next, & .dg-nav button { flex: none; width: auto; max-width: none; }
+  & #dg-panel-2 { width: 720px; margin-inline: auto; }
+  & .dg-settings { width: 100%; max-width: none; }
+  & .dg-palettes { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; height: auto; }
+  & .dg-palettes button { min-width: 0; width: 100%; }
+  & #dg-mini { display: block; width: 180px; margin: 16px 0 0 auto; }
+  & .dg-toolbar { display: grid; grid-template-columns: auto auto auto 1fr 110px auto 1fr; align-items: center; width: 100%; }
+  & .dg-radius-note, & #dg-to-analysis-top { justify-self: end; }
+  & .dg-filters { justify-content: flex-start; }
+  & .dg-grid { grid-template-columns: repeat(6, 1fr) !important; gap: 40px 24px; width: 100%; }
+  & .dg-results, & #dg-panel-3, & #dg-panel-4 { width: 100%; max-width: none; }
+}
+
+/* Director fix: side gutters inside the fixed 1680 canvas */
+body[data-mode="diagrams"] { box-sizing: border-box; padding-inline: 48px; overflow-x: hidden; }
+body[data-mode="diagrams"] #top, body[data-mode="diagrams"] .nav-inner { width: 100%; }
+body[data-mode="diagrams"] #panel-ign .inline { gap: 8px; }
+body[data-mode="diagrams"] #map-style { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden; clip-path: inset(50%); }
