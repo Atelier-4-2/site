@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
@@ -13,7 +13,7 @@ import {
 import { surfaceOf } from "./dgdefs3_v04.js?v=20261114m1";
 import { extendGround } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m5";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114t1";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [
@@ -28,6 +28,17 @@ export function createTabs(api) {
   const $ = id => document.getElementById(id);
   const bar = $("dg-tabbar"), controls = $("dg-controls"), stage = $("dg-stage"), note = $("dg-tabnote");
   let active = "A1";
+  function fitStage() {
+    const r = stage.getBoundingClientRect();
+    if (!r.width) return;
+    const scale = r.width / stage.offsetWidth;
+    stage.style.boxSizing = "border-box";
+    stage.style.height =
+      Math.max(480, (window.innerHeight - r.top - 24) / scale) + "px";
+    gl?.resize?.();
+  }
+  window.addEventListener("resize", fitStage);
+  new ResizeObserver(fitStage).observe(controls);
   const basePalette = api.pal;
   api = { ...api, pal: () => {
     const p = semanticPalette(basePalette());
@@ -101,11 +112,13 @@ export function createTabs(api) {
     const g = { renderer, scene, camera, controls: controlsO, side, raf: 0 };
     const loop = () => { g.raf = requestAnimationFrame(loop); controlsO.update(); g.tick?.(); renderer.render(scene, camera); };
     loop();
-    g.ro = new ResizeObserver(() => {
+    g.resize = () => {
       const W = stage.clientWidth, H = stage.clientHeight;
       if (!W || !H) return;
       renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix();
-    });
+      g.fit?.();
+    };
+    g.ro = new ResizeObserver(g.resize);
     g.ro.observe(stage);
     gl = g;
     return g;
@@ -595,6 +608,18 @@ export function createTabs(api) {
     const g = frame3d(false);
     g.scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
+    g.fit = () => {
+      const box = new THREE.Box3().setFromObject(g.scene);
+      const radius = box.min.clone().abs().max(box.max.clone().abs()).length();
+      const half = g.camera.fov * RAD / 2;
+      const angle = Math.min(half, Math.atan(Math.tan(half) * g.camera.aspect));
+      g.controls.target.set(0, 0, 0);
+      g.camera.position.normalize().multiplyScalar(radius / Math.sin(angle) * 1.08);
+      g.camera.far = Math.max(g.side * 20, g.camera.position.length() + radius * 2);
+      g.camera.updateProjectionMatrix();
+      g.controls.update();
+    };
+    g.fit();
     const ov = new THREE.Group(); g.scene.add(ov);
     function draw() {
       ov.children.forEach(m => { m.material.map?.dispose(); m.geometry.dispose(); m.material.dispose(); });
@@ -617,9 +642,24 @@ export function createTabs(api) {
         const t = Math.max(0, Math.min(1, (litF - .38) / .24));
         return cShade.map((shade, i) => shade + (cSun[i] - shade) * t);
       }, 6);
-      ov.add(draped(tex, S, 0));
+      ov.add(draped(tex, S, .12));
       $("a4-info").textContent = `${utciInfoText(e)} · 양지 ${(sunny / Math.max(1, tot) * 100).toFixed(0)} %`;
-      $("a4-legend").innerHTML = UTCI_CATS.map((c, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px"><i style="width:12px;height:12px;background:${c.hex};border:1px solid ${c.edge || CLIMATE.sub};display:inline-block"></i>${c.ko} (${UTCI_RANGE[i]} °C)${counts[i] ? ` ${(counts[i] / Math.max(1, tot) * 100).toFixed(0)}%` : ""}</span>`).join("") + `<br>${KO_PLATE["plate.utci.src"]}`;
+      const legend = $("a4-legend");
+      legend.style.cssText =
+        "display:flex;flex-wrap:wrap;gap:4px;text-align:left;white-space:normal;width:100%;max-width:100%;min-width:0";
+      const rows = [["양지", e.sun, catSun, sunny],
+                    ["그늘", e.shade, catShade, tot - sunny]];
+      legend.innerHTML = rows.map(([label, value, cat, count]) =>
+        `<div style="flex-basis:100%"><i style="display:inline-block;width:12px;height:12px;background:${UTCI_CATS[cat].hex}"></i> ${label} ${value.toFixed(1)} °C · ${UTCI_CATS[cat].ko} · ${(100 * count / Math.max(1, tot)).toFixed(0)}%</div>`
+      ).join("") +
+        (catSun === catShade ? "<div>양지와 그늘이 같은 구간입니다</div>" : "") +
+        `<div style="flex-basis:100%;min-width:0"><div style="width:100%;max-width:520px">
+        <div style="display:flex;height:8px">${UTCI_CATS.map(c =>
+          `<i style="flex:1;background:${c.hex}"></i>`).join("")}</div>
+        ${rows.map(([label, , cat]) =>
+          `<div style="display:grid;grid-template-columns:repeat(10,minmax(0,1fr));font-size:10px"><span style="grid-column:${cat + 1};overflow-wrap:anywhere">▲ ${label}</span></div>`).join("")}
+        <div style="display:flex;justify-content:space-between"><span>−40 °C</span><span>46 °C</span></div>
+        </div></div><div>${KO_PLATE["plate.utci.src"]}</div>`;
     }
     controls.innerHTML = `${viewToggle("A4")}<label>월 <select id="a4-month">${Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}"${state.month === i + 1 ? " selected" : ""}>${i + 1}월</option>`).join("")}</select></label>
       <label>시각 <input id="a4-hour" type="range" min="0" max="23" step="1" value="${state.utciHour}"> <output id="a4-hour-out">${state.utciHour}:00</output></label>
@@ -724,13 +764,16 @@ export function createTabs(api) {
   }
   let profile = null;
   function tabA5() {
+    fitStage();
     const ctx = api.ctx(), data = api.data(), pal = api.pal();
     profile = null;
     const [x0, y0, x1, y1] = ctx.extent, S = Math.max(x1 - x0, y1 - y0);
     const VW = (x1 - x0) / S * 1000, VH = (y1 - y0) / S * 1000;
     // map above, profile full width below: a site section is a long flat strip and was
     // squeezed into a ~200 px column beside the map
-    stage.innerHTML = `<div class="dg-2d" style="display:grid;grid-template-columns:1fr;gap:8px;padding:8px;justify-items:center"><div id="a5-map" style="cursor:crosshair;width:min(100%,520px)"></div><div id="a5-profile" style="width:100%"></div></div>`;
+    stage.innerHTML = `<div class="dg-2d" style="box-sizing:border-box;display:grid;grid-template-rows:38% minmax(0,1fr);gap:8px;padding:0 8px 8px;overflow:hidden;justify-items:center">
+      <div id="a5-map" style="cursor:crosshair;height:100%;aspect-ratio:1;max-width:100%;min-height:0"></div>
+      <div id="a5-profile" style="width:100%;min-height:0;display:grid;grid-auto-rows:minmax(0,1fr);overflow:hidden"></div></div>`;
     const mapDiv = $("a5-map"), profDiv = $("a5-profile");
     const tx = x => (x - x0) / S * 1000, ty = y => (y1 - y) / S * 1000;
     const path = (rings, close = true) => rings.map(r => r.map((p, i) => (i ? "L" : "M") + tx(p[0]).toFixed(1) + " " + ty(p[1]).toFixed(1)).join("") + (close ? "Z" : "")).join("");
@@ -794,7 +837,7 @@ export function createTabs(api) {
       const sx = d => 40 + d * k, sy = z => H - 40 - (z - zmin) * ve * k;
       const pl = (pts, close) => pts.map((p, i) => (i ? "L" : "M") + sx(p[0]).toFixed(1) + " " + sy(p[1]).toFixed(1)).join("") + (close ? "Z" : "");
       profile = { L, ground, blds, zmin, zmax, ve };
-      profDiv.innerHTML = `<svg id="a5-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;background:#fff" font-family="Noto Sans, Noto Sans KR, sans-serif">
+      profDiv.innerHTML = `<svg id="a5-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;height:100%;min-height:0;background:#fff" font-family="Noto Sans, Noto Sans KR, sans-serif">
         <rect width="${W}" height="${H}" fill="${pal.bg}"/>
         <path d="${blds.map(r => pl(r, true)).join("")}" fill="${pal.building}" stroke="${pal.buildingLine}" stroke-width="1" stroke-linejoin="round"/>
         <path d="${pl(ground)}" fill="none" stroke="${pal.text}" stroke-width="2"/>
@@ -1092,10 +1135,12 @@ export function createTabs(api) {
     bar.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", String(b.dataset.tab === id)); b.tabIndex = b.dataset.tab === id ? 0 : -1; });
     stage.setAttribute("aria-label", TABS.find(t => t[0] === id)?.[1] || id);
     clearStage();
+    fitStage();
     if (!ready()) return missing("다이어그램 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
     try {
       if (state.view[id] === "plate") plateTab(id);
       else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8 })[id]();
+      fitStage();
     } catch (e) { console.error(e); missing("분석 다이어그램을 생성하지 못했습니다: " + e.message); }
   }
 

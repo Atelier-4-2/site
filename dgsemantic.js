@@ -54,6 +54,32 @@ export const STYLES = {
   }
 };
 
+const colours = x => x.split(" ").map(c => "#" + c);
+const ZONING = colours("E05A47 B565A7 E8C564 6BA368");
+const SUN = colours("2B83BA 80CDC1 F4E285 E08244 9E1B32");
+const SYNTAX = colours("2563EB 38BDF8 FACC15 F97316 DC2626");
+[
+["swiss","스위스 아틀라스","atlas","F6F2E9 DED8CA 231F20 FFFFFF B83B2A 689ec2 C2D4B2 6E8F64","D98A6C C0392B 4A748C 689F8E 8E6C88 B5B0A4","F3E5AB E2B86B C87D3B 9E472A 5C1D18","4A6B82 DED8CA B83B2A","244357 4A748C 7FA6B8 B8D0DC E6EEF2"],
+["paris","파리 카다스트르","atlas","ECEEF1 D4D8DF 1E242B FFFFFF D9381E 7FAAC9 B8D0B5 5E8C61","E59866 D9534F 5B84B1 529E8A 9B6B9E A6ACAF","E8EEF5 B5C7DE 7B9BC4 436B9E 1B3B6F","3B7A9E D4D8DF D9381E","1B3B6F 436B9E 7B9BC4 B5C7DE E8EEF5"],
+["datascape","더치 데이터","dutch","FFFFFF E5E7EB 0A0A0A D1D5DB FF0055 00AEEF 7AC943 009245","FFCC00 FF0055 0099FF 00CC66 9933CC 9CA3AF","FFF3B0 FFB703 FB8500 D62828 5F0F40","0099FF E5E7EB FF0055"],
+["nocturne","다크 스펙트럼","dutch","16191E 262B33 F3F4F6 0D0F12 FF3366 1E6091 1E3F2E 388E6C","FDE047 FB7185 38BDF8 34D399 C084FC 64748B","FEE090 FDAE61 F46D43 D73027 A50026","38BDF8 262B33 FB7185"],
+["poche","미니멀 포셰","minimal","F7F7F5 E2E2DF 111111 FFFFFF D62828 C8D3DC E6E8E3 9CA399","CCCCCC D62828 777777 E89894 333333 E5E5E5","EBEBEB C4C4C4 8F8F8F 525252 171717","737373 E2E2DF D62828"],
+["critical","지질·생태","eco","E6E8E1 CFD3C8 1B261E F4F5F0 C85A17 2C6E8A 84A970 2D5A3C","D49A6A B84A39 4B7F8C 5E8C5A 7E6B8F B0B5A8","E9E2D0 C2B280 8A9A68 4A7856 1E4631","2C6E8A CFD3C8 C85A17","194037 367062 68A392 A8CFC2 E3EFEA"]
+].forEach(([id,name,parent,base,use,warm,diverging,cool]) => {
+  STYLES[id] = {
+    name,
+    ...Object.fromEntries(
+      ["bg","building","figure","road","site","water","green","trees"]
+        .map((key,i) => [key,colours(base)[i]])
+    ),
+    use6:colours(use), warm:colours(warm), cool:colours(cool || warm),
+    diverging:colours(diverging), sun:[...SUN], zoning:[...ZONING],
+    heritage:"#7A2048", syntax:[...SYNTAX],
+    isochrone:[...STYLES[parent].isochrone],
+    aspect8:[...STYLES[parent].aspect8]
+  };
+});
+
 const mix = (a, b, t) => "#" + [1, 3, 5].map(i =>
   Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) +
     parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
@@ -77,12 +103,12 @@ export function semanticPalette(pal) {
     ...pal, cat6: s.use6, seq5: s.cool, water: s.water, green: s.green,
     waterLine: mix(s.water, "#141414", .5), greenLine: mix(s.green, "#141414", .45),
     year: [...s.warm].reverse(), height: s.cool, high: s.diverging[2], low: s.diverging[0],
-    zoning: STYLES.atlas.zoning,
-    protection: [s.heritage, s.warm[3], s.cool[3], s.cool[2], s.cool[2], s.cool[2]],
+    zoning: [...ZONING],
+    protection: ["#7A2048", s.warm[3], s.cool[3], s.cool[2], s.cool[2], s.cool[2]],
     planned: s.diverging[2], treeRow: s.trees, tree: mix(s.trees, "#FFFFFF", .25),
     isochrone: s.isochrone[0], blocks: s.warm[3], density: s.warm,
-    terrain: s.warm, slope: s.warm, parcel: s.warm[1], plot: s.cool, sun: s.sun,
-    svf: [...s.cool].reverse(), syntax: s.warm, visibility: [s.cool[1], s.cool[2], s.cool[4]],
+    terrain: s.warm, slope: s.warm, parcel: s.warm[1], plot: s.cool, sun: [...SUN],
+    svf: [...s.cool].reverse(), syntax: [...SYNTAX], visibility: [s.cool[1], s.cool[2], s.cool[4]],
     dh: s.cool, aspect: s.aspect8.map(desaturate),
     wind, windSeason: wind.map(c => mix(c, "#FFFFFF", .2))
   };

@@ -1224,7 +1224,7 @@ $("#export").onclick = () => operation(async (_signal, ensureCurrent) => {
     JSON.stringify(viewer.exportMetadata(), null, 2)
   );
   files["README.txt"] = strToU8([
-    "SiteLaser",
+    "Terrain",
     "",
     "terrain_번호_두께mm / building_번호_두께mm: 판별 제작 도면.",
     "PDF는 용지 실치수입니다. 출력할 때 배율 100%를 선택하세요.",
@@ -1260,7 +1260,7 @@ $("#export").onclick = () => operation(async (_signal, ensureCurrent) => {
 
   const archive = zipSync(files, { level: 6 });
   ensureCurrent();
-  download(archive, "sitelaser.zip");
+  download(archive, "terrain.zip");
   status("다운로드를 시작했습니다.");
   completedSteps.add(4);
   syncSteps();

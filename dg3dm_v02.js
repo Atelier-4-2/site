@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Rhino .3dm export for the site diagrams (rhino3dm 8.35.0, already loaded by index.html).
 // Units m. The model origin is the SITE CENTRE (Lambert-93 coordinates are ~6.8e6 m north and Rhino loses
 // precision that far from the origin); the shift is stored in the document UserText and on every object.
@@ -58,7 +58,7 @@ const rgb = hex => { const s = hex.replace("#", ""); return { r: parseInt(s.slic
 // jobs: [{ def, sheet, ctx, pal, data, volumes:boolean, origin?:[x,y], volCtx?, extra? }] -> Uint8Array (.3dm)
 // opts.origin = model origin in source coordinates (default: centre of the first ctx = site centre).
 // A job with its own `origin` is a drawing in local coordinates (A5 section / A8 projection), not Lambert-93.
-export async function build3dm(jobs, { title = "SiteLaser", origin = null, custom = false } = {}) {
+export async function build3dm(jobs, { title = "Terrain", origin = null, custom = false } = {}) {
   const rh = await loadRhino();
   const doc = new rh.File3dm();
   const del = [];
@@ -69,8 +69,8 @@ export async function build3dm(jobs, { title = "SiteLaser", origin = null, custo
     const [x0, y0, x1, y1] = ctx0.extent;
     const mpm = ctx0.paperMm ? 1 : Math.max(x1 - x0, y1 - y0) / 255;
     doc.settings().modelUnitSystem = ctx0.paperMm ? rh.UnitSystem.Millimeters : rh.UnitSystem.Meters;
-    doc.applicationName = "SiteLaser";
-    const note = `SiteLaser 대지 다이어그램 · ${ctx0.address} · ${ctx0.radiusLabel} · 조회일 ${ctx0.date}\n` +
+    doc.applicationName = "Terrain";
+    const note = `Terrain 대지 다이어그램 · ${ctx0.address} · ${ctx0.radiusLabel} · 조회일 ${ctx0.date}\n` +
       (custom
         ? `도면 좌표(${unit}). 모델 원점 = 도면 범위 중심: 원래 좌표 = 모델 좌표 + (x ${offE}, y ${offN}).\n`
         : `좌표계 RGF93 / Lambert-93 (EPSG:2154), 단위 m. 모델 원점 = 대지 중심: 원래 좌표 = 모델 좌표 + (E ${offE}, N ${offN}).\n`) +
@@ -83,7 +83,7 @@ export async function build3dm(jobs, { title = "SiteLaser", origin = null, custo
     S.set("address", ctx0.address || ""); S.set("date", ctx0.date); S.set("notes", note);
 
     // one dashed linetype (document level); layers that are dashed in the sheet use it
-    const dash = new rh.Linetype(); dash.name = "SiteLaser Dashed";
+    const dash = new rh.Linetype(); dash.name = "Terrain Dashed";
     dash.appendSegment(1.2 * mpm, true); dash.appendSegment(0.8 * mpm, false);
     doc.linetypes().add(dash); del.push(dash);
     const dashIdx = doc.linetypes().count - 1;

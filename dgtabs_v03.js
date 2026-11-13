@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
@@ -13,7 +13,7 @@ import {
 import { surfaceOf } from "./dgdefs3_v03.js?v=20261113cards2";
 import { extendGround } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114m1";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114t1";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const TABS = [

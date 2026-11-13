@@ -6,17 +6,17 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261114m5";
-import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261113s";
-import { STYLES } from "./dgsemantic.js?v=20261113s";
+import { DIAGRAMS, isReady } from "./dgdefs_v04.js?v=20261114t1";
+import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
+import { STYLES } from "./dgsemantic.js?v=20261114t1";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
-import { KO } from "./dgstrings.js?v=20261114m1";
-import { createTabs } from "./dgtabs_v04.js?v=20261114m5";
+import { KO } from "./dgstrings.js?v=20261114t1";
+import { createTabs } from "./dgtabs_v04.js?v=20261114t1";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v03.js?v=20261113cards2";
 import { toDxf } from "./dgdxf_v02.js?v=20261113y";
-import { buildPdf } from "./dgpdf.js?v=20261113p";
-import { build3dm } from "./dg3dm_v02.js?v=20261114m1";
+import { buildPdf } from "./dgpdf.js?v=20261114t1";
+import { build3dm } from "./dg3dm_v02.js?v=20261114t1";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -34,7 +34,7 @@ let results = null;          // { ctx, data, status:{key:error|null} }
 let busy = false;
 let tabs = null;
 let controller = null;
-let palId = "atlas";
+let palId = "swiss";
 let baseLw = 1;
 const cardOpts = new Map();  // num -> { lw }
 
@@ -553,7 +553,7 @@ const u8 = async blob => new Uint8Array(await blob.arrayBuffer());
 
 async function allPdf(builds, snap, tag, cancelled) {
   return buildPdf(builds.map(b => ({ svg: pdfSvg(b.def, b.sheet, snap) })), {
-    title: `SiteLaser ${snap.ctx.address}`, subject: `${snap.ctx.radiusLabel} · ${builds.length}장`,
+    title: `Terrain ${snap.ctx.address}`, subject: `${snap.ctx.radiusLabel} · ${builds.length}장`,
     isCancelled: cancelled,
     onProgress: (i, n) => { $("#dg-progress").textContent = `${tag} ${i}/${n} · ${builds[i - 1].def.num} ${builds[i - 1].def.ko}`; }
   });
@@ -562,7 +562,7 @@ async function all3dm(builds, snap, tag, stop) {
   const jobs = builds.map((b, i) => job3dm(b.def, b.sheet, snap, i === 0));   // the 3D layers are written once
   $("#dg-progress").textContent = `${tag} · ${builds.length}장`;
   await yieldUi(); stop();
-  return to3dm(jobs, `SiteLaser ${snap.ctx.address}`);
+  return to3dm(jobs, `Terrain ${snap.ctx.address}`);
 }
 
 $("#dg-pdf-all").addEventListener("click", () => batchExport("PDF", async (snap, stop, cancelled) => {
@@ -570,7 +570,7 @@ $("#dg-pdf-all").addEventListener("click", () => batchExport("PDF", async (snap,
   if (!builds.length) throw new Error("저장할 수 있는 다이어그램이 없습니다.");
   const blob = await allPdf(builds, snap, "PDF", cancelled);
   stop();
-  download(blob, "sitelaser_all.pdf");
+  download(blob, "terrain_all.pdf");
   $("#dg-progress").textContent = `${snap.ctx.address} · ${snap.ctx.radiusLabel} · 전체 PDF ${builds.length}쪽 저장` + (skipped.length ? ` · 제외 ${skipped.length}장` : "");
 }));
 
@@ -579,7 +579,7 @@ $("#dg-3dm-all").addEventListener("click", () => batchExport("3dm", async (snap,
   if (!builds.length) throw new Error("저장할 수 있는 다이어그램이 없습니다.");
   const blob = await all3dm(builds, snap, "3dm", stop);
   stop();
-  download(blob, "sitelaser_all.3dm");
+  download(blob, "terrain_all.3dm");
   $("#dg-progress").textContent = `${snap.ctx.address} · ${snap.ctx.radiusLabel} · 전체 3dm ${builds.length}장 저장` + (skipped.length ? ` · 제외 ${skipped.length}장` : "");
 }));
 
@@ -601,27 +601,27 @@ $("#dg-zip").addEventListener("click", () => batchExport("ZIP", async (snap, sto
     }
   }
   stop();
-  files["sitelaser_all.pdf"] = await u8(await allPdf(builds, snap, "ZIP 전체 PDF", cancelled));
+  files["terrain_all.pdf"] = await u8(await allPdf(builds, snap, "ZIP 전체 PDF", cancelled));
   stop();
-  files["sitelaser_all.3dm"] = await u8(await all3dm(builds, snap, "ZIP 전체 3dm", stop));
+  files["terrain_all.3dm"] = await u8(await all3dm(builds, snap, "ZIP 전체 3dm", stop));
   stop();
   files["README.txt"] = strToU8(readme(snap, skipped));
   $("#dg-progress").textContent = "ZIP 묶는 중…";
   await yieldUi();
   const zip = zipSync(files, { level: 6 });
-  download(new Blob([zip], { type: "application/zip" }), "sitelaser_diagrams.zip");
+  download(new Blob([zip], { type: "application/zip" }), "terrain_diagrams.zip");
   $("#dg-progress").textContent = `${snap.ctx.address} · ${snap.ctx.radiusLabel} · ZIP ${n}/${DIAGRAMS.filter(isReady).length}장 저장 (${(zip.length / 1048576).toFixed(1)} MB)` +
     (skipped.length ? ` · 제외 ${skipped.length}장 (README 참조)` : "");
 }));
 
 function readme(snap, skipped) {
   const c = snap.ctx, off = c.center.map(v => Math.round(v * 1000) / 1000);
-  return `SiteLaser 대지 다이어그램\n${c.address} · ${c.radiusLabel}\n조회일 ${c.date}\n\n` +
+  return `Terrain 대지 다이어그램\n${c.address} · ${c.radiusLabel}\n조회일 ${c.date}\n\n` +
     "파일 형식\n" +
-    "- *.pdf : A3 가로 벡터 PDF(글자 포함). sitelaser_all.pdf = 전체 다이어그램을 한 파일에 묶은 쪽 모음\n" +
+    "- *.pdf : A3 가로 벡터 PDF(글자 포함). terrain_all.pdf = 전체 다이어그램을 한 파일에 묶은 쪽 모음\n" +
     "- *.png : 3175 x 2245 px 래스터\n- *.svg : A3 벡터(Illustrator·Inkscape 등)\n" +
     "- *.dxf : AutoCAD DXF R2000. 다이어그램 레이어 1개 = DXF 레이어 1개, 닫힌 폴리선(해치 없음), 글자는 TEXT/TITLE/LEGEND 레이어. DWG가 필요하면 AutoCAD에서 열어 '다른 이름으로 저장'\n" +
-    "- *.3dm / sitelaser_all.3dm : Rhino 파일(rhino3dm). 다이어그램마다 부모 레이어 'NN 제목', 아래에 다이어그램 레이어. sitelaser_all.3dm에는 3D_건물·3D_지형 레이어(3D 볼륨)가 함께 들어 있음\n\n" +
+    "- *.3dm / terrain_all.3dm : Rhino 파일(rhino3dm). 다이어그램마다 부모 레이어 'NN 제목', 아래에 다이어그램 레이어. terrain_all.3dm에는 3D_건물·3D_지형 레이어(3D 볼륨)가 함께 들어 있음\n\n" +
     "좌표\n" +
     "- DXF: 좌표계 RGF93 / Lambert-93 (EPSG:2154) 실좌표 그대로, 단위 m (다른 IGN 자료와 겹쳐 쓸 수 있음)\n" +
     `- 3dm: 단위 m, 모델 원점 = 대지 중심. 원래 좌표(Lambert-93) = 모델 좌표 + (E ${off[0]}, N ${off[1]}). 이동량은 문서 UserText와 각 객체 UserText(L93_offset_E / L93_offset_N)에도 기록. 3D 높이는 대지 중심 지면(IGN RGE ALTI)을 0으로 한 상대 높이\n` +

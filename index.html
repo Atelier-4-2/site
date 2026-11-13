@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="theme-color" content="#000000"
         media="(prefers-color-scheme: dark)">
-  <title>SiteLaser — 4·2</title>
+  <title>Terrain — 4·2</title>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="./style.css?v=20261109zr">
   <link rel="stylesheet" href="brand.css?v=20261113b2">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&display=swap">
-  <link rel="stylesheet" href="./diagrams.css?v=20261114m5">
+  <link rel="stylesheet" href="./diagrams.css?v=20261114t1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&family=Noto+Sans+KR:wght@400;600&family=Noto+Sans+Mono:wght@400&display=swap">
 
@@ -70,8 +70,8 @@
 
   <header class="page-header">
     <div class="nav-inner">
-      <a id="brand-home" class="product-name" href="#top" aria-label="4·2 SiteLaser 처음으로">
-        <span class="brand-mark">4·2</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-tool">SiteLaser</span>
+      <a id="brand-home" class="product-name" href="#top" aria-label="4·2 Terrain 처음으로">
+        <span class="brand-mark">4·2</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-tool">Terrain</span>
       </a>
 
       <nav id="laser-stepper" class="stepper" aria-label="제작 단계">
@@ -317,10 +317,16 @@
           <div>
             <span class="dg-label" id="dg-color-label">다이어그램 테마</span>
             <div class="segmented dg-palettes" role="radiogroup" aria-labelledby="dg-color-label">
-              <button type="button" role="radio" aria-checked="true" data-dg-pal="atlas">아틀라스형(기본)</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="dutch">데이터형</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="minimal">미니멀</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="eco">생태형</button>
+              <button type="button" role="radio" aria-checked="true" data-dg-pal="swiss">스위스 아틀라스</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="paris">파리 카다스트르</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="datascape">더치 데이터</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="nocturne">다크 스펙트럼</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="poche">미니멀 포셰</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="critical">지질·생태</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="atlas">아틀라스형 (기존)</button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="dutch">데이터형 (기존)</button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="minimal">미니멀 (기존)</button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="eco">생태형 (기존)</button>
             </div>
           </div>
           <div>
@@ -726,10 +732,10 @@
     <p>지도·건물·지형 데이터 © IGN · 모든 파일은 브라우저 안에서만 처리됩니다.</p>
   </footer>
 
-  <noscript>SiteLaser를 사용하려면 JavaScript를 활성화하세요.</noscript>
+  <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v04.js?v=20261114m5"); import("./app.js?v=20261113p").catch(error => {
+    import("./diagrams_v04.js?v=20261114t1"); import("./app.js?v=20261114t1").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";

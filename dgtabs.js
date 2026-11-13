@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.

@@ -1,8 +1,8 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Shared drawing core for the site-analysis diagrams (diagrams.html).
 // Model coordinates are EPSG:2154 metres. Sheet units are millimetres (A3).
 
-import { PALETTES } from "./dgpalettes.js?v=20261113s";
+import { PALETTES } from "./dgpalettes.js?v=20261114t1";
 
 export const ACCENT = "#E6B89C";
 export const INK = "#1d1d1f";

@@ -27,10 +27,10 @@ const DIRS16 = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "S
 export const KO_PLATE = {
   "plate.view3d": "3D 보기", "plate.viewPlate": "다이어그램",
   "plate.sun.title": "태양 경로와 그림자 — 하지·춘분·동지", "plate.sun.fr": "Trajectoires solaires et ombres portées",
-  "plate.wind.title": "바람장미 — 대지 바깥 링과 주풍향", "plate.wind.fr": "Rose des vents annulaire et vents dominants",
+  "plate.wind.title": "바람장미 — 연간 주풍향", "plate.wind.fr": "Rose des vents annuelle · vents dominants",
   "plate.utci.title": "미기후 점 격자", "plate.utci.fr": "Grille de points : UTCI estimé",
   "plate.utci.note": "UTCI(Bröde 2012 다항식) · 월평균 기상 + 맑은 날 일사 가정 · 그늘 여부만 반영, 바람 차폐·반사 미반영 · 초기 설계용 추정치",
-  "plate.utci.src": "구간 Bröde et al. 2012, 색 SiteLaser",
+  "plate.utci.src": "구간 Bröde et al. 2012, 색 Terrain",
   "plate.sunhours": "일조시간 (h)", "plate.calm": "정온 < 0.5 m/s",
   "plate.pin.sun": "양지", "plate.pin.shade": "그늘", "plate.pin.night": "일사 없음"
 };
@@ -391,8 +391,7 @@ function miniRose(d, cxp, cyp, R, rose, pctMax, title, sub, dotColor) {
   const k = R / pctMax, map = (r, a) => [cxp + r * Math.sin(a * RAD), cyp - r * Math.cos(a * RAD)];
   [5, 10, 15].forEach(p => { if (p <= pctMax * 1.0001) d.circ(cxp, cyp, p * k, { stroke: CLIMATE.ring, w: .12 }); });
   d.line([cxp, cyp - R - 1], [cxp, cyp + R + 1], { stroke: CLIMATE.ring, w: .1 }).line([cxp - R - 1, cyp], [cxp + R + 1, cyp], { stroke: CLIMATE.ring, w: .1 });
-  drawRose(d, map, rose, rose.calm * k, k, .08);
-  d.circ(cxp, cyp, rose.calm * k, { fill: CLIMATE.wind.calm, stroke: CLIMATE.sub, w: .1, layer: "rose" });
+  drawRose(d, map, rose, 0, k, .08);
   d.text(cxp, cyp - R - 2.4, "N", { size: 2.4, weight: 600, anchor: "middle" });
   const tw = textWidth(title, 2.8);
   if (dotColor) d.circ(cxp - tw / 2 - 2, cyp + R + 4.2, 1.1, { fill: dotColor, stroke: CLIMATE.sub, w: .1 });
@@ -483,32 +482,30 @@ function plateA3(env) {
   });
   siteMarker(d, ...ax.P(cx, cy));
   // right column: seasonal mini roses (same scale), label dots in the season colours
-  const pm = Math.ceil(Math.max(...[1, 2, 3, 4].map(p => roses[p].max)) / 5) * 5, RM = 15;
+  const pm = Math.max(5, Math.ceil(Math.max(...[1, 2, 3, 4].map(p => roses[p].max)) / 5) * 5), RM = 15;
   d.text(322, 36, "계절 풍배도 (평면, 같은 눈금)", { size: 2.7, weight: 600 });
   [2, 3, 4, 1].forEach((p, i) => {
-    miniRose(d, 340 + (i % 2) * 46, 62 + Math.floor(i / 2) * 47, RM, roses[p], pm, `${SEASONS[p].ko} ${SEASONS[p].fr}`, `최다 ${DIRS16[topDirs(roses[p], 1)[0].d]} ${roses[p].max.toFixed(1)} %`, CLIMATE.wind.season[p]);
+    const dominant = topDirs(roses[p], 1)[0];
+    miniRose(d, 340 + (i % 2) * 46, 62 + Math.floor(i / 2) * 47, RM, roses[p], pm, `${SEASONS[p].ko} · ${DIRS16[dominant.d]} ${dominant.tot.toFixed(0)} %`, "", null);
   });
   let y = 150; const X = 322;
   d.text(X, y, "풍속 구간 (m/s)", { size: 2.5, weight: 600 });
   const rows = [[CLIMATE.wind.calm, KO_PLATE["plate.calm"]], ...CLIMATE.wind.bins.map((c, i) => [c, SPEED_LABELS[i] + " m/s"])];
   rows.forEach(([c, t], i) => { const yy = y + 4 + i * 4.2; d.rect(X, yy - 2.6, 9, 3.2, { fill: c, stroke: CLIMATE.sub, w: .1, layer: "rose" }); d.text(X + 12, yy, t, { size: 2.4 }); d.legend.push({ kind: "line", stroke: c, sw: .3, label: "풍속 " + t }); });
   y += 4 + rows.length * 4.2 + 2;
-  d.text(X, y, "꽃잎 방향 = 바람이 불어오는 쪽", { size: 2.3 }); y += 3.6;
-  d.text(X, y, "꽃잎 길이 = 빈도 % (평면 칸 동심원 5 · 10 · 15 %)", { size: 2.3 }); y += 3.6;
-  d.text(X, y, `큰 축측 링: 5 % = 지면 ${(5 * len).toFixed(0)} m (방향에 따라 단축)`, { size: 2.3 }); y += 3.6;
+  d.text(X, y, "꽃잎 = 바람이 불어오는 방향 · 길이 = 빈도(%)", { size: 2.1 }); y += 3.6;
+
   d.text(X, y, `연간 정온(< 0.5 m/s) ${ann.calm.toFixed(1)} %`, { size: 2.3 }); y += 5;
-  d.line([X, y - 1], [X + 12, y - 1], { stroke: CLIMATE.wind.arrow1, w: 2.5 * PT, layer: "arrow" }).arrow([X, y - 1], [X + 12, y - 1], 3.2, 1.2, CLIMATE.wind.arrow1, "arrow");
-  d.text(X + 15, y, `1순위 ${DIRS16[tops[0].d]} · ${tops[0].tot.toFixed(1)} %`, { size: 2.5, weight: 600 }); y += 4;
-  d.line([X, y - 1], [X + 12, y - 1], { stroke: CLIMATE.wind.arrow2, w: 1.8 * PT, dash: [6, 3], layer: "arrow" }).arrow([X, y - 1], [X + 12, y - 1], 3.2, 1.2, CLIMATE.wind.arrow2, "arrow");
-  d.text(X + 15, y, `2순위 ${DIRS16[tops[1].d]} · ${tops[1].tot.toFixed(1)} %`, { size: 2.5, weight: 600 }); y += 4;
-  d.text(X, y, "건물 사이 유선은 그리지 않음 — 국소 CFD 아님", { size: 2.2, fill: CLIMATE.sub }); y += 6;
+
+
+
   siteKey(d, X, y); y += 5.5;
-  d.wrap(X, y, stationLine(st, km), 86, { size: 2, fill: CLIMATE.sub });
+
   scaleBar(d, 14, 252, ax.s); northArrow(d, 90, 250, ax.north());
   const out = frame(d, ctx, {
     id: "A3 · 다이어그램", ko: KO_PLATE["plate.wind.title"], fr: KO_PLATE["plate.wind.fr"], ref: "Eddy3D 원형 도메인 · Ladybug Wind Rose",
-    src: srcLine(ctx, list),
-    honest: `기상 데이터: EPW ${st.name}(WMO ${st.wmo}, 대지에서 약 ${km.toFixed(1)} km, 지상 10 m 풍속). 풍배도는 광역 통계이며 국소 CFD 유동 해석이 아님. 풍속 구간 이름(보퍼트 등급)은 구간 경계가 달라 m/s 값만 표기.`
+    src: `건물: © IGN BD TOPO V3 · 기상: ${stationLine(st, km)}`,
+    honest: "참고용 · 국소 CFD 아님"
   });
   return { svg: out, d, list, stats: { tops: tops.map(t => ({ dir: DIRS16[t.d], pct: t.tot })), calm: ann.calm, station: st.name, km } };
 }

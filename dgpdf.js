@@ -71,14 +71,14 @@ function loadFonts() {
 
 // pages: [{ svg:string, fit?:boolean }]; svg = full-sheet SVG (viewBox 420 x 297) made with renderSvg(..., {pdf:true}).
 // fit pages (analysis tabs) keep their own aspect ratio, centred on an A3 landscape page.
-export async function buildPdf(pages, { title = "SiteLaser", subject = "", onProgress = null, isCancelled = () => false } = {}) {
+export async function buildPdf(pages, { title = "Terrain", subject = "", onProgress = null, isCancelled = () => false } = {}) {
   const [{ jsPDF, svg2pdf }, fonts] = await Promise.all([loadLibs(), loadFonts()]);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [420, 297], compress: true });
   for (const f of fonts) {
     doc.addFileToVFS(f.file, f.b64);
     doc.addFont(f.file, PDF_FAMILY, "normal", f.style === "bold" ? 700 : 400, "Identity-H");
   }
-  doc.setProperties({ title, subject, author: "", keywords: "", creator: "SiteLaser" });
+  doc.setProperties({ title, subject, author: "", keywords: "", creator: "Terrain" });
   const holder = document.createElement("div");
   holder.style.cssText = "position:fixed;left:-99999px;top:0;width:1px;height:1px;overflow:hidden";
   document.body.append(holder);

@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic.js?v=20261113s";
+import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 // Rhino .3dm export for the site diagrams (rhino3dm 8.35.0, already loaded by index.html).
 // Units m. The model origin is the SITE CENTRE (Lambert-93 coordinates are ~6.8e6 m north and Rhino loses
 // precision that far from the origin); the shift is stored in the document UserText and on every object.

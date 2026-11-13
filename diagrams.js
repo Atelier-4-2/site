@@ -7,14 +7,14 @@ import {
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 import { DIAGRAMS, isReady } from "./dgdefs.js?v=20261113s";
-import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261113s";
+import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
-import { KO } from "./dgstrings.js?v=20261114m1";
+import { KO } from "./dgstrings.js?v=20261114t1";
 import { createTabs } from "./dgtabs.js?v=20261113x";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore.js?v=20261113s";
 import { toDxf } from "./dgdxf.js?v=20261113t";
-import { buildPdf } from "./dgpdf.js?v=20261113p";
+import { buildPdf } from "./dgpdf.js?v=20261114t1";
 import { build3dm } from "./dg3dm.js?v=20261113s";
 
 const $ = s => document.querySelector(s);
