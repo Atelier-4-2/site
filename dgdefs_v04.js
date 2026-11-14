@@ -4,9 +4,9 @@ import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic.js?v=20
 //   { num, fr, en, needs:[dataKeys], color, build(ctx, data, opt) -> sheet }
 // sheet = { layers:[{id,name,items}], legend:[], notes:[], sources:[] }
 // opt   = { mono:boolean, color:hex|null, lw:number (line-weight multiplier) }
-import { ringArea, clipRingRect } from "./dgcore.js?v=20261113s";
+import { ringArea, clipRingRect, mix } from "./dgcore.js?v=20261113s";
 import { bands, gaussian } from "./dgcontour.js?v=20261113b";
-import { IMPL2 } from "./dgdefs2_v03.js?v=20261114m1";
+import { IMPL2 } from "./dgdefs2_v03.js?v=20261114z1";
 import { IMPL3 } from "./dgdefs3_v04.js?v=20261114m1";
 import { KO } from "./dgstrings.js?v=20261114t1";
 import { heightOf, heightEstimated } from "./dganalysis.js?v=20261113p";
@@ -364,5 +364,70 @@ const IMPL = {
   }
 };
 
-export const DIAGRAMS = SLOTS.map(s => ({ ...s, ...(IMPL[s.num] || IMPL2[s.num] || IMPL3[s.num] || {}) }));
+function zoneDisplay(def) {
+  if (!["08", "11", "12", "15", "18", "19"].includes(def.num)) return def;
+  const build = def.build;
+  return {
+    ...def,
+    build(ctx, data, opt) {
+      const sheet = build(ctx, data, opt), pal = P(opt);
+      const alpha = def.num === "18" ? "4D" : "59";
+      const styles = new Map();
+      const isZone = id =>
+        /^(plu_(?!code$)|sup_(?!code$)|iso_|elevation_|slope_)/.test(id) ||
+        id === "er_surface";
+      const zoneStyle = fill => {
+        const hue = fill.slice(0, 7);
+        return {
+          fill: hue + alpha,
+          stroke: mix(hue, "#141414", .35),
+          sw: lw(opt, .5),
+          dash: "4 3"
+        };
+      };
+      const layers = sheet.layers.map(layer => ({
+        ...layer,
+        items: layer.items.map(item => {
+          if (layer.id === "context") return {
+            ...item, fill: pal.building, stroke: pal.buildingLine,
+            sw: lw(opt, .06), cardStroke: true
+          };
+          if (!isZone(layer.id) || item.k !== "poly") return item;
+          const style = zoneStyle(item.fill);
+          styles.set(item.fill, style);
+          const { op, ...rest } = item;
+          return { ...rest, ...style };
+        })
+      }));
+      const roads = layers.filter(l => /road/i.test(l.id));
+      if (!roads.length && data.roads?.length) roads.push({
+        id: "zone_roads", name: "도로",
+        items: featLines(data.roads, () => ({
+          stroke: pal.roadLine, sw: lw(opt, .15)
+        }))
+      });
+      const buildings = layers.filter(l => l.id === "context");
+      let overlays = layers.filter(l =>
+        l.id !== "context" && !/road/i.test(l.id));
+      if (def.num === "15") overlays = overlays.slice().sort((a, b) =>
+        Number(b.id.slice(4)) - Number(a.id.slice(4)));
+      return {
+        ...sheet,
+        layers: [...roads, ...buildings, ...overlays],
+        legend: sheet.legend.map(entry => {
+          if (entry.kind !== "fill" ||
+              (entry.fill === pal.building &&
+               entry.stroke === pal.buildingLine)) return entry;
+          const style = styles.get(entry.fill);
+          if (!style) return entry;
+          const { op, ...rest } = entry;
+          return { ...rest, ...style };
+        })
+      };
+    }
+  };
+}
+export const DIAGRAMS = SLOTS.map(s => zoneDisplay({
+  ...s, ...(IMPL[s.num] || IMPL2[s.num] || IMPL3[s.num] || {})
+}));
 export const isReady = d => typeof d.build === "function";

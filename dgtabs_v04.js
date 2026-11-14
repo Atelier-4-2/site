@@ -33,8 +33,9 @@ export function createTabs(api) {
     if (!r.width) return;
     const scale = r.width / stage.offsetWidth;
     stage.style.boxSizing = "border-box";
+    const above = r.top - bar.getBoundingClientRect().top;   // tab bar + controls height, scroll-independent
     stage.style.height =
-      Math.max(480, (window.innerHeight - r.top - 24) / scale) + "px";
+      Math.max(420, (window.innerHeight / scale) - 64 - above / scale - 24) + "px";
     gl?.resize?.();
   }
   window.addEventListener("resize", fitStage);
@@ -528,7 +529,13 @@ export function createTabs(api) {
     }
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
-    return draped(tex, { nx: 1, ny: 1, step: 1, x0, y0, width: w, height: h }, 0);
+    const mesh = draped(tex, { nx: 1, ny: 1, step: 1, x0, y0, width: w, height: h }, 0);
+    // owner: the rose on the ground was hidden by the buildings — render it on top of everything
+    mesh.traverse(o => {
+      o.renderOrder = 999;
+      if (o.material) { o.material.depthTest = false; o.material.depthWrite = false; o.material.transparent = true; o.material.opacity = .92; }
+    });
+    return mesh;
   }
 
   function tabA3() {
@@ -610,7 +617,7 @@ export function createTabs(api) {
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     g.fit = () => {
       const box = new THREE.Box3().setFromObject(g.scene);
-      const radius = box.min.clone().abs().max(box.max.clone().abs()).length();
+      const radius = new THREE.Vector3(Math.max(Math.abs(box.min.x), Math.abs(box.max.x)), Math.max(Math.abs(box.min.y), Math.abs(box.max.y)), Math.max(Math.abs(box.min.z), Math.abs(box.max.z))).length();
       const half = g.camera.fov * RAD / 2;
       const angle = Math.min(half, Math.atan(Math.tan(half) * g.camera.aspect));
       g.controls.target.set(0, 0, 0);
@@ -1136,6 +1143,8 @@ export function createTabs(api) {
     stage.setAttribute("aria-label", TABS.find(t => t[0] === id)?.[1] || id);
     clearStage();
     fitStage();
+    // bring the tab bar under the sticky header so tabs + controls + the whole stage fit without scrolling
+    { const t = bar.getBoundingClientRect().top; if (Math.abs(t - 64) > 8) window.scrollTo({ top: window.scrollY + t - 64, behavior: "auto" }); }
     if (!ready()) return missing("다이어그램 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
     try {
       if (state.view[id] === "plate") plateTab(id);

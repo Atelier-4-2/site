@@ -152,7 +152,7 @@ function supSheet(ctx, data, opt) {
     layers.push({
       id: `sup_${c.id}`, name: c.label,
       items: featPolys(fs, () => ({
-        fill: mix(pal.bg, col, c.outline ? .14 : .23), stroke: col, sw: lw(opt, .38), dash
+        fill: col + "59", stroke: col, sw: lw(opt, .38), dash
       }), ctx.extent)
     });
     const code = c.label.split(" · ")[0];
@@ -175,7 +175,7 @@ function supSheet(ctx, data, opt) {
         labeled.add(code);
       }
     }
-    legend.push({ kind: "fill", fill: mix(pal.bg, col, c.outline ? .14 : .23), stroke: col,
+    legend.push({ kind: "fill", fill: col + "59", stroke: col,
       sw: .35, dash, label: c.label, count: fs.length });
   }
   legend.push(ctxLegend(opt), SITE);
