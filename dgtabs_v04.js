@@ -5,7 +5,7 @@ import { semanticPalette } from "./dgsemantic.js?v=20261114t1";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf } from "./dgcore_v03.js?v=20261113cards2";
+import { mix, renderSvg, ringArea, seqOf } from "./dgcore_v03.js?v=20261114f1";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
@@ -16,10 +16,21 @@ import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
 import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v02.js?v=20261114t1";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
+import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind.js?v=20261114lb1";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun.js?v=20261114lb1";
+import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy.js?v=20261114lb1";
+
+const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
+const LB_BUILD = Object.fromEntries([
+  ...WIND_KINDS.map(d => [d.kind, windPlate]),
+  ...SUN_KINDS.map(d => [d.kind, sunPlate]),
+  ...PSY_KINDS.map(d => [d.kind, psyPlate])
+]);
 const TABS = [
   ["A1", "3D 볼륨"], ["A2", "일조·그림자"], ["A3", "바람"], ["A4", "열쾌적성"],
   ["A5", "단면"], ["A6", "컨텍스트 맵"], ["A7", "다이어그램 오버레이"], ["A8", "3D 액소노메트릭"]
 ];
+TABS.push(...LB_KINDS.map(d => [d.kind, d.ko]));
 const RAD = Math.PI / 180;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const hOf = b => { const h = heightOf(b); return h == null ? 3 : h; };
@@ -682,6 +693,95 @@ export function createTabs(api) {
 
   // ---- climate plates (A2 / A3 / A4 "다이어그램" view): vector SVG axonometric, see dgclimplate.js ------------------------------
   let shadowDay = SHADOW_DAYS[0].id, shadowHour = 12;
+  const lbOptions = {};
+  function tabLb(kind) {
+    const def = LB_KINDS.find(d => d.kind === kind);
+    const opts = lbOptions[kind] ??= Object.fromEntries(
+      def.controls.map(c => [c.key, c.default])
+    );
+    const ctx = api.ctx(), data = api.data();
+    if (["B3", "B4", "B5", "B6"].includes(kind) && !data.climate)
+      return missing(api.status("climate") === "loading"
+        ? "기후(EPW) 데이터를 불러오는 중…"
+        : "기후(EPW) 데이터를 불러오지 못했습니다.");
+    const name = `${kind.toLowerCase()}_plate`;
+    let cur = null;
+    controls.innerHTML = def.controls.map(c => {
+      const label = esc(c.label ?? c.ko ?? c.key);
+      const key = esc(c.key);
+      const field = c.type === "select"
+        ? `<select data-lb="${key}">${c.options.map(o =>
+          `<option value="${esc(o.value)}"${String(opts[c.key]) === String(o.value) ? " selected" : ""}>${esc(o.label ?? o.ko ?? o.value)}</option>`
+        ).join("")}</select>`
+        : `<input data-lb="${key}" type="${esc(c.type)}"
+          ${c.type === "checkbox" ? (opts[c.key] ? "checked" : "") : `value="${esc(opts[c.key])}"`}
+          ${["min", "max", "step"].filter(k => c[k] != null).map(k => `${k}="${esc(c[k])}"`).join(" ")}>`;
+      return `<label data-lb-label="${key}">${label} ${field}</label>`;
+    }).join("") + saveGroup(
+      ["svg", "png", "pdf", "dxf", "3dm"].map(k =>
+        `<button type="button" data-lb-save="${k}">${k === "3dm" ? k : k.toUpperCase()}</button>`
+      ).join("")
+    );
+    const draw = () => {
+      cur = null;
+      def.controls.forEach(c => {
+        const v = c.visibleWhen;
+        controls.querySelector(`[data-lb-label="${c.key}"]`).hidden =
+          !!v && opts[v.key] !== v.value;
+      });
+      const marker = document.createElement("p");
+      marker.className = "note";
+      marker.textContent = "계산 중…";
+      stage.replaceChildren(marker);
+      controls.querySelectorAll("[data-lb-save]").forEach(b => b.disabled = true);
+      setTimeout(() => {
+        if (!stage.contains(marker)) return;
+        try {
+          const env = {
+            ctx, data, pal: api.pal(), S: surfaceOf(ctx, data),
+            month: state.month, hour: state.utciHour, shadowDay, shadowHour
+          };
+          cur = LB_BUILD[kind](kind, env, { ...opts });
+          stage.innerHTML = `<div class="dg-2d" style="padding:8px;width:100%;height:100%;box-sizing:border-box;overflow:hidden">${cur.svg}</div>`;
+          const svg = stage.querySelector("svg");
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          Object.assign(svg.style, { width: "100%", height: "100%", display: "block" });
+          controls.querySelectorAll("[data-lb-save]").forEach(b => b.disabled = false);
+          fitStage();
+        } catch (e) { cur = null; missing(esc(e.message ?? e)); }
+      }, 0);
+    };
+    controls.querySelectorAll("[data-lb]").forEach(el => {
+      el.addEventListener(el.type === "range" ? "input" : "change", () => {
+        if (!el.reportValidity()) return;
+        const c = def.controls.find(c => c.key === el.dataset.lb);
+        opts[c.key] = c.type === "checkbox" ? el.checked
+          : c.type === "select"
+            ? c.options.find(o => String(o.value) === el.value).value
+            : Number(el.value);
+        draw();
+      });
+    });
+    controls.onclick = async e => {
+      const k = e.target.dataset.lbSave;
+      if (!k || !cur) return;
+      try {
+        const p = cur;
+        const spec = { def: p.def, sheet: p.sheet, ctx: p.ctx2, name };
+        if (k === "pdf")
+          await api.exportTab(k, {
+            ...spec, svg: p.svg.replace(/font-family="[^"]*"/, 'font-family="Noto Sans KR"')
+          }, e.target);
+        else if (k === "dxf" || k === "3dm")
+          await api.exportTab(k, { ...spec, custom: true }, e.target);
+        else if (k === "svg")
+          api.download(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + p.svg],
+            { type: "image/svg+xml" }), `${name}.svg`);
+        else api.download(await api.pngFromSvg(p.svg), `${name}.png`);
+      } catch (e) { missing(esc(e.message ?? e)); }
+    };
+    draw();
+  }
   function plateTab(id) {
     const ctx = api.ctx(), data = api.data();
     if (id !== "A2" && !data.climate) return missing(api.status("climate") === "loading" ? "기후(EPW) 데이터를 불러오는 중…" : "기후(EPW) 데이터를 불러오지 못했습니다.");
@@ -1147,7 +1247,8 @@ export function createTabs(api) {
     { const t = bar.getBoundingClientRect().top; if (Math.abs(t - 64) > 8) window.scrollTo({ top: window.scrollY + t - 64, behavior: "auto" }); }
     if (!ready()) return missing("다이어그램 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
     try {
-      if (state.view[id] === "plate") plateTab(id);
+      if (LB_BUILD[id]) tabLb(id);
+      else if (state.view[id] === "plate") plateTab(id);
       else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8 })[id]();
       fitStage();
     } catch (e) { console.error(e); missing("분석 다이어그램을 생성하지 못했습니다: " + e.message); }

@@ -203,7 +203,13 @@ ${opts.fontCss ? `<style>${opts.fontCss}</style>` : ""}
 
   const mapGroup = `<g id="${P}map" clip-path="url(#${P}clip)">` +
     `<rect x="${mapX}" y="${mapY}" width="${num(mapW)}" height="${num(mapH)}" fill="${pal.bg}"/>` +
-    sheet.layers.map(layerSvg).join("") + siteSvg + `</g>`;
+    sheet.layers.map(layerSvg).join("") + siteSvg + `</g>` +
+    // owner: zones clipped at the map edge left a dashed "box" — erase their clip edge and draw one solid hairline frame
+    (isCircle
+      ? `<circle cx="${num(mapX + mapW / 2)}" cy="${num(mapY + mapH / 2)}" r="${num(Math.min(mapW, mapH) / 2)}" fill="none" stroke="${pal.bg}" stroke-width="1.6"/>` +
+        `<circle cx="${num(mapX + mapW / 2)}" cy="${num(mapY + mapH / 2)}" r="${num(Math.min(mapW, mapH) / 2)}" fill="none" stroke="${MUTED}" stroke-width=".25"/>`
+      : `<rect x="${mapX}" y="${mapY}" width="${num(mapW)}" height="${num(mapH)}" fill="none" stroke="${pal.bg}" stroke-width="1.6"/>` +
+        `<rect x="${mapX}" y="${mapY}" width="${num(mapW)}" height="${num(mapH)}" fill="none" stroke="${MUTED}" stroke-width=".25"/>`);
 
   const frameDash = def.num === "15" ? ' stroke-dasharray="1.8 1.2"' : "";
   if (opts.card) {
@@ -291,7 +297,7 @@ ${opts.fontCss ? `<style>${opts.fontCss}</style>` : ""}
   const frame = isCircle
     ? `<circle id="${P}frame" cx="${num(mapX + mapW / 2)}" cy="${num(mapY + mapH / 2)}" r="${num(Math.min(mapW, mapH) / 2)}" fill="none" stroke="${INK}" stroke-width=".35"${frameDash}/>`
     : `<rect id="${P}frame" x="${mapX}" y="${mapY}" width="${num(mapW)}" height="${num(mapH)}" fill="none" stroke="${INK}" stroke-width=".35"${frameDash}/>`;
-  const foot = `<text x="${margin}" y="${h - 5}" font-size="2.6" fill="${MUTED}">SiteLaser · Archi Studio</text>`;
+  const foot = `<text x="${margin}" y="${h - 5}" font-size="2.6" fill="${MUTED}">Terrain · Atelier 4·2</text>`;
 
   const full = `<svg xmlns="http://www.w3.org/2000/svg"${opts.pdf ? ' xmlns:xlink="http://www.w3.org/1999/xlink"' : ""} viewBox="0 0 ${w} ${h}" ` +
     (opts.absoluteSize ? `width="${w}mm" height="${h}mm" ` : "") +
