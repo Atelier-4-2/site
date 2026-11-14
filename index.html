@@ -292,11 +292,12 @@
           <p id="file-note" class="note" aria-live="polite"></p>
         </section>
 
+        <!-- error lines sit right above the button they belong to (they used to appear far left, below it) -->
+        <p id="dg-error" class="note error" aria-live="polite" style="text-align:right" hidden></p>
+        <p id="site-error" class="note error" aria-live="polite" style="text-align:right" hidden></p>
         <div class="section-actions dg-only">
           <button id="dg-site-next" type="button" class="primary full-width">다음 · 다이어그램 생성</button>
         </div>
-        <p id="dg-error" class="note error" aria-live="polite" hidden></p>
-        <p id="site-error" class="note error" aria-live="polite" hidden></p>
         <div class="section-actions laser-only">
           <button id="site-next" type="button" class="primary full-width laser-only">
             다음 · 설정
@@ -735,7 +736,7 @@
   <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v04.js?v=20261114f1"); import("./app.js?v=20261114t1").catch(error => {
+    import("./diagrams_v05.js?v=20261114r2"); import("./app.js?v=20261114t1").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";
