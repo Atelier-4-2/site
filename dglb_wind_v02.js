@@ -1,7 +1,7 @@
 // North-up A3 plan plates. Pure ES module; no DOM or external libraries.
 // Inputs use EPSG:2154 metres. ctx.convergence follows dgenv/climate convention.
 // No input object or array is mutated.
-import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115a";
+import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115f";
 
 export const LB_KINDS = [
   {

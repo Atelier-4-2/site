@@ -6,18 +6,18 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115a";
+import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115f";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
-import { STYLES } from "./dgsemantic_v02.js?v=20261115a";
+import { STYLES } from "./dgsemantic_v02.js?v=20261115f";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114t1";
-import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115b";
+import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115f";
 const DETAIL_ZOOM_HINT = "더블클릭하면 그 지점을 확대하고, 다시 더블클릭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다.";
-import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115a";
-import { toDxf } from "./dgdxf_v03.js?v=20261115a";
+import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115f";
+import { toDxf } from "./dgdxf_v03.js?v=20261115f";
 import { buildPdf } from "./dgpdf.js?v=20261114t1";
-import { build3dm } from "./dg3dm_v03.js?v=20261115a";
+import { build3dm } from "./dg3dm_v03.js?v=20261115f";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -129,7 +129,10 @@ function readSite() {
   const kind = shape === "circle" ? "circle" : shape === "rect" ? "rect" : "square";
   const extent = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2].map(v => Math.round(v * 100) / 100);
   const [lon, lat] = toWGS84(cx, cy);
-  const addr = $("#search").value.trim() || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  // the typed text names the site only when a search was really run and the site was not then set by a
+  // click on the map; otherwise the sheets carry the coordinates (direct review, Gemini: a typed but
+  // unsearched address ended up as the title of a different place)
+  const addr = (addrFromSearch && $("#search").value.trim()) || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
   // Lambert-93 grid convergence: true north is rotated by -n*(lon-3 deg) from map-up.
   const convergence = -0.7256077650532670 * (lon - 3);
   return {
@@ -138,12 +141,25 @@ function readSite() {
   };
 }
 
+let addrFromSearch = false;
+{
+  const box = $("#search"), area = box?.closest(".search-area");
+  box?.addEventListener("keydown", e => { if (e.key === "Enter") addrFromSearch = true; });
+  area?.addEventListener("click", e => { if (e.target.closest("button, li, [role=option]")) addrFromSearch = true; });
+  document.querySelector("#map")?.addEventListener("click", () => { addrFromSearch = false; }, true);
+}
 function summarizeSite() {
   const c = readSite();
   $("#dg-site-summary").textContent = c
     ? `대지: ${c.address} · ${c.radiusLabel} · 분석 범위 ${Math.round(c.extent[2] - c.extent[0])} m`
     : "지도에서 대상 대지를 먼저 선택해 주세요.";
 }
+
+// the "set the site first" line disappears as soon as a site exists (it used to stay until the next click)
+for (const type of ["pointerup", "mouseup", "click", "keyup", "change"]) document.querySelector("#step-panel-1")?.addEventListener(type, () => setTimeout(() => {
+  const err = $("#site-error");
+  if (ignMap.bounds && err && !err.hidden) { err.textContent = ""; err.hidden = true; }
+}, 200), true);
 
 $("#dg-site-next").addEventListener("click", () => {
   const err = $("#site-error");

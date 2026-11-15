@@ -1,7 +1,7 @@
 // Shared preparation for the CAD exports (DXF, 3dm): turns a diagram sheet into plain,
 // colour-resolved layers + text lists in model coordinates (EPSG:2154 metres).
 // No hatches or fills are exported (owner rule v02): closed outlines only.
-import { SHEET, hex2rgb, wrapText, sheetScale } from "./dgcore_v04.js?v=20261115a";
+import { SHEET, hex2rgb, wrapText, sheetScale } from "./dgcore_v04.js?v=20261115f";
 
 export const WEIGHTS = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
 // sheet stroke width (mm) -> nearest standard CAD lineweight, in 1/100 mm

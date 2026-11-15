@@ -1,4 +1,4 @@
-import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261115a";
+import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261115f";
 // Diagram cards 06-08, 10-12, 14-16, 21, 25, 27 (vector data only). Merged into
 // the registry by dgdefs.js. Data colours are resolved by dgsemantic.js.
 import { ringArea, clipRingRect, circleRing, mix } from "./dgcore.js?v=20261113s";
@@ -38,6 +38,12 @@ const unknownStyle = (opt, w = .18) =>
   ({ fill: P(opt).bg, stroke: P(opt).edge, sw: lw(opt, w), dash: "0.9 0.7" });
 const lvl = m => Math.round(m / 3);
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
+// Mapped water drawn over area fills (walking isochrones, urban blocks): a river is neither walkable
+// ground nor a city block (direct review, Gemini).
+const waterOver = (opt, data) => ({
+  id: "water", name: "수면",
+  items: (data.waterS || []).flatMap(f => f.polygons.map(rings => ({ k: "poly", rings, fill: P(opt).water, stroke: "none", context: true })))
+});
 
 // Street canyon D/H for card 27. Unlike streetDH() in dganalysis.js (D = carriageway width from
 // BD TOPO, pavements excluded, which put almost every Paris street below 0.5), D here is the
@@ -442,7 +448,7 @@ export const IMPL2 = {
         layers: [...order.map(z => ({
           id: `iso_${z.min}`, name: `도보 ${z.min}분`,
           items: z.polygons.map(rings => ({ k: "poly", rings: rings.map(smoothRing), fill: fills[z.min] || fills[15], stroke: line, sw: lw(opt, .4), dash: "1.8 1.2" }))
-        })), ctxBuildings(opt, data)],
+        })), waterOver(opt, data), ctxBuildings(opt, data)],
         legend: [...[5, 10, 15].map(m => ({ kind: "fill", fill: fills[m], stroke: line, sw: .4, dash: "1.8 1.2", label: `도보 ${m}분 (약 ${Math.round(m * 80)} m 보행)` })),
           ctxLegend(opt), SITE],
         notes: ["IGN 경로 서비스(isochrone, bdtopo-valhalla, 보행)로 대지 중심에서 산출한 보행 등시간권입니다. 다이어그램 범위를 벗어나는 영역은 생략될 수 있습니다.",
@@ -462,6 +468,7 @@ export const IMPL2 = {
       const fill = pal.blocks + "D9";
       return {
         layers: [{ id: "blocks", name: "블록", items: faces.map(r => ({ k: "poly", rings: [r], fill, stroke: "#FFFFFF", sw: lw(opt, 1) })) },
+          waterOver(opt, data),
           { id: "bati_line", name: "건물", items: polyItems(data.buildings, () => ({ fill: pal.building, stroke: pal.buildingLine, sw: lw(opt, .06), context: true })) }],
         legend: [{ kind: "fill", fill, stroke: "#FFFFFF", sw: 1, label: "도시 가구 (블록)", count: faces.length },
           { kind: "fill", fill: pal.building, stroke: pal.buildingLine, sw: .06, label: "건물" }, SITE],

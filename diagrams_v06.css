@@ -30,3 +30,8 @@
   .dg-controls { justify-content: flex-start; gap: 6px 8px; }
   .dg-detail { width: 100vw; max-width: 100vw; padding: 10px; border-radius: 12px; }
 }
+
+/* 4. Card detail dialog: the letterbox around the sheet takes the dialog colour (it was pure white,
+      which glared around a dark-theme sheet). */
+.dg-detail .dg-sheet { background: transparent; border-color: transparent; }
+.dg-detail .dg-sheet svg { margin: 0 auto; }

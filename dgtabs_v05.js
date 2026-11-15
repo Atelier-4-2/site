@@ -1,24 +1,24 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261115a";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115f";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115a";
+import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115f";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
-} from "./dgenv_v02.js?v=20261115a";
-import { surfaceOf } from "./dgdefs3_v05.js?v=20261115a";
+} from "./dgenv_v02.js?v=20261115f";
+import { surfaceOf } from "./dgdefs3_v05.js?v=20261115f";
 import { extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115a";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115f";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
-import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261115a";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115b";
-import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115a";
+import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261115f";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115f";
+import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115f";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -127,7 +127,9 @@ export function createTabs(api) {
     const scale = r.width / stage.offsetWidth;
     stage.style.boxSizing = "border-box";
     const above = r.top - bar.getBoundingClientRect().top;   // tab bar + controls height, scroll-independent
-    const cap = stage.offsetWidth < 700 ? stage.offsetWidth * 1.1 : Infinity;   // phones: no tall empty stage
+    // phones: no tall empty stage. The diagram mode is a fixed 1680 px layout zoomed to the window, so the
+    // test is the real viewport (media query), not the layout width.
+    const cap = window.matchMedia("(max-width: 799px)").matches ? stage.offsetWidth * 1.1 : Infinity;
     stage.style.height =
       Math.min(cap, Math.max(420, (window.innerHeight / scale) - 64 - above / scale - 24)) + "px";
     gl?.resize?.();
@@ -326,6 +328,16 @@ export function createTabs(api) {
     return mesh;
   }
 
+  // A building reduced to its part inside the analysis extent (owner 2026-11-15: buildings that
+  // cross the edge are cut there instead of sticking out of the base plate). null = entirely outside.
+  function clipBld(b) {
+    const [x0, y0, x1, y1] = api.ctx().extent;
+    const polygon = clipRingRect(b.polygon, x0, y0, x1, y1);
+    if (polygon.length < 3 || ringArea(polygon) < 1) return null;
+    const holes = (b.holes || []).map(h => clipRingRect(h, x0, y0, x1, y1)).filter(h => h.length >= 3 && ringArea(h) >= .5);
+    return { polygon, holes };
+  }
+
   // All buildings become ONE mesh and ONE line-segment object (vertex colours carry the per-building tint).
   function buildings(pal, colourOf = null) {
     const data = api.data(), c0 = api.ctx().center;
@@ -333,8 +345,10 @@ export function createTabs(api) {
     const solids = [], edges = [];
     const tint = new THREE.Color();
     for (const b of data.buildings) {
-      const shape = new THREE.Shape(b.polygon.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1])));
-      for (const hole of b.holes) shape.holes.push(new THREE.Path(hole.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1]))));
+      const cb = clipBld(b);                       // only the part inside the analysis extent
+      if (!cb) continue;
+      const shape = new THREE.Shape(cb.polygon.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1])));
+      for (const hole of cb.holes) shape.holes.push(new THREE.Path(hole.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1]))));
       let gmin = Infinity, gmax = -Infinity;
       for (const p of b.polygon) { const z = demAt(data.dem, p[0], p[1]); gmin = Math.min(gmin, z); gmax = Math.max(gmax, z); }
       const h = hOf(b);
@@ -528,30 +542,11 @@ export function createTabs(api) {
     return mesh;
   }
 
-  // "N" on a white disc just outside the north edge of the sheet (true north), always facing the camera:
-  // without it the orbit view gave no clue which way is north (live review, Gemini)
-  function northMark(g) {
-    const ctx = api.ctx(), c = CONV(), r = (ctx.extent[3] - ctx.extent[1]) / 2 + g.side * .055;
-    const x = ctx.center[0] + Math.sin(c) * r, y = ctx.center[1] + Math.cos(c) * r;
-    const cv = document.createElement("canvas"); cv.width = cv.height = 128;
-    const k = cv.getContext("2d");
-    k.beginPath(); k.arc(64, 64, 58, 0, Math.PI * 2); k.fillStyle = "#FFFFFF"; k.fill();
-    k.lineWidth = 5; k.strokeStyle = "#1E293B"; k.stroke();
-    k.fillStyle = "#1E293B"; k.font = "bold 78px sans-serif"; k.textAlign = "center"; k.textBaseline = "middle"; k.fillText("N", 64, 69);
-    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-    spr.scale.set(g.side * .06, g.side * .06, 1);
-    spr.position.copy(P3(x, y, demAt(api.data().dem, x, y) + g.side * .02));
-    spr.renderOrder = 1000;
-    return spr;
-  }
-
   function buildBase(g, pal, opts = {}) {
     lights(g, pal);
     g.scene.add(terrain(pal), buildings(pal, opts.colourOf), siteOutline(pal));
     const wtr = water(pal);
     if (wtr) g.scene.add(wtr);
-    g.scene.add(northMark(g));
     const t = treeCrowns(pal);
     if (t) g.scene.add(t);
     return g;
@@ -594,6 +589,8 @@ export function createTabs(api) {
     const pal = api.pal(), ctx = api.ctx(), data = api.data();
     const g = frame3d(true);
     buildBase(g, pal);
+    // less fill light than in A1, so cast shadows stand out and their change over the day is easy to see
+    g.scene.traverse(o => { if (o.isHemisphereLight) o.intensity *= .62; });
     // dome radius > half diagonal of the sheet (0.707 x side), so the sun paths never cut through the
     // model, and the camera is fitted to model + dome so the paths are not cropped by the stage
     const R = g.side * .75;
@@ -661,7 +658,7 @@ export function createTabs(api) {
       const up = s.alt > 0;
       const v = dirOf(s);
       g.sun.position.copy(v.clone().multiplyScalar(g.side * 2.5));
-      g.sun.intensity = up ? (pal.dark ? 1.6 : 1.2) * Math.min(1, s.alt / (12 * RAD) + .25) : 0;
+      g.sun.intensity = up ? (pal.dark ? 1.9 : 1.55) * Math.min(1, s.alt / (12 * RAD) + .25) : 0;
       sunMarker.visible = up; sunMarker.position.copy(v.clone().multiplyScalar(R));
       $("a2-info").textContent = up
         ? `${d.label} ${fmtHour(state.hour)} · 고도 ${(s.alt / RAD).toFixed(1)}° · 방위 ${(s.az / RAD).toFixed(0)}°`
@@ -814,7 +811,6 @@ export function createTabs(api) {
     const dl = new THREE.DirectionalLight(0xffffff, .7); dl.position.set(1, 2, 1); g.scene.add(dl);
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
-    g.scene.add(northMark(g));
     const winds = new THREE.Group(); g.scene.add(winds);
     const [cx, cy] = ctx.center;
     const [x0, y0, x1, y1] = ctx.extent;
@@ -887,7 +883,6 @@ export function createTabs(api) {
     g.scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
-    g.scene.add(northMark(g));
     g.fit = makeFit(g, new THREE.Box3().setFromObject(g.scene));
     g.fit();
     const ov = new THREE.Group(); g.scene.add(ov);
@@ -1106,7 +1101,6 @@ export function createTabs(api) {
     const dl = new THREE.DirectionalLight(0xffffff, .7); dl.position.set(1, 2, 1); g.scene.add(dl);
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
-    g.scene.add(northMark(g));
     const ov = new THREE.Group(); g.scene.add(ov);
     const S = surfaceOf(ctx, data);
     controls.innerHTML = viewToggle(kind) + lbFields(def, opts) + saveGroup(`<button type="button" data-lb3="png">PNG</button>`) +
@@ -1319,7 +1313,8 @@ export function createTabs(api) {
     const mapDiv = $("a5-map"), profDiv = $("a5-profile");
     const tx = x => (x - x0) / S * 1000, ty = y => (y1 - y) / S * 1000;
     const path = (rings, close = true) => rings.map(r => r.map((p, i) => (i ? "L" : "M") + tx(p[0]).toFixed(1) + " " + ty(p[1]).toFixed(1)).join("") + (close ? "Z" : "")).join("");
-    const base = `<rect width="${VW}" height="${VH}" fill="${pal.bg}"/><path d="${data.buildings.map(b => path([b.polygon, ...b.holes])).join("")}" fill="${pal.building}" stroke="${pal.buildingLine}" stroke-width=".6" fill-rule="evenodd"/>` +
+    const waterD = (data.waterS || []).flatMap(f => f.polygons).map(r => path(r)).join("");   // the river, so the section line can be placed against it
+    const base = `<rect width="${VW}" height="${VH}" fill="${pal.bg}"/>${waterD ? `<path d="${waterD}" fill="${pal.water}" fill-rule="evenodd"/>` : ""}<path d="${data.buildings.map(b => path([b.polygon, ...b.holes])).join("")}" fill="${pal.building}" stroke="${pal.buildingLine}" stroke-width=".6" fill-rule="evenodd"/>` +
       `<path d="${path([ctx.site.ring])}" fill="none" stroke="${pal.siteLine}" stroke-width="3"/>`;
     function drawMap() {
       let ov = "";
@@ -1381,11 +1376,18 @@ export function createTabs(api) {
       const sx = d => 40 + d * k, sy = z => H - 40 - (z - zmin) * ve * k;
       const pl = (pts, close) => pts.map((p, i) => (i ? "L" : "M") + sx(p[0]).toFixed(1) + " " + sy(p[1]).toFixed(1)).join("") + (close ? "Z" : "");
       profile = { L, ground, blds, zmin, zmax, ve };
+      // elevation ticks on the left and distance ticks along the bottom (live review, Gemini)
+      const zStep = (zmax - zmin) > 60 ? 20 : (zmax - zmin) > 25 ? 10 : 5, dStep = L > 600 ? 200 : L > 250 ? 100 : 50;
+      let axisTicks = "";
+      for (let z = Math.ceil(zmin / zStep) * zStep; z <= zmax; z += zStep) axisTicks += `<path d="M${sx(0).toFixed(1)} ${sy(z).toFixed(1)}H${sx(L).toFixed(1)}" stroke="${pal.edge}" stroke-width=".6" stroke-dasharray="3 4"/><text x="${(sx(0) - 5).toFixed(1)}" y="${(sy(z) + 4).toFixed(1)}" font-size="11" text-anchor="end" fill="${pal.text}">${z}</text>`;
+      for (let dd = dStep; dd < L; dd += dStep) axisTicks += `<path d="M${sx(dd).toFixed(1)} ${(H - 40).toFixed(1)}v5" stroke="${pal.text}" stroke-width="1"/><text x="${sx(dd).toFixed(1)}" y="${(H - 24).toFixed(1)}" font-size="11" text-anchor="middle" fill="${pal.text}">${dd} m</text>`;
+      axisTicks += `<text x="${(sx(0) - 5).toFixed(1)}" y="${(sy(zmax) - 6).toFixed(1)}" font-size="10" text-anchor="end" fill="${pal.text}">m</text>`;
       profDiv.innerHTML = `<svg id="a5-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;height:100%;min-height:0;background:#fff" font-family="Noto Sans, Noto Sans KR, sans-serif">
         <rect width="${W}" height="${H}" fill="${pal.bg}"/>
         <path d="${blds.map(r => pl(r, true)).join("")}" fill="${pal.building}" stroke="${pal.buildingLine}" stroke-width="1" stroke-linejoin="round"/>
         <path d="${pl(ground)}" fill="none" stroke="${pal.text}" stroke-width="2"/>
-        <text x="40" y="26" font-size="16" fill="${pal.text}">단면 A–B · 길이 ${L.toFixed(0)} m · 표고 ${Math.min(...gzs).toFixed(1)}–${(zmax - 3).toFixed(1)} m · 건물 ${blds.length}</text>
+        ${axisTicks}
+        <text x="40" y="26" font-size="16" fill="${pal.text}">단면 A–B · 길이 ${L.toFixed(0)} m · 지형 표고 ${Math.min(...gzs).toFixed(1)}–${Math.max(...gzs).toFixed(1)} m${blds.length ? ` · 건물 최고 ${ztop.toFixed(1)} m` : ""} · 건물 ${blds.length}</text>
         <text x="${sx(0)}" y="${H - 14}" font-size="13" fill="${pal.text}">A</text><text x="${sx(L) - 8}" y="${H - 14}" font-size="13" fill="${pal.text}">B</text>
         <text x="${W - 40}" y="26" font-size="12" text-anchor="end" fill="${pal.text}">${ve === 1 ? "수직·수평 같은 축척" : `수직 과장 ×${ve}`} · 굵은 선 = 지형, 면 = 건물</text></svg>`;
     }
@@ -1435,6 +1437,20 @@ export function createTabs(api) {
     const path = (rings, close = true) => rings.map(r => r.map((p, i) => (i ? "L" : "M") + tx(p[0]).toFixed(1) + " " + ty(p[1]).toFixed(1)).join("") + (close ? "Z" : "")).join("");
     let vb = [0, 0, VW, VH];
     const circle = ctx.shape?.kind === "circle";
+    // North arrow (true north) and a scale bar drawn in the current view, so they keep their size on
+    // screen and stay correct while zooming; they are part of the SVG and are saved with it.
+    function fur() {
+      const u = vb[2] / 1000, mPerUnit = S / 1000;
+      const target = vb[2] * mPerUnit * .2, pw = 10 ** Math.floor(Math.log10(target));
+      const len = [1, 2, 5, 10].map(v => v * pw).reduce((a, b) => Math.abs(b - target) < Math.abs(a - target) ? b : a);
+      const bx = vb[0] + 36 * u, by = vb[1] + vb[3] - 34 * u, bw = len / mPerUnit;
+      const nx = vb[0] + vb[2] - 48 * u, ny = vb[1] + 70 * u;
+      const halo = `stroke="${pal.bg}" stroke-width="${5 * u}" paint-order="stroke"`;
+      return `<path d="M${bx} ${by - 7 * u}V${by}H${bx + bw}V${by - 7 * u}" fill="none" stroke="${pal.text}" stroke-width="${2 * u}"/>` +
+        `<text x="${bx + bw / 2}" y="${by - 10 * u}" font-size="${17 * u}" text-anchor="middle" fill="${pal.text}" ${halo}>${len} m</text>` +
+        `<g transform="rotate(${ctx.convergence || 0} ${nx} ${ny})"><path d="M${nx} ${ny + 22 * u}V${ny - 22 * u}M${nx - 8 * u} ${ny - 8 * u}L${nx} ${ny - 24 * u}L${nx + 8 * u} ${ny - 8 * u}" fill="none" stroke="${pal.text}" stroke-width="${2.2 * u}" stroke-linecap="round" stroke-linejoin="round"/>` +
+        `<text x="${nx}" y="${ny - 32 * u}" font-size="${20 * u}" font-weight="700" text-anchor="middle" fill="${pal.text}" ${halo}>N</text></g>`;
+    }
     function svg() {
       // the map keeps the site shape: circle -> circular crop, square / rectangle -> W x H
       let s = (circle ? `<defs><clipPath id="a6clip"><circle cx="${VW / 2}" cy="${VH / 2}" r="${Math.min(VW, VH) / 2}"/></clipPath></defs><g clip-path="url(#a6clip)">` : "<g>") +
@@ -1451,11 +1467,11 @@ export function createTabs(api) {
         s += (data.trees.crowns || []).map(c => `<circle cx="${tx(c.p[0]).toFixed(1)}" cy="${ty(c.p[1]).toFixed(1)}" r="${Math.max(1.6, c.d / 2 / S * 1000).toFixed(1)}" fill="${tcol}" fill-opacity="${c.kind === "A" ? .75 : .45}"/>`).join("");
       }
       s += `<path d="${path([ctx.site.ring])}" fill="none" stroke="${pal.siteLine}" stroke-width="3.5" stroke-dasharray="14 9"/></g>`;
-      return `<svg id="a6-svg" xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(" ")}" style="width:100%;height:100%;touch-action:none;cursor:grab">${s}</svg>`;
+      return `<svg id="a6-svg" xmlns="http://www.w3.org/2000/svg" viewBox="${vb.join(" ")}" style="width:100%;height:100%;touch-action:none;cursor:grab">${s}<g id="a6-fur">${fur()}</g></svg>`;
     }
     stage.innerHTML = `<div class="dg-2d" id="a6-wrap" style="padding:0;overflow:hidden">${svg()}</div>`;
     const wrap = $("a6-wrap");
-    const apply = () => { wrap.querySelector("svg").setAttribute("viewBox", vb.join(" ")); };
+    const apply = () => { wrap.querySelector("svg").setAttribute("viewBox", vb.join(" ")); wrap.querySelector("#a6-fur").innerHTML = fur(); };
     wrap.addEventListener("wheel", e => {
       e.preventDefault();
       const svgEl = wrap.querySelector("svg"), pt = svgEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
@@ -1563,7 +1579,9 @@ export function createTabs(api) {
       const h = hOf(b), base = Math.min(...b.polygon.map(p => zOf(p[0], p[1])));
       // unknown height (drawn at 3 m) gets its own neutral tint, never a height class
       const col = state.axoMode === "height" ? (heightOf(b) == null ? unkCol : seqOf(pal)[hcls(h)]) : state.axoMode === "site" ? (inSite(b) ? pal.site : pal.building) : pal.building;
-      const ring = b.polygon;
+      const cb = clipBld(b);
+      if (!cb) continue;
+      const ring = cb.polygon;
       const roof = ring.map(p => proj(p[0], p[1], base + h));
       const walls = [], corners = [], feet = [];
       const addWalls = (r, inward) => {
@@ -1596,8 +1614,8 @@ export function createTabs(api) {
         }
       };
       addWalls(ring, false);
-      for (const hole of b.holes) addWalls(hole, true); // courtyard walls
-      const holeRoofs = b.holes.map(hr => hr.map(p => proj(p[0], p[1], base + h)));
+      for (const hole of cb.holes) addWalls(hole, true); // courtyard walls
+      const holeRoofs = cb.holes.map(hr => hr.map(p => proj(p[0], p[1], base + h)));
       const vc = roof.reduce((a, p) => a + p[2], 0) / roof.length;
       items.push({ roof, holeRoofs, walls, corners, feet, col, depth: vc, base });
     }
