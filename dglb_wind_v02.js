@@ -1,7 +1,7 @@
 // North-up A3 plan plates. Pure ES module; no DOM or external libraries.
 // Inputs use EPSG:2154 metres. ctx.convergence follows dgenv/climate convention.
 // No input object or array is mutated.
-import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261114r1";
+import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115a";
 
 export const LB_KINDS = [
   {
@@ -755,10 +755,13 @@ export function buildLbPlate(kind, env, opts = {}) {
   const noteStart = d.svg.length;
   d.text(12, 275, result.source, 2.1, "start", SUB);
   d.text(12, 282, result.note, 2.05);
-  for (let i = noteStart; i < d.svg.length; i++) {
-    d.svg[i] = d.svg[i].replace("<text ",
+  // squeeze a footer line only when it would overrun the 390 mm frame; forcing textLength on a short
+  // line stretched its glyphs to several times their size (live review, Gemini)
+  [[result.source, 2.1], [result.note, 2.05]].forEach(([t, size], k) => {
+    const est = [...String(t)].reduce((w, ch) => w + (ch.charCodeAt(0) < 128 ? .52 : 1), 0) * size;
+    if (est > 390) d.svg[noteStart + k] = d.svg[noteStart + k].replace("<text ",
       '<text textLength="390" lengthAdjust="spacingAndGlyphs" ');
-  }
+  });
   const notes = [result.source, result.note];
   const sources = kind === "B1"
     ? ["BD TOPO® V3", "EPW TMYx", "Hong Kong AVA",

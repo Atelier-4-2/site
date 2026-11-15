@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261114r1";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115a";
 // Shared drawing core for the site-analysis diagrams (diagrams.html).
 // Model coordinates are EPSG:2154 metres. Sheet units are millimetres (A3).
 
@@ -126,6 +126,8 @@ function legendSwatch(e, x, y, pal, P = "") {
       return `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="1.5" fill="${e.fill || "none"}" stroke="${stroke}" stroke-width="${num(e.sw ?? .2)}"/>`;
     case "dots":
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${P}dots)" stroke="${stroke}" stroke-width=".2"/>`;
+    case "sitePoint":   // point + radius site: the map shows a centre mark, not a boundary
+      return `<circle cx="${x + w / 2}" cy="${y + h / 2}" r="1.1" fill="${pal.siteLine}"/><circle cx="${x + w / 2}" cy="${y + h / 2}" r="2.3" fill="none" stroke="${pal.siteLine}" stroke-width=".35"/>`;
     case "site":
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${pal.bg}" stroke-width="1.7"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${pal.siteLine}" stroke-width="1"/>`;
     default:
@@ -256,7 +258,10 @@ ${opts.fontCss ? `<style>${opts.fontCss}</style>` : ""}
   }
   pitch = Math.max(3.6, pitch);
   const fs = pitch < 5.2 ? 2.8 : 3.3;
-  for (const e of sheet.legend) {
+  for (const e0 of sheet.legend) {
+    // a site that fills the sheet is drawn as a centre mark only (its boundary lies under the map frame),
+    // so the legend shows that mark instead of a red "boundary" box (live review, Gemini)
+    const e = e0.kind === "site" && !smallSite ? { ...e0, kind: "sitePoint", label: "대지 중심" } : e0;
     panel += legendSwatch(e, px, y - 3.4 * (fs / 3.3), pal, P);
     const label = e.label + (e.count != null ? `  ${e.count}` : "");
     panel += `<text x="${px + 12}" y="${y}" font-size="${fs}" fill="${INK}">${esc(label)}</text>`;

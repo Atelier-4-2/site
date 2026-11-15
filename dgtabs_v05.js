@@ -1,24 +1,24 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261114r1";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115a";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261114r2";
+import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115a";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
-} from "./dgenv_v02.js?v=20261114r1";
-import { surfaceOf } from "./dgdefs3_v05.js?v=20261114r1";
+} from "./dgenv_v02.js?v=20261115a";
+import { surfaceOf } from "./dgdefs3_v05.js?v=20261115a";
 import { extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261114r2";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115a";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
-import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261114r1";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261114r1";
-import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261114r1";
+import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261115a";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115a";
+import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115a";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -127,8 +127,9 @@ export function createTabs(api) {
     const scale = r.width / stage.offsetWidth;
     stage.style.boxSizing = "border-box";
     const above = r.top - bar.getBoundingClientRect().top;   // tab bar + controls height, scroll-independent
+    const cap = stage.offsetWidth < 700 ? stage.offsetWidth * 1.1 : Infinity;   // phones: no tall empty stage
     stage.style.height =
-      Math.max(420, (window.innerHeight / scale) - 64 - above / scale - 24) + "px";
+      Math.min(cap, Math.max(420, (window.innerHeight / scale) - 64 - above / scale - 24)) + "px";
     gl?.resize?.();
   }
   window.addEventListener("resize", fitStage);
@@ -286,7 +287,7 @@ export function createTabs(api) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx); geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: mix(pal.bg, pal.green, pal.dark ? .5 : .25), roughness: 1, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: pal.dark ? mix(mix(pal.bg, pal.green, .5), "#ffffff", .14) : mix(pal.bg, pal.green, .25), roughness: 1, side: THREE.DoubleSide }));
     mesh.receiveShadow = true;
     return mesh;
   }
@@ -407,7 +408,7 @@ export function createTabs(api) {
   // building) is bilinearly interpolated on an `up`× finer canvas and only then classified by
   // `col(v)`, so class boundaries follow smooth curves instead of the 4 m cell staircase that
   // showed as saw-teeth in the 3D views.
-  function fieldTexture(S, val, col, up = 4) {
+  function fieldTexture(S, val, col, up = 4, hide = null) {
     const v = new Float32Array(S.nx * S.ny);
     for (let k = 0; k < v.length; k++) v[k] = val(k);
     const W = S.nx * up, H = S.ny * up;
@@ -422,6 +423,10 @@ export function createTabs(api) {
       for (const [a, b] of q) if (!Number.isNaN(a)) { s += a * b; w += b; }
       const own = at(Math.round(gx), Math.round(gy));
       const o = ((H - 1 - py) * W + px) * 4;
+      if (hide) {                                             // e.g. water cells: no overlay colour there
+        const hv = (i, j) => hide[Math.max(0, Math.min(S.ny - 1, j)) * S.nx + Math.max(0, Math.min(S.nx - 1, i))];
+        if (hv(i0, j0) * (1 - fx) * (1 - fy) + hv(i0 + 1, j0) * fx * (1 - fy) + hv(i0, j0 + 1) * (1 - fx) * fy + hv(i0 + 1, j0 + 1) * fx * fy > .5) { img.data[o + 3] = 0; continue; }
+      }
       if (Number.isNaN(own) || w === 0) { img.data[o + 3] = 0; continue; }
       const c = col(s / w);
       if (!c) { img.data[o + 3] = 0; continue; }
@@ -440,6 +445,31 @@ export function createTabs(api) {
     const f = extendGround(Float32Array.from({ length: S.nx * S.ny }, (_, k) => val(k)), S.nx, S.ny);
     return sigma && Number.isFinite(f[0]) ? gaussian(f, S.nx, S.ny, sigma) : f;
   };
+  // Ground cells under a mapped water surface (cell centre inside a BD TOPO water polygon). The ground
+  // overlays (sun hours, shadows, UTCI, B3 / B4) stay transparent there, so a river reads as water
+  // instead of sunny or hot ground (live review, GPT + Gemini).
+  const waterMasks = new WeakMap();
+  function waterMaskOf(S) {
+    const feats = api.data().waterS;
+    if (!feats) return null;                                  // not loaded yet: do not cache an empty mask
+    let m = waterMasks.get(S);
+    if (m) return m;
+    m = new Uint8Array(S.nx * S.ny);
+    for (const f of feats) for (const rings of f.polygons) {
+      const outer = rings[0];
+      if (!outer || outer.length < 3) continue;
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const p of outer) { a = Math.min(a, p[0]); b = Math.min(b, p[1]); c = Math.max(c, p[0]); d = Math.max(d, p[1]); }
+      const i0 = Math.max(0, Math.floor((a - S.x0) / S.step)), i1 = Math.min(S.nx - 1, Math.floor((c - S.x0) / S.step));
+      const j0 = Math.max(0, Math.floor((b - S.y0) / S.step)), j1 = Math.min(S.ny - 1, Math.floor((d - S.y0) / S.step));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const x = S.x0 + (i + .5) * S.step, y = S.y0 + (j + .5) * S.step;
+        if (inRing(outer, x, y) && !rings.slice(1).some(h => inRing(h, x, y))) m[j * S.nx + i] = 1;
+      }
+    }
+    waterMasks.set(S, m);
+    return m;
+  }
   const rgbOf = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
   function siteOutline(pal) {
@@ -484,7 +514,7 @@ export function createTabs(api) {
     const crowns = api.data().trees?.crowns || [];
     if (!crowns.length) return null;
     const geo = new THREE.IcosahedronGeometry(.5, 1);
-    const mat = new THREE.MeshStandardMaterial({ color: mix(pal.green, pal.text, pal.dark ? .1 : .25), roughness: 1, flatShading: true });
+    const mat = new THREE.MeshStandardMaterial({ color: pal.dark ? mix(pal.green, "#ffffff", .4) : mix(pal.green, pal.text, .25), roughness: 1, flatShading: true });
     const mesh = new THREE.InstancedMesh(geo, mat, crowns.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
     crowns.forEach((c, i) => {
@@ -498,11 +528,30 @@ export function createTabs(api) {
     return mesh;
   }
 
+  // "N" on a white disc just outside the north edge of the sheet (true north), always facing the camera:
+  // without it the orbit view gave no clue which way is north (live review, Gemini)
+  function northMark(g) {
+    const ctx = api.ctx(), c = CONV(), r = (ctx.extent[3] - ctx.extent[1]) / 2 + g.side * .055;
+    const x = ctx.center[0] + Math.sin(c) * r, y = ctx.center[1] + Math.cos(c) * r;
+    const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+    const k = cv.getContext("2d");
+    k.beginPath(); k.arc(64, 64, 58, 0, Math.PI * 2); k.fillStyle = "#FFFFFF"; k.fill();
+    k.lineWidth = 5; k.strokeStyle = "#1E293B"; k.stroke();
+    k.fillStyle = "#1E293B"; k.font = "bold 78px sans-serif"; k.textAlign = "center"; k.textBaseline = "middle"; k.fillText("N", 64, 69);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    spr.scale.set(g.side * .06, g.side * .06, 1);
+    spr.position.copy(P3(x, y, demAt(api.data().dem, x, y) + g.side * .02));
+    spr.renderOrder = 1000;
+    return spr;
+  }
+
   function buildBase(g, pal, opts = {}) {
     lights(g, pal);
     g.scene.add(terrain(pal), buildings(pal, opts.colourOf), siteOutline(pal));
     const wtr = water(pal);
     if (wtr) g.scene.add(wtr);
+    g.scene.add(northMark(g));
     const t = treeCrowns(pal);
     if (t) g.scene.add(t);
     return g;
@@ -550,7 +599,10 @@ export function createTabs(api) {
     const R = g.side * .75;
     {
       const box = new THREE.Box3().setFromObject(g.scene);
-      box.expandByPoint(new THREE.Vector3(-R, 0, -R)).expandByPoint(new THREE.Vector3(R, R * .93, R));   // .93 = sin of the highest sun in France (~68 deg)
+      // model plus a moderate margin: fitting the whole dome made the model too small to read the shadows
+      // (live review, GPT + Gemini); the low ends of the paths may leave the frame, orbit / zoom shows them
+      const F = g.side * .6;
+      box.expandByPoint(new THREE.Vector3(-F, 0, -F)).expandByPoint(new THREE.Vector3(F, g.side * .5, F));
       g.fit = makeFit(g, box);
       g.fit();
     }
@@ -637,7 +689,7 @@ export function createTabs(api) {
         const hourCols = [...CLIMATE.sun.hours].reverse();
         const cols = hourCols.map(rgbOf);
         const hf = groundField(S, k => res.hours[k], .8);
-        const tex = fieldTexture(S, k => hf[k], h => cols[h < 2 ? 0 : h < 4 ? 1 : h < 6 ? 2 : h < 8 ? 3 : 4], 6);
+        const tex = fieldTexture(S, k => hf[k], h => cols[h < 2 ? 0 : h < 4 ? 1 : h < 6 ? 2 : h < 8 ? 3 : 4], 6, waterMaskOf(S));
         overlayGroup.add(draped(tex, S, .25));
         $("a2-overlay-note").textContent = `일조 분석도(${d.label}): 가조시간 ${res.daylight.toFixed(1)}시간 중 직사일조 시간 (5단계 구분, 건물 안 제외).`;
         $("a2-legend").innerHTML = ["0–2", "2–4", "4–6", "6–8", "8 이상"].map((t, i) => `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px"><i style="width:12px;height:12px;background:${hourCols[i]};border:1px solid ${i < 4 ? "transparent" : CLIMATE.sun.hoursEdge || CLIMATE.ink};display:inline-block"></i>${t} h</span>`).join("");
@@ -649,7 +701,7 @@ export function createTabs(api) {
           const mask = shadowMask(S, s.az + conv, s.alt);
           const c = rgbOf([CLIMATE.sun.h9, CLIMATE.sun.h12, CLIMATE.sun.h15][idx]);
           const mf = groundField(S, k => S.bld[k] ? NaN : (mask[k] === 1 ? 1 : 0));
-          const tex = fieldTexture(S, k => mf[k], m => m >= .5 ? [c[0], c[1], c[2], 150] : null, 6);
+          const tex = fieldTexture(S, k => mf[k], m => m >= .5 ? [c[0], c[1], c[2], 150] : null, 6, waterMaskOf(S));
           const m = draped(tex, S, .25 + idx * .05);
           m.renderOrder = 3 + idx;
           overlayGroup.add(m);
@@ -762,6 +814,7 @@ export function createTabs(api) {
     const dl = new THREE.DirectionalLight(0xffffff, .7); dl.position.set(1, 2, 1); g.scene.add(dl);
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
+    g.scene.add(northMark(g));
     const winds = new THREE.Group(); g.scene.add(winds);
     const [cx, cy] = ctx.center;
     const [x0, y0, x1, y1] = ctx.extent;
@@ -798,8 +851,10 @@ export function createTabs(api) {
         for (const part of [shaft, tip]) part.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), heading);
         winds.add(shaft, tip);
       });
-      $("a3-directions").textContent = [
-        ...top.map(({ dir, count }, i) => `${i + 1}순위 ${WIND_DIRECTIONS[dir]} ${(100 * count / total).toFixed(1)}%`),
+      // in the arrow view each rank carries the colour of its arrow (live review, Gemini)
+      const chip = i => windView === "arrows" ? `<i style="display:inline-block;width:18px;height:6px;border-radius:3px;vertical-align:middle;margin-right:4px;background:${i ? CLIMATE.wind.arrow2 : CLIMATE.wind.arrow1}"></i>` : "";
+      $("a3-directions").innerHTML = [
+        ...top.map(({ dir, count }, i) => `${chip(i)}${i + 1}순위 ${WIND_DIRECTIONS[dir]} ${(100 * count / total).toFixed(1)}%`),
         `정온 ${(100 * st.calm[p] / Math.max(1, total)).toFixed(1)}%`
       ].join(" · ");
     };
@@ -832,6 +887,7 @@ export function createTabs(api) {
     g.scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
+    g.scene.add(northMark(g));
     g.fit = makeFit(g, new THREE.Box3().setFromObject(g.scene));
     g.fit();
     const ov = new THREE.Group(); g.scene.add(ov);
@@ -855,7 +911,7 @@ export function createTabs(api) {
       const tex = fieldTexture(S, k => field[k], litF => {
         const t = Math.max(0, Math.min(1, (litF - .38) / .24));
         return cShade.map((shade, i) => shade + (cSun[i] - shade) * t);
-      }, 6);
+      }, 6, waterMaskOf(S));
       ov.add(draped(tex, S, .12));
       $("a4-info").textContent = `${utciInfoText(e)} · 양지 ${(sunny / Math.max(1, tot) * 100).toFixed(0)} %`;
       const legend = $("a4-legend");
@@ -1050,6 +1106,7 @@ export function createTabs(api) {
     const dl = new THREE.DirectionalLight(0xffffff, .7); dl.position.set(1, 2, 1); g.scene.add(dl);
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
     { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
+    g.scene.add(northMark(g));
     const ov = new THREE.Group(); g.scene.add(ov);
     const S = surfaceOf(ctx, data);
     controls.innerHTML = viewToggle(kind) + lbFields(def, opts) + saveGroup(`<button type="button" data-lb3="png">PNG</button>`) +
@@ -1074,7 +1131,7 @@ export function createTabs(api) {
           }
           const values = r.stats.values;
           const vf = groundField(S, k => S.bld[k] ? NaN : values[k], .8);
-          ov.add(draped(fieldTexture(S, k => vf[k], v => rampRgb(spec.stops, spec.t(v)), 6), S, .25));
+          ov.add(draped(fieldTexture(S, k => vf[k], v => rampRgb(spec.stops, spec.t(v)), 6, waterMaskOf(S)), S, .25));
           $("lb3-info").textContent = spec.info(r.stats);
           const hex = c => "#" + c.map(x => x.toString(16).padStart(2, "0")).join("");
           $("lb3-legend").innerHTML = `<div style="width:260px;max-width:100%;text-align:left">${esc(spec.title(r.stats))} (${spec.unit})
@@ -1268,6 +1325,7 @@ export function createTabs(api) {
       let ov = "";
       if (section.a) ov += `<circle cx="${tx(section.a[0])}" cy="${ty(section.a[1])}" r="8" fill="${pal.siteLine}"/>`;
       if (section.a && section.b) ov += `<line x1="${tx(section.a[0])}" y1="${ty(section.a[1])}" x2="${tx(section.b[0])}" y2="${ty(section.b[1])}" stroke="${pal.siteLine}" stroke-width="4"/><circle cx="${tx(section.b[0])}" cy="${ty(section.b[1])}" r="8" fill="${pal.siteLine}"/>`;
+      for (const [pt, name] of [[section.a, "A"], [section.b, "B"]]) if (pt) ov += `<text x="${tx(pt[0]) + 14}" y="${ty(pt[1]) - 12}" font-size="34" font-weight="700" fill="${pal.siteLine}" stroke="${pal.bg}" stroke-width="6" paint-order="stroke">${name}</text>`;
       mapDiv.innerHTML = svgMap(base + ov, `0 0 ${VW} ${VH}`);
     }
     function drawProfile() {

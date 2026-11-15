@@ -3,7 +3,7 @@
 // Ported from SiteLaser/web/drafts/climate (common.js, draft-a2/a3/a4.js), re-targeted at the real site (ctx, buildings, DEM
 // surface, EPW station) with the climate-only colour set (briefs/sitelaser_climate_build_v01.md).
 // Owner graphic rules: white background, line based, no hatch, Noto Sans, no area labels. #E6B89C / #B87D5B only on the site.
-import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261114r1";
+import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261115a";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import { UTCI_CATS, UTCI_RANGE, utciCat, utciShade, utciSun, deltaMrtSun, clearSkyDni } from "./dgutci.js?v=20261113x";
 
@@ -17,7 +17,7 @@ export const CLIMATE = {
     hours: ["#FDE74C", "#F9A620", "#E34A33", "#B30059", "#5E0035"], hoursEdge: "#1E293B" },
   wind: { calm: "#E2E8F0", bins: ["#7FBC8C", "#41B6C4", "#1D91C0", "#225EA8", "#081D58"], arrow1: "#081D58", arrow2: "#1D91C0",
     season: { 2: "#009E73", 3: "#E69F00", 4: "#6B3FA0", 1: "#0072B2" } },
-  ink: "#1E293B", sub: "#475569", ring: "#CBD5E1", bld: "#94A3B8", site: "#E6B89C", siteLine: "#B87D5B"
+  ink: "#1E293B", sub: "#475569", ring: "#CBD5E1", bld: "#94A3B8", bldLine: "#64748B",   /* bldLine: context buildings on the plates, darker and heavier than before (live review) */ site: "#E6B89C", siteLine: "#B87D5B"
 };
 export const SPEED_LABELS = ["0.5–2", "2–4", "4–6", "6–8", "8 이상"];
 const SEASONS = [{ ko: "연간", fr: "Annuel" }, { ko: "겨울", fr: "Hiver" }, { ko: "봄", fr: "Printemps" }, { ko: "여름", fr: "Été" }, { ko: "가을", fr: "Automne" }];
@@ -176,14 +176,14 @@ function drawBuildings(d, ax, list) {
         const p = ring[i], q = ring[(i + 1) % ring.length];
         const nx = (q[1] - p[1]) * sg, ny = -(q[0] - p[0]) * sg;
         if (nx * ax.cam[0] + ny * ax.cam[1] <= 0) continue;
-        d.poly([ax.P(p[0], p[1], 0), ax.P(q[0], q[1], 0), ax.P(q[0], q[1], b.h), ax.P(p[0], p[1], b.h)], { fill: "#fff", stroke: CLIMATE.bld, w: .09, layer: "bld" });
+        d.poly([ax.P(p[0], p[1], 0), ax.P(q[0], q[1], 0), ax.P(q[0], q[1], b.h), ax.P(p[0], p[1], b.h)], { fill: "#fff", stroke: CLIMATE.bldLine, w: .14, layer: "bld" });
       }
     };
     addWalls(b.outer, false); b.holes.forEach(r => addWalls(r, true));
     const roof = [b.outer, ...b.holes].map(ring => ax.G(ring, b.h));
     if (b.holes.length) d.area([roof], "#fff");
     for (const ring of roof) {
-      d.poly(ring, { fill: b.holes.length ? "none" : "#fff", stroke: CLIMATE.bld, w: .09, layer: "bld" });
+      d.poly(ring, { fill: b.holes.length ? "none" : "#fff", stroke: CLIMATE.bldLine, w: .14, layer: "bld" });
     }
   }
 }

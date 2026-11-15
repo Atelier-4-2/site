@@ -1,4 +1,4 @@
-import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261114r1";
+import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261115a";
 // Diagram cards 06-08, 10-12, 14-16, 21, 25, 27 (vector data only). Merged into
 // the registry by dgdefs.js. Data colours are resolved by dgsemantic.js.
 import { ringArea, clipRingRect, circleRing, mix } from "./dgcore.js?v=20261113s";
@@ -536,11 +536,13 @@ export const IMPL2 = {
       // narrow canyon = dark in every theme (some themes list the ramp dark-first)
       const lum = c => parseInt(c.slice(1, 3), 16) * .2126 + parseInt(c.slice(3, 5), 16) * .7152 + parseInt(c.slice(5, 7), 16) * .0722;
       const cols = lum(pal.dh[0]) < lum(pal.dh[pal.dh.length - 1]) ? [...pal.dh] : [...pal.dh].reverse();
+      cols[cols.length - 1] = mix(cols[cols.length - 1], pal.text, .22);   // widest class was the same tone as the paper
       const W = [1.3, 1.1, .9, .7, .5];
+      const waterCtx = { id: "water", name: "수면", items: (data.waterS || []).flatMap(f => f.polygons.map(rings => ({ k: "poly", rings, fill: pal.water, stroke: "none", context: true }))) };
       const b = CL.map(() => []), unk = [];
       for (const s of segs) (s.ratio == null ? unk : b[CL.findIndex(c => c.test(s.ratio))]).push(s);
       return {
-        layers: [ctxBuildings(opt, data),
+        layers: [waterCtx, ctxBuildings(opt, data),
           { id: "dh_unknown", name: UNK, items: unk.map(s => ({ k: "line", pts: s.pts, stroke: pal.edge, sw: lw(opt, .2), dash: "0.9 0.7" })) },
           ...CL.map((c, i) => ({ id: c.id, name: c.label, items: b[i].map(s => ({ k: "line", pts: s.pts, stroke: cols[i], sw: lw(opt, W[i]), cap: "butt" })) }))],
         legend: [...CL.map((c, i) => ({ kind: "line", stroke: cols[i], sw: W[i], label: c.label, count: b[i].length })),

@@ -1,11 +1,11 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261114r1";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115a";
 // Diagram cards 18, 19, 22, 23, 24, 26, 28 (computed from terrain / buildings / climate).
 // Every result is a reference simulation: "참고용 시뮬레이션, 법적 효력 없음".
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   contours, slopeAspect, makeSurface, sunHours, skyViewFactor, viewshed,
   nearestStation, KEY_DAYS
-} from "./dgenv_v02.js?v=20261114r1";
+} from "./dgenv_v02.js?v=20261115a";
 import { bands, contourRings, extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { toWGS84 } from "./ign.js?v=20261113p";
 
@@ -24,6 +24,13 @@ const solidCtx = (opt, data) => ({
   id: "context", name: "건물",
   items: polyItems(data.buildings || [], () => ({ fill: P(opt).buildingLine, stroke: P(opt).buildingLine, sw: lw(opt, .06), context: true, cardStroke: true }))
 });
+// Mapped water above the ground bands of the sun / sky-view / aspect cards: a river is not ground
+// to be scored (live review, GPT + Gemini).
+const waterTop = (opt, data) => ({
+  id: "water_top", name: "수면",
+  items: (data.waterS || []).flatMap(f => f.polygons.map(rings => ({ k: "poly", rings, fill: P(opt).water, stroke: P(opt).waterLine, sw: lw(opt, .12), context: true, cardStroke: true })))
+});
+const waterLegend = (opt, data) => data.waterS?.length ? [{ kind: "fill", fill: P(opt).water, stroke: P(opt).waterLine, sw: .12, label: "수면" }] : [];
 const solidLegend = opt => ({ kind: "fill", fill: P(opt).buildingLine, stroke: P(opt).buildingLine, sw: .06, label: "건물" });
 const ctxLegend = opt => ({ kind: "fill", fill: P(opt).building, stroke: P(opt).buildingLine, sw: .06, label: "건물" });
 
@@ -137,9 +144,9 @@ function aspectSheet(ctx, data, opt) {
   for (let k = 0; k < slope.length; k++) if (Number.isFinite(z[k])) { all++; if (cls(k) < 0) flat++; }
   const flatPct = all ? Math.round(100 * flat / all) : 0;
   return {
-    layers: [...layers, solidCtx(opt, data)],
+    layers: [...layers, waterTop(opt, data), solidCtx(opt, data)],
     legend: [...DIRS8.map((n, i) => ({ kind: "compass", angle: i * 45, fill: cols[i], stroke: pal.edge, label: `${n} 향` })),
-      { kind: "fill", fill: pal.bg, stroke: pal.edge, sw: .1, label: "평탄지(경사 3% 미만)" }, solidLegend(opt), SITE],
+      { kind: "fill", fill: pal.bg, stroke: pal.edge, sw: .1, label: "평탄지(경사 3% 미만)" }, solidLegend(opt), ...waterLegend(opt, data), SITE],
     notes: ["경사향(Aspect) · DEM 3×3 평균 · 경사 3% 이상",
       ...(flatPct >= 70 ? [`분석 범위의 ${flatPct}%가 경사 3% 미만 평탄지라 향이 거의 표시되지 않습니다.`] : []), SIM],
     sources: ["IGN RGE ALTI® — Géoplateforme altimetrie"]
@@ -157,8 +164,8 @@ function sunSheet(ctx, data, opt) {
   const values = res.hours.map(h => res.daylight > 0 ? h / res.daylight : NaN);
   const layers = groundLayers(S, values, [0, .2, .4, .6, .8], SUN_CLASSES, pal.sun, "sun");
   return {
-    layers: [...layers, solidCtx(opt, data)],
-    legend: [...SUN_CLASSES.map((c, i) => ({ kind: "fill", fill: pal.sun[i], stroke: pal.edge, sw: .1, label: `일조율 ${c}` })), solidLegend(opt), SITE],
+    layers: [...layers, waterTop(opt, data), solidCtx(opt, data)],
+    legend: [...SUN_CLASSES.map((c, i) => ({ kind: "fill", fill: pal.sun[i], stroke: pal.edge, sw: .1, label: `일조율 ${c}` })), solidLegend(opt), ...waterLegend(opt, data), SITE],
     notes: [`${day.label} 일조 시뮬레이션: 가조시간(${res.daylight.toFixed(1)}시간) 중 지표면(지상 0.5 m) 직사일조 도달 비율 (30분 간격 ${res.samples}회 표본).`,
       ...surfNote(S, data)],
     sources: ["태양 위치: Meeus/SunCalc 알고리즘 계산 (Europe/Paris 현지시 기준)"]
@@ -175,8 +182,8 @@ function svfSheet(ctx, data, opt) {
   const svf = skyViewFactor(S, 32, 150);
   const layers = groundLayers(S, svf, [0, .6, .7, .8, .9], SVF_CLASSES, pal.svf, "svf");
   return {
-    layers: [...layers, solidCtx(opt, data)],
-    legend: [...SVF_CLASSES.map((c, i) => ({ kind: "fill", fill: pal.svf[i], stroke: pal.edge, sw: .1, label: `SVF ${c}` })), solidLegend(opt), SITE],
+    layers: [...layers, waterTop(opt, data), solidCtx(opt, data)],
+    legend: [...SVF_CLASSES.map((c, i) => ({ kind: "fill", fill: pal.svf[i], stroke: pal.edge, sw: .1, label: `SVF ${c}` })), solidLegend(opt), ...waterLegend(opt, data), SITE],
     notes: ["천공률(Sky View Factor, SVF): 지상 1.5 m 높이에서 32방향 수평 차폐각(반경 150 m 이내)으로 산출한 비율 (1 = 완전 개방). 다이어그램 가장자리 150 m 안쪽은 바깥 건물이 빠져 실제보다 높게 나올 수 있습니다.", ...surfNote(S, data)],
     sources: ["IGN BD TOPO® V3 batiment, RGE ALTI®"]
   };

@@ -6,18 +6,18 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261114r2";
+import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115a";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
-import { STYLES } from "./dgsemantic_v02.js?v=20261114r1";
+import { STYLES } from "./dgsemantic_v02.js?v=20261115a";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114t1";
-import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261114r2";
+import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115a";
 const DETAIL_ZOOM_HINT = "더블클릭하면 그 지점을 확대하고, 다시 더블클릭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다.";
-import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261114r2";
-import { toDxf } from "./dgdxf_v03.js?v=20261114r2";
+import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115a";
+import { toDxf } from "./dgdxf_v03.js?v=20261115a";
 import { buildPdf } from "./dgpdf.js?v=20261114t1";
-import { build3dm } from "./dg3dm_v03.js?v=20261114r2";
+import { build3dm } from "./dg3dm_v03.js?v=20261115a";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -209,7 +209,7 @@ const FETCHERS = {
   iso: (b, s, p, ctx) => fetchIsochrones(ctx.center, s, p),
   dem: (b, s, p) => fetchElevationGrid(b, s, p),
   climate: async (b, s) => {
-    const r = await fetch(new URL("./dgclimate.json?v=20261113p", import.meta.url), { signal: s });
+    const r = await fetch(new URL("./dgclimate_v02.json?v=20261115a", import.meta.url), { signal: s });
     if (!r.ok) throw new Error("기후 데이터(EPW 요약)를 불러오지 못했습니다.");
     return await r.json();
   },

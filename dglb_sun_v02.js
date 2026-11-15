@@ -24,9 +24,9 @@
 import {
   makeSurface, sunHours, shadowMask, skyViewFactor,
   nearestStation, sunPosition, parisDate, runRects, contours
-} from "./dgenv_v02.js?v=20261114r1";
-import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261114r1";
-import { STYLES } from "./dgsemantic_v02.js?v=20261114r1";
+} from "./dgenv_v02.js?v=20261115a";
+import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261115a";
+import { STYLES } from "./dgsemantic_v02.js?v=20261115a";
 
 const W = 420;
 const H = 297;
@@ -583,10 +583,26 @@ function drawRaster(d, ax, S, result, extent) {
       const clipped = clipRing(ring, extent);
       if (clipped.length >= 3) {
         d.polygon([clipped.map(p => ax.P(...p))],
-          colors[index], "none", 0, "analysis");
+          colors[index], colors[index], 0.12, "analysis");
       }
     }
   });
+}
+
+// Nearest-ground fill for building cells (NaN), so contour lines pass under the footprints
+// instead of wrapping every building or breaking at them.
+function fillGaps(values, nx, ny) {
+  const v = Float32Array.from(values), queue = new Int32Array(v.length);
+  let head = 0, tail = 0;
+  for (let i = 0; i < v.length; i++) if (Number.isFinite(v[i])) queue[tail++] = i;
+  while (head < tail) {
+    const i = queue[head++], x = i % nx;
+    for (const j of [x > 0 ? i - 1 : -1, x + 1 < nx ? i + 1 : -1, i - nx, i + nx]) {
+      if (j < 0 || j >= v.length || Number.isFinite(v[j])) continue;
+      v[j] = v[i]; queue[tail++] = j;
+    }
+  }
+  return v;
 }
 
 function drawContours(d, ax, S, values, extent) {
@@ -594,17 +610,24 @@ function drawContours(d, ax, S, values, extent) {
   const result = contours({
     x0: S.x0 + S.step / 2,
     y0: S.y0 + S.step / 2,
-    dx: S.step, nx: S.nx, ny: S.ny, z: values
+    dx: S.step, nx: S.nx, ny: S.ny, z: fillGaps(values, S.nx, S.ny)
   }, 2);
   for (const line of result.lines) {
     if (line.level !== 2 && line.level !== 4) continue;
-    // All cell-centre contour points are within the analysis extent.
-    const points = line.pts.filter(p =>
-      p[0] >= extent[0] && p[0] <= extent[2] &&
-      p[1] >= extent[1] && p[1] <= extent[3]
-    );
-    d.line(points.map(p => ax.P(...p)), CLIMATE.ink,
-      line.level === 4 ? 0.3 : 0.18, "contour");
+    // one polyline per unbroken run: joining the points left after filtering drew long straight
+    // lines across the sheet (live review, GPT)
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) d.line(run.map(p => ax.P(...p)), CLIMATE.ink, line.level === 4 ? 0.3 : 0.18, "contour");
+      run = [];
+    };
+    for (const p of line.pts) {
+      const inside = p[0] >= extent[0] && p[0] <= extent[2] && p[1] >= extent[1] && p[1] <= extent[3];
+      const last = run[run.length - 1];
+      if (!inside || (last && Math.hypot(p[0] - last[0], p[1] - last[1]) > S.step * 2.5)) flush();
+      if (inside) run.push(p);
+    }
+    flush();
   }
 }
 
@@ -692,6 +715,11 @@ function legend(d, result, S) {
   y += 6;
   d.rect(x, y - 3, 7, 3.2, NODATA);
   d.text(x + 10, y, "결측 / 계산 범위 밖", 2.4);
+  if (result.water) {
+    y += 6;
+    d.rect(x, y - 3, 7, 3.2, result.water);
+    d.text(x + 10, y, "수면", 2.4);
+  }
   y += 8;
   d.circle(x + 3, y - 1, 2.4, CLIMATE.site, CLIMATE.siteLine, 0.55, "site");
   d.text(x + 10, y, "대지 중심", 2.4);
@@ -743,6 +771,14 @@ export function buildLbPlate(kind, env, opts = {}) {
 
   drawRaster(d, ax, S, result, ctx.extent);
   if (result.contour) drawContours(d, ax, S, result.values, ctx.extent);
+  // mapped water surfaces above the raster: a river is not ground to be scored (live review, GPT + Gemini)
+  for (const ft of env.data.waterS || []) for (const rings of ft.polygons || []) {
+    const clippedRings = rings.map(r => clipRing(r, ctx.extent)).filter(r => r.length >= 3);
+    if (clippedRings.length && clippedRings[0].length >= 3) {
+      d.polygon(clippedRings.map(r => r.map(p => ax.P(...p))), tokens.water, "none", 0, "water");
+      result.water = tokens.water;
+    }
+  }
   drawBuildings(d, ax, buildings, ctx.extent, result.roofs);
 
   const site = clipRing(ctx.site?.ring, ctx.extent);
