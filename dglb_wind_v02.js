@@ -1,7 +1,7 @@
 // North-up A3 plan plates. Pure ES module; no DOM or external libraries.
 // Inputs use EPSG:2154 metres. ctx.convergence follows dgenv/climate convention.
 // No input object or array is mutated.
-import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115f";
+import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115m";
 
 export const LB_KINDS = [
   {
@@ -456,6 +456,7 @@ function windPlate(env, opts, S, d, P) {
   });
   paintRuns(d, G, k => mean[k] < .15 ? 0 : mean[k] <= .4 ? 1 : 2,
     [TEAL, YELLOW, BROWN], P, "lambda_f", .5);
+  const hasWater = drawPlateWater(d, data, ctx.extent, P, env.pal);
   let alignedSegments = 0;
   for (const road of features(data.roads)) for (const line of roadLines(road)) {
     for (let i = 1; i < line.length; i++) {
@@ -471,10 +472,10 @@ function windPlate(env, opts, S, d, P) {
   }
   directions.forEach((t, rank) => {
     for (const path of t.paths) {
-      const pts = path.points.map(p => P(...p));
+      const pts = smoothPath(path.points).map(p => P(...p));
       d.line(pts, TEAL, rank ? 1.3 : 2.1, "corridors", .3);
       const i = Math.max(1, Math.floor(pts.length * .7));
-      d.arrow(pts[i - 1], pts[i], TEAL, rank ? 2 : 2.5, "corridors");
+      d.arrow(pts[Math.max(0, i - 3)], pts[i], TEAL, rank ? 2 : 2.5, "corridors");
     }
   });
   legend(d, [
@@ -482,7 +483,8 @@ function windPlate(env, opts, S, d, P) {
     [YELLOW, "λf 0.15–0.40", .5],
     [BROWN, "λf > 0.40", .5],
     [TEAL, "바람길 후보", .3],
-    [TEAL, "정렬 도로 ±30°", 1]
+    [TEAL, "정렬 도로 ±30°", 1],
+    ...(hasWater ? [[env.pal?.water || "#A8C8D8", "수면", .92]] : [])
   ]);
   d.text(322, 91, "격자 25 m · λf 무차원", 2.5);
   directions.forEach((t, i) => {
@@ -594,6 +596,7 @@ function coldPlate(env, S, d, P) {
   paintRuns(d, S, k => source[k] ? 0 : -1,
     [pal.green || "#B5CCA6"], P, "cold_sources", .45);
   paintRuns(d, S, k => pool[k] ? 0 : -1, [LILAC], P, "pooling", .55);
+  const hasWater = drawPlateWater(d, data, ctx.extent, P, pal);
 
   // Bounded marching-squares contours on the analysis surface.
   let zmin = Infinity, zmax = -Infinity;
@@ -653,7 +656,8 @@ function coldPlate(env, S, d, P) {
   legend(d, [
     [pal.green || "#B5CCA6", "찬공기 생성지", .45],
     [TEAL, "흐름 방향", .8],
-    [LILAC, "정체 구역", .55]
+    [LILAC, "정체 구역", .55],
+    ...(hasWater ? [[pal.water || "#A8C8D8", "수면", .92]] : [])
   ]);
   d.text(322, 80, `흐름 격자 ${S.step} m`, 2.5);
   d.text(322, 86, "생성지 시드 30 m", 2.5);
@@ -675,6 +679,35 @@ function coldPlate(env, S, d, P) {
   };
 }
 
+// Grid paths (25 m cells, eight neighbours) are stair-stepped. For drawing only: a running mean over
+// +-`r` cells (twice, ends pinned) and a resample every `seg` metres. The mean is local, so candidates
+// that share a trunk still lie exactly on top of each other.
+export function smoothPath(pts, r = 2, seg = 8) {
+  if (pts.length < 3) return pts;
+  let line = pts;
+  for (let pass = 0; pass < 2; pass++) line = line.map((_, i) => {
+    const k = Math.min(r, i, line.length - 1 - i);
+    let x = 0, y = 0;
+    for (let j = i - k; j <= i + k; j++) { x += line[j][0]; y += line[j][1]; }
+    return [x / (2 * k + 1), y / (2 * k + 1)];
+  });
+  const out = [line[0]];
+  for (let i = 1; i < line.length; i++) {
+    const p = line[i - 1], q = line[i], k = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / seg));
+    for (let j = 1; j <= k; j++) out.push([p[0] + (q[0] - p[0]) * j / k, p[1] + (q[1] - p[1]) * j / k]);
+  }
+  return out;
+}
+
+// Mapped water above the analysis raster and under the flow lines.
+function drawPlateWater(d, data, e, P, pal) {
+  let any = false;
+  for (const f of data.waterS || []) for (const rings of f.polygons || []) {
+    const rs = rings.map(r => clipRing(r, e)).filter(r => r.length >= 3).map(r => r.map(p => P(...p)));
+    if (rs.length) { d.poly(rs, pal?.water || "#A8C8D8", "none", .08, "water", .92); any = true; }
+  }
+  return any;
+}
 function legend(d, rows) {
   d.text(322, 38, "범례", 3.2);
   rows.forEach(([color, label, op], i) => {

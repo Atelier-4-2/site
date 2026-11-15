@@ -1,24 +1,24 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261115f";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115m";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115f";
+import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115m";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
-} from "./dgenv_v02.js?v=20261115f";
-import { surfaceOf } from "./dgdefs3_v05.js?v=20261115f";
+} from "./dgenv_v02.js?v=20261115m";
+import { surfaceOf } from "./dgdefs3_v05.js?v=20261115m";
 import { extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115f";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115m";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
-import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261115f";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115f";
-import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115f";
+import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath } from "./dglb_wind_v02.js?v=20261115m";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115m";
+import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115m";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -272,20 +272,67 @@ export function createTabs(api) {
   // map (x,y,z) -> scene (x, z, -y) around the site centre
   const P3 = (x, y, z = 0) => new THREE.Vector3(x - api.ctx().center[0], z - baseZ(), -(y - api.ctx().center[1]));
 
-  function terrain(pal) {
-    const ctx = api.ctx(), dem = api.data().dem;
-    const [x0, y0, x1, y1] = ctx.extent;
-    const nx = dem ? dem.nx : 2, ny = dem ? dem.ny : 2;
-    const pos = [], idx = [];
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const x = x0 + (x1 - x0) * i / (nx - 1), y = y0 + (y1 - y0) * j / (ny - 1);
-      const p = P3(x, y, demAt(dem, x, y) - 0.05);
-      pos.push(p.x, p.y, p.z);
+  // Circular site: everything in the 3D model is cut to the circle (owner 2026-11-15), like the cards.
+  const circleSite = () => api.ctx().shape?.kind === "circle";
+  const inShape = (x, y) => {
+    if (!circleSite()) return true;
+    const c = api.ctx(), r = (c.extent[2] - c.extent[0]) / 2;
+    return Math.hypot(x - c.center[0], y - c.center[1]) <= r + .01;
+  };
+  // Sutherland-Hodgman against a convex ring (the 128-gon of a circular site)
+  function clipRingConvex(ring, conv) {
+    const sgn = signedArea(conv) > 0 ? 1 : -1;
+    let res = ring;
+    for (let i = 0; i < conv.length && res.length; i++) {
+      const p0 = conv[i], p1 = conv[(i + 1) % conv.length], ex = p1[0] - p0[0], ey = p1[1] - p0[1];
+      if (Math.abs(ex) + Math.abs(ey) < 1e-9) continue;
+      const side = p => sgn * (ex * (p[1] - p0[1]) - ey * (p[0] - p0[0]));     // >= 0: inside
+      const inp = res; res = [];
+      for (let j = 0; j < inp.length; j++) {
+        const p = inp[j], q = inp[(j + 1) % inp.length], sp = side(p), sq = side(q);
+        if (sp >= 0) res.push(p);
+        if ((sp >= 0) !== (sq >= 0)) { const t = sp / (sp - sq); res.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); }
+      }
     }
+    return res;
+  }
+  const clipToSite = ring => {
+    const [x0, y0, x1, y1] = api.ctx().extent;
+    const r = clipRingRect(ring, x0, y0, x1, y1);
+    return circleSite() && r.length >= 3 ? clipRingConvex(r, api.ctx().site.ring) : r;
+  };
+  // Ground vertices [x, y] (map coordinates) and triangle indices: the DEM grid over the extent, or,
+  // for a circular site, a disc on a polar grid so the edge of the ground is a clean circle.
+  function groundPts() {
+    const ctx = api.ctx(), dem = api.data().dem, [x0, y0, x1, y1] = ctx.extent;
+    const pts = [], idx = [];
+    if (circleSite()) {
+      const R = (x1 - x0) / 2, K = Math.max(12, Math.min(48, Math.round(R / 12))), M = 96;
+      pts.push([ctx.center[0], ctx.center[1]]);
+      for (let k = 1; k <= K; k++) for (let m = 0; m < M; m++) {
+        const t = m / M * Math.PI * 2, r = R * k / K;
+        pts.push([ctx.center[0] + Math.sin(t) * r, ctx.center[1] + Math.cos(t) * r]);
+      }
+      for (let m = 0; m < M; m++) idx.push(0, 1 + m, 1 + (m + 1) % M);
+      for (let k = 1; k < K; k++) for (let m = 0; m < M; m++) {
+        const a0 = 1 + (k - 1) * M + m, a1 = 1 + (k - 1) * M + (m + 1) % M, b0 = a0 + M, b1 = a1 + M;
+        idx.push(a0, b0, a1, a1, b0, b1);
+      }
+      return { pts, idx };
+    }
+    const nx = Math.max(2, dem ? dem.nx : 2), ny = Math.max(2, dem ? dem.ny : 2);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) pts.push([x0 + (x1 - x0) * i / (nx - 1), y0 + (y1 - y0) * j / (ny - 1)]);
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
-      const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
-      idx.push(a, c, b, b, c, d);
+      const p = j * nx + i, q = p + 1, r = p + nx, t = r + 1;
+      idx.push(p, r, q, q, r, t);
     }
+    return { pts, idx };
+  }
+
+  function terrain(pal) {
+    const dem = api.data().dem, { pts, idx } = groundPts();
+    const pos = [];
+    for (const [x, y] of pts) { const p = P3(x, y, demAt(dem, x, y) - 0.05); pos.push(p.x, p.y, p.z); }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx); geo.computeVertexNormals();
@@ -303,7 +350,7 @@ export function createTabs(api) {
     const v2 = r => r.map(p => new THREE.Vector2(p[0] - ctx.center[0], -(p[1] - ctx.center[1])));
     const geos = [];
     for (const f of feats) for (const rings of f.polygons) {
-      const [outer, ...holes] = rings.map(r => clipRingRect(r, x0, y0, x1, y1));
+      const [outer, ...holes] = rings.map(clipToSite);
       if (!outer || outer.length < 3) continue;
       const sh = new THREE.Shape(v2(outer));
       for (const h of holes) if (h.length >= 3) sh.holes.push(new THREE.Path(v2(h)));
@@ -331,10 +378,9 @@ export function createTabs(api) {
   // A building reduced to its part inside the analysis extent (owner 2026-11-15: buildings that
   // cross the edge are cut there instead of sticking out of the base plate). null = entirely outside.
   function clipBld(b) {
-    const [x0, y0, x1, y1] = api.ctx().extent;
-    const polygon = clipRingRect(b.polygon, x0, y0, x1, y1);
+    const polygon = clipToSite(b.polygon);
     if (polygon.length < 3 || ringArea(polygon) < 1) return null;
-    const holes = (b.holes || []).map(h => clipRingRect(h, x0, y0, x1, y1)).filter(h => h.length >= 3 && ringArea(h) >= .5);
+    const holes = (b.holes || []).map(clipToSite).filter(h => h.length >= 3 && ringArea(h) >= .5);
     return { polygon, holes };
   }
 
@@ -378,22 +424,15 @@ export function createTabs(api) {
     return grp;
   }
 
-  // A texture draped over the terrain grid (vertices follow the DEM, lifted `lift` m).
+  // A texture draped over the ground mesh (vertices follow the DEM, lifted `lift` m).
   function draped(tex, S, lift, opacity = 1) {
-    const ctx = api.ctx(), dem = api.data().dem;
-    const [x0, y0, x1, y1] = ctx.extent;
-    const nx = Math.max(2, dem ? dem.nx : 2), ny = Math.max(2, dem ? dem.ny : 2);
-    const pos = [], uv = [], idx = [];
+    const dem = api.data().dem, { pts, idx } = groundPts();
+    const pos = [], uv = [];
     const W = S.width ?? S.nx * S.step, H = S.height ?? S.ny * S.step;
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const x = x0 + (x1 - x0) * i / (nx - 1), y = y0 + (y1 - y0) * j / (ny - 1);
+    for (const [x, y] of pts) {
       const p = P3(x, y, demAt(dem, x, y) + lift);
       pos.push(p.x, p.y, p.z);
       uv.push((x - S.x0) / W, (y - S.y0) / H);
-    }
-    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
-      const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
-      idx.push(a, c, b, b, c, d);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -525,7 +564,7 @@ export function createTabs(api) {
 
   // Official-data trees as cheap instanced crowns (one draw call): a low-poly ball on a trunk height.
   function treeCrowns(pal) {
-    const crowns = api.data().trees?.crowns || [];
+    const crowns = (api.data().trees?.crowns || []).filter(c => inShape(c.p[0], c.p[1]));
     if (!crowns.length) return null;
     const geo = new THREE.IcosahedronGeometry(.5, 1);
     const mat = new THREE.MeshStandardMaterial({ color: pal.dark ? mix(pal.green, "#ffffff", .4) : mix(pal.green, pal.text, .25), roughness: 1, flatShading: true });
@@ -598,8 +637,8 @@ export function createTabs(api) {
       const box = new THREE.Box3().setFromObject(g.scene);
       // model plus a moderate margin: fitting the whole dome made the model too small to read the shadows
       // (live review, GPT + Gemini); the low ends of the paths may leave the frame, orbit / zoom shows them
-      const F = g.side * .6;
-      box.expandByPoint(new THREE.Vector3(-F, 0, -F)).expandByPoint(new THREE.Vector3(F, g.side * .5, F));
+      const F = g.side * .5;
+      box.expandByPoint(new THREE.Vector3(-F, 0, -F)).expandByPoint(new THREE.Vector3(F, g.side * .4, F));
       g.fit = makeFit(g, box);
       g.fit();
     }
@@ -1036,7 +1075,7 @@ export function createTabs(api) {
     const cls = [WIND3D.teal, WIND3D.yellow, WIND3D.brown].map(rgbOf);
     ov.add(draped(gridTexture(G, k => [...cls[s.lambda[k] < .15 ? 0 : s.lambda[k] <= .4 ? 1 : 2], 105]), G, .25));
     const streets = ribbonSet(), paths = ribbonSet(), casing = ribbonSet(), heads = [];
-    const inExt = p => p[0] >= ext[0] && p[0] <= ext[2] && p[1] >= ext[1] && p[1] <= ext[3];
+    const inExt = p => p[0] >= ext[0] && p[0] <= ext[2] && p[1] >= ext[1] && p[1] <= ext[3] && inShape(p[0], p[1]);   // also inside a circular site
     for (const f of api.data().roads || []) for (const line of f.lines) for (let i = 1; i < line.length; i++) {
       const a = line[i - 1], b = line[i], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
       if (!l || !inExt(a) || !inExt(b)) continue;
@@ -1044,21 +1083,29 @@ export function createTabs(api) {
     }
     s.directions.forEach((t, rank) => {
       for (const path of t.paths) {
-        const w = rank ? 7 : 11, a = rank ? 30 : 40;
-        const i = Math.max(1, Math.floor(path.points.length * .7));
-        addRibbon(casing, path.points, w + 6, 1.5);                       // white casing under the dark line
-        addRibbon(paths, path.points, w, 1.5);
+        const w = rank ? 7 : 11, a = rank ? 44 : 60;
+        const line = smoothPath(path.points);
+        // only the stretches inside the site (a circular site cuts the 25 m grid paths at its edge)
+        let run = [], last = null;
+        const flush = () => { if (run.length > 1) { addRibbon(casing, run, w + 6, 1.5); addRibbon(paths, run, w, 1.5); last = run; } run = []; };
+        for (const pt of line) { if (inExt(pt)) run.push(pt); else flush(); }
+        flush();
+        // the head sits at the downwind end of the last visible stretch, just inside the site edge
+        const i = last ? last.length - 1 - Math.ceil(a / 16) : -1;
+        if (i < 3) continue;
         // candidates share trunks and run side by side: one arrow head per ~90 m, not one per path
-        const tip = path.points[i];
+        const tip = last[i];
         if (heads.some(h => Math.hypot(h[0] - tip[0], h[1] - tip[1]) < 90)) continue;
         heads.push(tip);
-        addArrow(casing, path.points[i - 1], tip, a + 12, 1.5);
-        addArrow(paths, path.points[i - 1], tip, a, 1.5);
+        addArrow(casing, last[i - 3], tip, a + 12, 1.5);
+        addArrow(paths, last[i - 3], tip, a, 1.5);
       }
     });
     if (streets.idx.length) ov.add(ribbonMesh(streets, WIND3D.teal, 1, false));
-    if (casing.idx.length) ov.add(ribbonMesh(casing, "#FFFFFF", .85, true, 0));
-    if (paths.idx.length) ov.add(ribbonMesh(paths, WIND3D.flow, .95, true, 1));
+    // depth-tested: where a 25 m-grid path crosses a building it disappears behind it, exactly as the
+    // plate draws building figures over the corridors (it used to run across the roofs)
+    if (casing.idx.length) ov.add(ribbonMesh(casing, "#FFFFFF", .85, false, 0));
+    if (paths.idx.length) ov.add(ribbonMesh(paths, WIND3D.flow, .95, false, 1));
     return {
       info: s.directions.map(t => `유입 ${t.from} · ${t.pct.toFixed(1)} %`).join(" · ") + " · 격자 25 m",
       legend: swatch(WIND3D.teal, "λf &lt; 0.15", .5) + swatch(WIND3D.yellow, "λf 0.15–0.40", .5) + swatch(WIND3D.brown, "λf &gt; 0.40", .5) +
@@ -1074,10 +1121,14 @@ export function createTabs(api) {
     const cc = k => [G.x0 + (k % G.nx + .5) * step, G.y0 + (Math.floor(k / G.nx) + .5) * step];
     const flow = ribbonSet();
     for (const ids of s.paths) {
-      const pts = ids.map(cc);
-      addRibbon(flow, pts, 2.4, .7);
+      const pts = smoothPath(ids.map(cc), 2, 6);
+      let run = [];
+      const flush = () => { if (run.length > 1) addRibbon(flow, run, 2.4, .7); run = []; };
+      for (const pt of pts) { if (inShape(pt[0], pt[1])) run.push(pt); else flush(); }   // cut at the edge of a circular site
+      flush();
+      if (pts.length < 2) continue;
       const tip = Math.max(1, Math.floor(pts.length * .65));
-      addArrow(flow, pts[tip - 1], pts[tip], 11, .7);
+      if (inShape(pts[tip][0], pts[tip][1]) && inShape(pts[tip - 1][0], pts[tip - 1][1])) addArrow(flow, pts[tip - 1], pts[tip], 11, .7);
     }
     if (flow.idx.length) ov.add(ribbonMesh(flow, WIND3D.flow, 1, false));
     return {
@@ -1643,7 +1694,7 @@ export function createTabs(api) {
     {
       let wd = "";
       for (const ft of data.waterS || []) for (const rings of ft.polygons) {
-        const [outer, ...holes] = rings.map(r => clipRingRect(r, x0, y0, x1, y1));
+        const [outer, ...holes] = rings.map(clipToSite);
         if (!outer || outer.length < 3) continue;
         wd += [outer, ...holes.filter(h => h.length >= 3)].map(r => poly(r.map(p => proj(p[0], p[1], zOf(p[0], p[1]))))).join("");
       }

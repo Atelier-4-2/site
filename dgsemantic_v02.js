@@ -106,7 +106,10 @@ export function semanticPalette(pal) {
   const s = { ...raw, cool: lightFirst(raw.cool), warm: lightFirst(raw.warm) };
   const wind = [.7, .5, .3, .15, 0].map(t => mix(s.cool[3], "#FFFFFF", t));
   return {
-    ...pal, cat6: s.use6, seq5: s.cool, water: s.water, green: s.green,
+    ...pal,
+    // dark theme: context buildings were almost the background colour (#262B33 on #16191E)
+    ...(pal.dark ? { building: mix(pal.building, "#FFFFFF", .17) } : {}),
+    cat6: s.use6, seq5: s.cool, water: s.water, green: s.green,
     waterLine: mix(s.water, "#141414", .5), greenLine: mix(s.green, "#141414", .45),
     year: [...s.warm].reverse(), height: s.cool, high: s.diverging[2], low: s.diverging[0],
     zoning: [...ZONING],

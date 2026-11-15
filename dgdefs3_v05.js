@@ -1,11 +1,11 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261115f";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261115m";
 // Diagram cards 18, 19, 22, 23, 24, 26, 28 (computed from terrain / buildings / climate).
 // Every result is a reference simulation: "참고용 시뮬레이션, 법적 효력 없음".
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   contours, slopeAspect, makeSurface, sunHours, skyViewFactor, viewshed,
   nearestStation, KEY_DAYS
-} from "./dgenv_v02.js?v=20261115f";
+} from "./dgenv_v02.js?v=20261115m";
 import { bands, contourRings, extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { toWGS84 } from "./ign.js?v=20261113p";
 

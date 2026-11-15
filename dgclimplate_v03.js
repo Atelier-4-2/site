@@ -3,7 +3,7 @@
 // Ported from SiteLaser/web/drafts/climate (common.js, draft-a2/a3/a4.js), re-targeted at the real site (ctx, buildings, DEM
 // surface, EPW station) with the climate-only colour set (briefs/sitelaser_climate_build_v01.md).
 // Owner graphic rules: white background, line based, no hatch, Noto Sans, no area labels. #E6B89C / #B87D5B only on the site.
-import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261115f";
+import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261115m";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import { UTCI_CATS, UTCI_RANGE, utciCat, utciShade, utciSun, deltaMrtSun, clearSkyDni } from "./dgutci.js?v=20261113x";
 
@@ -188,6 +188,12 @@ function drawBuildings(d, ax, list) {
   }
 }
 
+// Mapped water on the ground plane of the plates (holes = islands), clipped to the site outline.
+const PLATE_WATER = "#C9DDEA";
+function drawWater(d, ax, ctx, data) {
+  const polys = (data.waterS || []).flatMap(f => f.polygons || []);
+  if (polys.length) d.area(polys.map(rings => rings.map(ring => ax.G(ring))), PLATE_WATER, ax.G(ctx.site.ring));
+}
 function drawExtent(d, ax, ctx) {
   d.poly(ax.G(ctx.site.ring), { stroke: CLIMATE.ring, w: .3, layer: "ring" });
 }
@@ -299,6 +305,7 @@ function plateA2(env) {
   ext.push([cx, cy + R + 14, 0], [cx, cy - R - 14, 0], [cx + R + 14, cy, 0], [cx - R - 14, cy, 0]);
   ax.fit(ext, { x: 100, y: 28, w: 312, h: 242 });
   drawExtent(d, ax, ctx);
+  drawWater(d, ax, ctx, data);
   // Draw the selected time slice on the same flat plane as the building bases.
   const shadowDay = DAYS.find(day => day.id === env.shadowDay) || DAYS[0];
   const shadowHour = HOURS.find(hour => hour.h === env.shadowHour) || HOURS[1];
@@ -438,6 +445,10 @@ function plateA3(env) {
     }
     return points.map(p => ax.P(...p));
   };
+  for (const f of data.waterS || []) for (const rings of f.polygons || []) {
+    const rs = rings.map(clip).filter(r => r.length >= 3);
+    if (rs.length) d.area([rs], PLATE_WATER);
+  }
   for (const building of data.buildings) {
     const outer = clip(building.polygon);
     if (outer.length < 3) continue;
@@ -534,6 +545,7 @@ function plateA4(env) {
   const d = new Dwg(), ax = new Axo(ctx), maxH = Math.max(10, ...list.map(b => b.h));
   ax.fit(fitPoints(ctx, maxH), { x: 12, y: 40, w: 396, h: 194 });
   drawExtent(d, ax, ctx);
+  drawWater(d, ax, ctx, data);
   const mask = e.up ? shadowMask(S, gridAzimuth(ctx, e.sp.az), e.sp.alt) : null;   // grid azimuth, as the 3D view (cross-review, Gemini)
   const catSun = utciCat(e.sun), catShade = utciCat(e.shade);
   const [cx, cy] = ctx.center;

@@ -6,18 +6,18 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115f";
+import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115m";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
-import { STYLES } from "./dgsemantic_v02.js?v=20261115f";
+import { STYLES } from "./dgsemantic_v02.js?v=20261115m";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114t1";
-import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115f";
+import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115m";
 const DETAIL_ZOOM_HINT = "더블클릭하면 그 지점을 확대하고, 다시 더블클릭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다.";
-import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115f";
-import { toDxf } from "./dgdxf_v03.js?v=20261115f";
+import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115m";
+import { toDxf } from "./dgdxf_v03.js?v=20261115m";
 import { buildPdf } from "./dgpdf.js?v=20261114t1";
-import { build3dm } from "./dg3dm_v03.js?v=20261115f";
+import { build3dm } from "./dg3dm_v03.js?v=20261115m";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -107,6 +107,19 @@ for (const b of document.querySelectorAll("[data-dgstep]")) {
 // ---- site -------------------------------------------------------------------
 const shapeSel = $("#dg-shape");
 shapeSel.addEventListener("change", () => { $("#dg-rect-field").hidden = shapeSel.value !== "rect"; });
+// The map outline follows the chosen site shape (owner 2026-11-15: a circle was selected but the map
+// kept showing the square): the range polygon is redrawn as the circle / rectangle that will be analysed.
+{
+  const baseRender = ignMap.renderRange.bind(ignMap);
+  ignMap.renderRange = () => {
+    baseRender();
+    if (document.body.dataset.mode !== "diagrams") return;
+    const c = readSite();
+    if (c && c.shape.kind !== "square") ignMap.range.setLatLngs(c.site.ring.map(([x, y]) => { const [lon, lat] = toWGS84(x, y); return [lat, lon]; }));
+  };
+  shapeSel.addEventListener("change", () => ignMap.renderRange());
+  for (const id of ["#dg-w", "#dg-h"]) $(id)?.addEventListener("input", () => ignMap.renderRange());
+}
 
 function readSite() {
   const b = ignMap.bounds;

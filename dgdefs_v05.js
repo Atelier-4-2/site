@@ -1,4 +1,4 @@
-import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?v=20261115f";
+import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?v=20261115m";
 // Diagram registry. One entry per plate; the 28 reference slots are all listed,
 // those without `build` are shown as "준비 중" cards and plug in later:
 //   { num, fr, en, needs:[dataKeys], color, build(ctx, data, opt) -> sheet }
@@ -6,8 +6,8 @@ import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?
 // opt   = { mono:boolean, color:hex|null, lw:number (line-weight multiplier) }
 import { ringArea, clipRingRect, mix } from "./dgcore.js?v=20261113s";
 import { bands, gaussian } from "./dgcontour.js?v=20261113b";
-import { IMPL2 } from "./dgdefs2_v04.js?v=20261115f";
-import { IMPL3 } from "./dgdefs3_v05.js?v=20261115f";
+import { IMPL2 } from "./dgdefs2_v04.js?v=20261115m";
+import { IMPL3 } from "./dgdefs3_v05.js?v=20261115m";
 import { KO } from "./dgstrings.js?v=20261114t1";
 import { heightOf, heightEstimated } from "./dganalysis.js?v=20261113p";
 
@@ -241,7 +241,8 @@ const IMPL = {
       for (const k of [1, 2, 3, 4, 5, 6]) {
         const fs = data.roads.filter(f => String(f.props.importance) === String(k));
         const label = ROAD[k];
-        const col = ROAD_COLOURS[k - 1], w = ROAD_WIDTHS[k - 1];
+        // the road greys are dark inks: on a dark theme they are lifted towards white to stay visible
+        const col = pal.dark ? mix(ROAD_COLOURS[k - 1], "#FFFFFF", .78) : ROAD_COLOURS[k - 1], w = ROAD_WIDTHS[k - 1];
         const walk = f => /Sentier|Escalier|Chemin/i.test(f.props.nature || "");
         layers.push({
           id: `road_${k}`, name: label,
@@ -432,7 +433,30 @@ function zoneDisplay(def) {
     }
   };
 }
-export const DIAGRAMS = SLOTS.map(s => zoneDisplay({
+// Every map card shows mapped water (owner 2026-11-15): cards that do not draw it themselves get a
+// water layer under their buildings. Left alone: the aerial photo, the wind rose, and the regulatory
+// zone cards (08, 11, 12), where the zone colour over the river is itself the information.
+const WATER_SKIP = new Set(["01", "08", "11", "12", "24"]);
+function withWater(def) {
+  if (WATER_SKIP.has(def.num) || typeof def.build !== "function") return def;
+  const build = def.build;
+  return {
+    ...def,
+    build(ctx, data, opt) {
+      const sheet = build(ctx, data, opt);
+      if (!sheet?.layers || !data.waterS?.length || sheet.layers.some(l => /water|hydro/.test(l.id))) return sheet;
+      const pal = P(opt);
+      const layer = { id: "water_ctx", name: "수면", items: data.waterS.flatMap(f => f.polygons.map(rings => ({ k: "poly", rings, fill: pal.water, stroke: "none", context: true }))) };
+      const at = sheet.layers.findIndex(l => l.id === "context" || l.id === "bati_line");
+      const layers = [...sheet.layers];
+      layers.splice(at < 0 ? 0 : at, 0, layer);
+      const legend = [...(sheet.legend || [])], si = legend.findIndex(e => e.kind === "site");
+      legend.splice(si < 0 ? legend.length : si, 0, { kind: "fill", fill: pal.water, stroke: "none", label: "수면" });
+      return { ...sheet, layers, legend };
+    }
+  };
+}
+export const DIAGRAMS = SLOTS.map(s => withWater(zoneDisplay({
   ...s, ...(IMPL[s.num] || IMPL2[s.num] || IMPL3[s.num] || {})
-}));
+})));
 export const isReady = d => typeof d.build === "function";

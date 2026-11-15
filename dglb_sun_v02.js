@@ -24,9 +24,9 @@
 import {
   makeSurface, sunHours, shadowMask, skyViewFactor,
   nearestStation, sunPosition, parisDate, runRects, contours
-} from "./dgenv_v02.js?v=20261115f";
-import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261115f";
-import { STYLES } from "./dgsemantic_v02.js?v=20261115f";
+} from "./dgenv_v02.js?v=20261115m";
+import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261115m";
+import { STYLES } from "./dgsemantic_v02.js?v=20261115m";
 import { contourRings, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 
 const W = 420;
