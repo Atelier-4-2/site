@@ -1,0 +1,113 @@
+/* Terrain v07 layout, loaded after diagrams_base_v07.css. */
+
+/* 1. Site step: the "generate" button and its error line stay in view (they fell below the fold at 1440x900). */
+#step-panel-1 > .section-actions.dg-only { position: sticky; bottom: 12px; z-index: 20; }
+#site-error:not([hidden]), #dg-error:not([hidden]) {
+  position: sticky; bottom: 72px; z-index: 20; width: fit-content; margin-left: auto;
+  padding: 6px 12px; border-radius: 10px; background: var(--paper);
+}
+
+/* 2. Card detail dialog: the whole A3 sheet fits the dialog on opening (scale line included) and the
+      header with the close button never scrolls away; only the sheet area scrolls when zoomed content is taller. */
+.dg-detail[open] { display: flex; flex-direction: column; }
+.dg-detail .dg-detail-head { flex: none; }
+.dg-detail .dg-sheet { flex: 1 1 auto; min-height: 0; }
+.dg-detail .dg-sheet svg { width: 100%; height: auto; max-height: calc(94vh - 190px); }
+.dg-detail > .note { flex: none; }
+
+/* 3. Card detail dialog: the letterbox around the sheet takes the dialog colour (it was pure white,
+      which glared around a dark-theme sheet). */
+.dg-detail .dg-sheet { background: transparent; border-color: transparent; }
+.dg-detail .dg-sheet svg { margin: 0 auto; }
+
+@media (max-width: 1023px) {
+  body[data-mode="diagrams"] #dg-stepper { display: block; }
+  body[data-mode="diagrams"] #input-controls { min-width: 0; padding: 0; border: 0; }
+  body[data-mode="diagrams"] .step-panel { padding-block: 24px 40px; }
+  body[data-mode="diagrams"][data-page] .section-intro { margin: 0 0 20px; text-align: left; }
+  body[data-mode="diagrams"] .section-intro h3 { font-size: clamp(26px, 5vw, 34px); }
+  body[data-mode="diagrams"] .section-intro .subhead { text-align: left; }
+
+  body[data-mode="diagrams"] .ign-side {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 12px;
+    align-items: start;
+  }
+  body[data-mode="diagrams"] .ign-side > * { grid-column: 1 / -1; }
+  body[data-mode="diagrams"] .ign-side > .grid:has(#radius) { grid-column: 1; grid-template-columns: 1fr; }
+  body[data-mode="diagrams"] .ign-side .dg-shape { display: contents; }
+  body[data-mode="diagrams"] .dg-shape > :first-child { grid-column: 2; }
+  body[data-mode="diagrams"] #dg-rect-field { grid-column: 1 / -1; }
+  body[data-mode="diagrams"] .ign-side .inline { flex-wrap: nowrap; }
+  body[data-mode="diagrams"] .ign-side :is(.search-area, .grid, .map-tools, #map-note) { margin: 0; }
+  body[data-mode="diagrams"] .search-area { max-width: none; }
+  body[data-mode="diagrams"] .ign-list,
+  body[data-mode="diagrams"] #photo-opacity-field.is-inactive { display: none; }
+  body[data-mode="diagrams"] .map-appearance {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  body[data-mode="diagrams"] .map-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  body[data-mode="diagrams"] .map-tools button[data-map-mode] { grid-column: auto; padding-inline: 4px; }
+  body[data-mode="diagrams"] #map { height: clamp(280px, 48svh, 500px); margin: 0; }
+  body[data-mode="diagrams"] #dg-site-next { width: 100%; }
+  #step-panel-1 > .section-actions.dg-only { position: static; }
+  body[data-mode="diagrams"] :is(#site-error, #dg-error):not([hidden]) { position: static; width: auto; margin-inline: 0; }
+
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline { display: grid; align-items: stretch; gap: 14px; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline > div { width: 100%; max-width: none; padding: 0; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline input[type="range"] { flex: 1 1 0; min-width: 0; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { padding: 4px; border-radius: 14px; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes > button { white-space: normal; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 8px; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin: 0; }
+  .dg-toolbar button { padding-inline: 6px; }
+  .dg-toolbar input { width: 100%; padding-inline: 8px; }
+  #dg-to-analysis-top { grid-column: 1 / -1; }
+  .dg-results .note { text-align: left; }
+  .dg-filters, .dg-tabbar { justify-content: flex-start; gap: 6px; }
+  .dg-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 12px; }
+  .dg-title { white-space: normal; overflow: visible; }
+  .dg-tabbar button, .dg-filters button, .dg-actions button,
+  .dg-controls button, .dg-controls .dg-save button, .dg-controls .dg-view button { min-height: 44px; }
+  .dg-controls { gap: 8px; }
+  .dg-controls > * { min-width: 0; max-width: 100%; }
+  .dg-controls :is(select, input[type="number"]) { min-height: 44px; font-size: 16px; }
+  .dg-controls input[type="range"] { width: min(160px, 45vw); }
+  .dg-stage { min-height: 280px; max-height: clamp(300px, 65svh, 640px); }
+
+  .dg-detail {
+    width: calc(100% - 16px);
+    max-width: none;
+    max-height: 94dvh;
+    padding: 12px;
+    border-radius: 12px;
+    overflow: auto;
+  }
+  .dg-detail .dg-sheet { flex: 0 0 auto; }
+  .dg-detail .dg-sheet svg { max-height: none; }
+}
+
+@media (max-width: 640px) {
+  body[data-mode="diagrams"] .nav-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    height: auto;
+    gap: 0 8px;
+  }
+  body[data-mode="diagrams"] #dg-stepper { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+  body[data-mode="diagrams"] #dg-stepper ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  body[data-mode="diagrams"] #dg-stepper button { width: 100%; padding-inline: 6px; font-size: 13px; }
+  body[data-mode="diagrams"] .step-count { grid-column: 2; grid-row: 1; }
+  body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .dg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dg-card .dg-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .dg-card .dg-actions button { padding-inline: 4px; }
+  .dg-card .dg-actions [data-act="detail"] { grid-column: 1 / -1; }
+  .dg-nav button { width: 100%; max-width: none; }
+}
