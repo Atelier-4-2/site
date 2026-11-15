@@ -27,6 +27,7 @@ import {
 } from "./dgenv_v02.js?v=20261115a";
 import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261115a";
 import { STYLES } from "./dgsemantic_v02.js?v=20261115a";
+import { contourRings, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 
 const W = 420;
 const H = 297;
@@ -563,30 +564,65 @@ function b5(env, S, opts, year) {
   };
 }
 
-function drawRaster(d, ax, S, result, extent) {
-  const count = 32;
-  const colors = Array.from({ length: count }, (_, i) =>
-    result.colorAt
-      ? result.colorAt(i / (count - 1))
-      : ramp(result.colors, i / (count - 1))
-  );
-  colors.push(NODATA);
-  const groups = runRects(S, k => {
-    if (S.bld[k] && !result.roofs) return -1;
+function inRing(ring, x, y) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const p = ring[i], q = ring[j];
+    if ((p[1] > y) !== (q[1] > y) &&
+        x < (q[0] - p[0]) * (y - p[1]) / (q[1] - p[1]) + p[0]) inside = !inside;
+  }
+  return inside;
+}
+
+// The analysis values live on a 4 m grid. Drawing one rectangle per cell made the plates look
+// pixelated (owner, 2026-11-15), so the ground is now drawn as smooth iso-bands:
+//  - building cells take the nearest ground value, the field gets a light blur (0.7 cell) and
+//    d3-contour traces the area above each of 24 thresholds; the areas are painted from the lowest
+//    threshold up, each covering the previous one, so there are no seams between bands;
+//  - on plates that also colour roofs (B5) every building is filled with the mean of its own roof
+//    cells, inside its true vector outline.
+// The numbers behind the plate (legend statistics, 3D view) are the unsmoothed cell values.
+function drawRaster(d, ax, S, result, extent, buildings = []) {
+  const N = 24;
+  const colorOf = t => result.colorAt ? result.colorAt(t) : ramp(result.colors, t);
+  const ground = new Float32Array(S.nx * S.ny);
+  let any = false;
+  for (let k = 0; k < ground.length; k++) {
     const v = result.values[k];
-    return finite(v)
-      ? Math.round(clamp(v / result.max, 0, 1) * (count - 1))
-      : count;
-  }, count + 1);
-  groups.forEach((rings, index) => {
-    for (const ring of rings) {
-      const clipped = clipRing(ring, extent);
-      if (clipped.length >= 3) {
-        d.polygon([clipped.map(p => ax.P(...p))],
-          colors[index], colors[index], 0.12, "analysis");
+    ground[k] = !S.bld[k] && finite(v) ? v : NaN;
+    if (!S.bld[k] && finite(v)) any = true;
+  }
+  if (any) {
+    const field = gaussian(fillGaps(ground, S.nx, S.ny), S.nx, S.ny, .7);
+    const thresholds = Array.from({ length: N }, (_, i) => i ? result.max * i / N : -1e9);
+    contourRings(field, S.nx, S.ny, S.x0, S.y0, S.step, thresholds).forEach((rings, i) => {
+      const clipped = rings.map(r => clipRing(r, extent)).filter(r => r.length >= 3);
+      if (clipped.length) {
+        d.polygon(clipped.map(r => r.map(p => ax.P(...p))), colorOf((i + .5) / N), "none", 0, "analysis");
       }
+    });
+  }
+  if (!result.roofs) return;
+  for (const b of buildings) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of b.polygon) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    const ia = Math.max(0, Math.floor((x0 - S.x0) / S.step)), ib = Math.min(S.nx - 1, Math.floor((x1 - S.x0) / S.step));
+    const ja = Math.max(0, Math.floor((y0 - S.y0) / S.step)), jb = Math.min(S.ny - 1, Math.floor((y1 - S.y0) / S.step));
+    let sum = 0, n = 0;
+    for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
+      const k = j * S.nx + i, v = result.values[k];
+      if (!S.bld[k] || !finite(v)) continue;
+      const x = S.x0 + (i + .5) * S.step, y = S.y0 + (j + .5) * S.step;
+      if (!inRing(b.polygon, x, y) || (b.holes || []).some(h => inRing(h, x, y))) continue;
+      sum += v; n++;
     }
-  });
+    if (!n) continue;                                  // smaller than one cell: left to the ground colour
+    const outer = clipRing(b.polygon, extent);
+    if (outer.length < 3) continue;
+    const holes = (b.holes || []).map(r => clipRing(r, extent)).filter(r => r.length >= 3);
+    d.polygon([outer, ...holes].map(r => r.map(p => ax.P(...p))),
+      colorOf(clamp(sum / n / result.max, 0, 1)), "none", 0, "analysis");
+  }
 }
 
 // Nearest-ground fill for building cells (NaN), so contour lines pass under the footprints
@@ -769,7 +805,7 @@ export function buildLbPlate(kind, env, opts = {}) {
   d.text(408, 14, `${kind} · A3`, 3.6, CLIMATE.ink, "end");
   d.text(12, 34, result.subtitle, 2.8);
 
-  drawRaster(d, ax, S, result, ctx.extent);
+  drawRaster(d, ax, S, result, ctx.extent, buildings);
   if (result.contour) drawContours(d, ax, S, result.values, ctx.extent);
   // mapped water surfaces above the raster: a river is not ground to be scored (live review, GPT + Gemini)
   for (const ft of env.data.waterS || []) for (const rings of ft.polygons || []) {

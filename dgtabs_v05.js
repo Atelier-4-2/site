@@ -17,7 +17,7 @@ import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHA
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate } from "./dglb_wind_v02.js?v=20261115a";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115a";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115b";
 import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115a";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
