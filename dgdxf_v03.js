@@ -3,7 +3,7 @@
 // OBJECTS (root dictionary, layouts); every object has a unique handle and an owner (330).
 // One DXF layer per sheet layer, closed LWPOLYLINEs only (no hatches), TEXT for labels.
 import { hex2rgb } from "./dgcore.js?v=20261113s";
-import { prepareSheet, stdWeight } from "./dgexport_v03.js?v=20261115m";
+import { prepareSheet, stdWeight } from "./dgexport_v03.js?v=20261116n";
 
 // ---- AutoCAD colour index (nearest match of a true colour) ---------------------------------
 const ACI = (() => {

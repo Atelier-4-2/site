@@ -16,6 +16,10 @@
 .dg-detail .dg-sheet svg { width: 100%; height: auto; max-height: calc(94vh - 190px); }
 .dg-detail > .note { flex: none; }
 
+/* Fold buttons and layer chips exist in the DOM on every screen but only phones show them (below). */
+.dg-fold, .dg-a7-chips { display: none; }
+.dg-a7-list { display: contents; }
+
 /* 3. Narrow screens: two cards per row, themes in two columns, tools wrap, no stretched settings row. */
 @media (max-width: 799px) {
   html body[data-mode="diagrams"] #dg-panel-3 #dg-grid.dg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 24px 12px !important; }
@@ -25,8 +29,68 @@
   html body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   html body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar { display: flex !important; flex-wrap: wrap; justify-content: center; gap: 8px; }
   html body[data-mode="diagrams"] #dg-panel-3 .dg-toolbar .dg-radius-note { margin-left: 0; }
-  .dg-tabbar { gap: 4px; }
-  .dg-tabbar button { min-height: 32px; padding: 3px 10px; font-size: 12px; }
+  /* --- phone layout (v06, 2026-11-16): the fixed 1680 px canvas is off below 800 px (diagrams_v02.css) --- */
+  /* site step: search, then the map, then the settings */
+  body[data-mode="diagrams"] #panel-ign { display: flex !important; flex-direction: column; gap: 14px; }
+  body[data-mode="diagrams"] #panel-ign :is(div, section):has(#map, .search-area, .map-tools, .map-appearance) { display: contents !important; }
+  body[data-mode="diagrams"] #panel-ign :is(div, section):has(#building-list):not(:has(#map, #search)),
+  body[data-mode="diagrams"] #panel-ign :is(h3, h4), body[data-mode="diagrams"] #load-buildings, body[data-mode="diagrams"] #select-all,
+  body[data-mode="diagrams"] #select-none, body[data-mode="diagrams"] #building-list, body[data-mode="diagrams"] #building-note { display: none !important; }
+  body[data-mode="diagrams"] #panel-ign .search-area { order: -3 !important; width: 100%; margin: 0; }
+  body[data-mode="diagrams"] #map { order: -2 !important; width: 100%; height: 52vh !important; min-height: 300px; margin: 0; }
+  body[data-mode="diagrams"] #map-note { order: -1 !important; margin: 0; }
+  body[data-mode="diagrams"] #panel-ign .grid:has(#radius), body[data-mode="diagrams"] #panel-ign .dg-shape > div,
+  body[data-mode="diagrams"] #dg-rect-field { width: 100%; margin: 0; }
+  body[data-mode="diagrams"] .dg-shape { display: contents !important; }
+  body[data-mode="diagrams"] #panel-ign :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; }
+  body[data-mode="diagrams"] #panel-ign .inline { display: flex; flex-wrap: nowrap; gap: 8px; width: 100%; }
+  body[data-mode="diagrams"] #search { flex: 1; }
+  body[data-mode="diagrams"] .map-tools { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 0; width: 100%; margin: 0; }
+  body[data-mode="diagrams"] .map-tools button { width: 100%; min-width: 0; padding-inline: 4px; }
+  body[data-mode="diagrams"] #range-view { grid-column: 1 / -1; }
+  body[data-mode="diagrams"] .map-appearance { display: block !important; width: 100%; margin: 0; }
+  body[data-mode="diagrams"] .map-appearance .segmented { display: flex; width: 100%; }
+  body[data-mode="diagrams"] .map-appearance .segmented button { flex: 1; min-width: 0; }
+  body[data-mode="diagrams"] #step-panel-1 > .section-actions.dg-only > * { width: 100%; }
+  body[data-mode="diagrams"] #dg-panel-2 { width: 100%; }
+  /* analysis: plates take the sheet's own height (no empty band above and below), 3D stays near-square */
+  .dg-stage:has(> .dg-2d) { height: auto !important; min-height: 0; }
+  .dg-stage .dg-2d { height: auto; overflow: visible; }
+  .dg-stage .dg-2d svg { width: 100%; height: auto; max-height: none; }
+  .dg-controls input[type="range"] { width: 150px; }
+  .dg-controls .dg-save { margin-left: 0; }
+  .dg-controls label { margin: 0; min-height: 32px; }
+  .dg-controls { row-gap: 4px; }
+  /* analysis tabs: two rows (A, B) that scroll sideways instead of five wrapped rows; 40 px touch height */
+  .dg-tabbar { display: grid; grid-auto-flow: column dense; grid-auto-columns: max-content; grid-template-rows: auto auto; justify-content: start; gap: 6px; overflow-x: auto; margin-inline: -16px; padding: 2px 16px 6px; scrollbar-width: none; }
+  .dg-tabbar::-webkit-scrollbar { display: none; }
+  .dg-tabbar > span { display: none; }
+  .dg-tabbar button { min-height: 40px; padding: 4px 14px; font-size: 13px; white-space: nowrap; }
+  .dg-tabbar button[data-tab^="A"] { grid-row: 1; }
+  .dg-tabbar button[data-tab^="B"] { grid-row: 2; }
+  .dg-controls button, .dg-controls select { min-height: 40px; }
+  /* folds (research 2026-11-16: summary + disclosure for the single choice, chips + capped list for the multi choice) */
+  .dg-fold { display: flex; align-items: center; justify-content: space-between; gap: 10px; box-sizing: border-box; width: 100%; min-height: 48px; padding: 8px 14px;
+    border: 0; border-radius: 14px; background: var(--surface, #f5f5f7); color: var(--ink); font: inherit; font-size: 14px; text-align: left; }
+  .dg-fold > span:first-child { flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dg-fold .dg-palette-strip { flex: 1 1 80px; max-width: 140px; }
+  .dg-fold > i { flex: none; font-style: normal; font-size: 11px; color: var(--muted); }
+  html body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes.is-folded { display: none !important; }
+  html body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { margin-top: 8px; }
+  .dg-controls .dg-fold { flex: 1 0 100%; }
+  .dg-a7-chips { display: flex; flex: 1 0 100%; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .dg-a7-chips:empty { display: none; }
+  .dg-chip { display: inline-flex; align-items: center; gap: 2px; flex: none; min-height: 36px; padding: 0 4px 0 12px; border: 1px solid var(--line); border-radius: 980px; font-size: 13px; white-space: nowrap; }
+  .dg-controls .dg-chip button { min-width: 36px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: 18px; line-height: 1; }
+  .dg-a7-list { display: flex; flex-wrap: wrap; flex: 1 0 100%; gap: 0 12px; box-sizing: border-box; max-height: 35vh; overflow-y: auto; padding: 4px 12px; border: 1px solid var(--line); border-radius: 14px; }
+  .dg-a7-list.is-folded { display: none; }
+  .dg-a7-list label { flex: 1 0 100%; min-height: 44px; }
+  /* theme picker: the pill-shaped tray became a grey circle behind five rows */
+  html body[data-mode="diagrams"] #dg-panel-3 .dg-settings-inline .dg-palettes { border-radius: 18px; }
+  /* A5 section: the map to tap two points on takes the full width, the profile sits under it */
+  .dg-2d:has(#a5-map) { grid-template-rows: auto auto !important; overflow: visible !important; }
+  #a5-map { width: 100%; height: auto !important; }
+  #a5-profile { min-height: 180px; }
   .dg-controls { justify-content: flex-start; gap: 6px 8px; }
   .dg-detail { width: 100vw; max-width: 100vw; padding: 10px; border-radius: 12px; }
 }

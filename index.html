@@ -21,8 +21,8 @@
   <link rel="stylesheet" href="./style.css?v=20261109zr">
   <link rel="stylesheet" href="brand.css?v=20261113b2">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&display=swap">
-  <link rel="stylesheet" href="./diagrams_base_v07.css">
-  <link rel="stylesheet" href="./diagrams_v07.css">
+  <link rel="stylesheet" href="./diagrams_v02.css?v=20261116a">
+  <link rel="stylesheet" href="./diagrams_v06.css?v=20261116f">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&family=Noto+Sans+KR:wght@400;600&family=Noto+Sans+Mono:wght@400&display=swap">
 
@@ -42,13 +42,13 @@
   <script defer
           src="https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.min.js"></script>
   <script>
-    /* Fit the desktop canvas. Narrow screens use the responsive stylesheet at full scale. */
+    /* Laptops: scale the whole desktop layout down so each step fits the screen height. */
     (function () {
       var REF = 1200, MIN = 0.6, root = document.documentElement;
       function fit() {
         var z = 1;
         var dg = document.body && document.body.dataset.mode === "diagrams";
-        if (dg && window.matchMedia("(min-width: 1024px)").matches) z = Math.min(1, window.innerWidth / 1680);
+        if (dg) z = window.matchMedia("(max-width: 799px)").matches ? 1 : Math.min(1, window.innerWidth / 1680);   /* phones: real layout, no zoom */
         else if (window.innerWidth >= 1024 && window.innerHeight < REF) z = Math.max(MIN, window.innerHeight / REF);
         root.style.zoom = z < 1 ? String(z) : "";
         root.classList.toggle("is-scaled", z < 1);
@@ -737,7 +737,7 @@
   <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v05.js?v=20261115m"); import("./app.js?v=20261114t1").catch(error => {
+    import("./diagrams_v05.js?v=20261116n"); import("./app.js?v=20261114t1").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";

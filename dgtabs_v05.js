@@ -1,24 +1,24 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261115m";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261116n";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261115m";
+import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261116n";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
-} from "./dgenv_v02.js?v=20261115m";
-import { surfaceOf } from "./dgdefs3_v05.js?v=20261115m";
+} from "./dgenv_v02.js?v=20261116n";
+import { surfaceOf } from "./dgdefs3_v05.js?v=20261116n";
 import { extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
-import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261115m";
+import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261116n";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
-import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath } from "./dglb_wind_v02.js?v=20261115m";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261115m";
-import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261115m";
+import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath, WIND_B1, KO_B1 } from "./dglb_wind_v02.js?v=20261116n";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116n";
+import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261116n";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -42,7 +42,9 @@ const lbOpts = (kind, opts) => kind === "B3" && opts.day === "autumn" ? { ...opt
 const COMPASS8 =["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 const lightToDark = r => lumOf(r[0]) < lumOf(r[r.length - 1]) ? [...r].reverse() : r;
 
-const ZOOM_HINT = "마우스 휠로 확대/축소, 드래그로 이동할 수 있습니다. ";
+// phones (touch): plates zoom on double tap and pan only while zoomed, so a finger on a plate still scrolls the page
+const PHONE = () => window.matchMedia("(max-width: 799px)").matches;
+const ZOOM_HINT = PHONE() ? "두 번 탭하면 그 지점을 확대하고, 다시 두 번 탭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다. " : "마우스 휠로 확대/축소, 드래그로 이동할 수 있습니다. ";
 // Wheel zoom (towards the cursor), drag pan and double-click reset for an SVG sheet inside `wrap`.
 // A3 sheets are far smaller than life on screen (3-5 px text); this only changes the on-screen viewBox,
 // exports are built from their own SVG strings.
@@ -51,7 +53,7 @@ const ZOOM_HINT = "마우스 휠로 확대/축소, 드래그로 이동할 수 �
 export function panZoom(wrap, opts = {}) {
   if (!wrap || wrap.dataset.pz) return;
   wrap.dataset.pz = "1";
-  const wheel = opts.wheel !== false;
+  const wheel = opts.wheel !== false && !PHONE();
   wrap.style.cursor = wheel ? "grab" : "zoom-in";
   if (wheel) wrap.style.touchAction = "none";
   const svgOf = () => wrap.querySelector("svg");
@@ -112,13 +114,16 @@ export function createTabs(api) {
     const st = document.createElement("style"); st.id = "dg-legend-ov-css";
     st.textContent = ".dg-legend-ov{position:absolute;left:12px;top:12px;width:min(440px,60%);z-index:2;pointer-events:none;text-align:left;font-size:12px;line-height:1.5}" +
       ".dg-legend-ov>*{display:block;box-sizing:border-box;width:fit-content;max-width:100%;margin:0 0 4px;padding:6px 10px;border-radius:10px;background:rgb(255 255 255 / 88%)}" +
-      ".dg-legend-ov>*:empty,.dg-legend-ov>[hidden]{display:none}";
+      ".dg-legend-ov>*:empty,.dg-legend-ov>[hidden]{display:none}" +
+      ".dg-legend-ov.dg-legend-below{position:static;width:100%;margin:8px 0 0;pointer-events:auto}.dg-legend-below>*{padding:4px 0;background:none}";
     document.head.append(st);
   }
   const stageLegend = (...ids) => {
     const box = document.createElement("div"); box.className = "dg-legend-ov";
     for (const id of ids) { const el = $(id); if (el) box.append(el); }
-    stage.append(box);
+    // phones: under the stage, not over the model (the box covered up to half of a 370 px wide view)
+    if (window.matchMedia("(max-width: 799px)").matches) { box.classList.add("dg-legend-below"); stage.after(box); }
+    else stage.append(box);
   };
   let active = "A1";
   function fitStage() {
@@ -127,8 +132,7 @@ export function createTabs(api) {
     const scale = r.width / stage.offsetWidth;
     stage.style.boxSizing = "border-box";
     const above = r.top - bar.getBoundingClientRect().top;   // tab bar + controls height, scroll-independent
-    // phones: no tall empty stage. The diagram mode is a fixed 1680 px layout zoomed to the window, so the
-    // test is the real viewport (media query), not the layout width.
+    // phones (real single-column layout, no zoom): a near-square 3D stage; plates size themselves in CSS
     const cap = window.matchMedia("(max-width: 799px)").matches ? stage.offsetWidth * 1.1 : Infinity;
     stage.style.height =
       Math.min(cap, Math.max(420, (window.innerHeight / scale) - 64 - above / scale - 24)) + "px";
@@ -189,7 +193,7 @@ export function createTabs(api) {
     gl = null;
   }
 
-  function clearStage() { disposeGl(); stage.replaceChildren(); controls.replaceChildren(); note.textContent = ""; }
+  function clearStage() { disposeGl(); stage.parentElement?.querySelectorAll(".dg-legend-below").forEach(el => el.remove()); stage.replaceChildren(); controls.replaceChildren(); note.textContent = ""; }
 
   // ---- shared 3D scene -------------------------------------------------------------------------
   function ready() { return api.ctx() && api.data().buildings; }
@@ -207,6 +211,7 @@ export function createTabs(api) {
     const side = Math.max(ctx.extent[2] - ctx.extent[0], ctx.extent[3] - ctx.extent[1]);
     const camera = new THREE.PerspectiveCamera(40, w / h, 5, side * 20);
     camera.position.set(side * .7, side * .65, side * .85);
+    camera.position.multiplyScalar(Math.max(1, 1.45 / (w / h)));   // portrait stage (phone): step back so the model is not cropped left and right
     const controlsO = new OrbitControls(camera, renderer.domElement);
     controlsO.target.set(0, 0, 0); controlsO.maxPolarAngle = Math.PI * .495; controlsO.update();
     const g = { renderer, scene, camera, controls: controlsO, side, raf: 0 };
@@ -606,7 +611,7 @@ export function createTabs(api) {
         api.exportTab("3dm", { def: { num: "A1", ko: "3D 볼륨", en: "3d-volume" }, sheet: { layers: [], legend: [], notes: ["3D 볼륨: 건물 압출 메시 + 지형 메시. 높이 미상 건물은 3 m."], sources: ["RGE ALTI"] }, volumes: true, name: "a1_volume" }, e.target);
       }
     };
-    note.textContent = "BD TOPO 건물 높이 및 IGN 표고(RGE ALTI) 기반 3D 매스 모델입니다. 마우스 드래그로 회전·확대할 수 있습니다. " + SIM;
+    note.textContent = "BD TOPO 건물 높이 및 IGN 표고(RGE ALTI) 기반 3D 매스 모델입니다. " + (PHONE() ? "한 손가락으로 회전, 두 손가락으로 확대/축소할 수 있습니다. " : "마우스 드래그로 회전·확대할 수 있습니다. ") + SIM;
   }
 
   function badge(t) { const b = document.createElement("div"); b.className = "dg-badge"; b.textContent = t; stage.append(b); }
@@ -1072,44 +1077,58 @@ export function createTabs(api) {
   // ground wind rose) + streets aligned with the two main wind directions.
   function renderB1(r, ov) {
     const s = r.stats, G = s.grid, ext = api.ctx().extent;
-    const cls = [WIND3D.teal, WIND3D.yellow, WIND3D.brown].map(rgbOf);
-    ov.add(draped(gridTexture(G, k => [...cls[s.lambda[k] < .15 ? 0 : s.lambda[k] <= .4 ? 1 : 2], 105]), G, .25));
-    const streets = ribbonSet(), paths = ribbonSet(), casing = ribbonSet(), heads = [];
+    // same colours as the plate: neutral-to-warm resistance classes, blue corridors only
+    const cls = [WIND_B1.low, WIND_B1.mid, WIND_B1.high].map(rgbOf);
+    // the 5 m resampled field of the plate, not the 25 m cells (square steps around every block)
+    const F = s.fine;
+    ov.add(draped(gridTexture(F, k => [...cls[F.values[k] < .15 ? 0 : F.values[k] <= .4 ? 1 : 2], 205]), F, .25));
+    const lambdaAt = (x, y) => { const i = Math.floor((x - G.x0) / G.step), j = Math.floor((y - G.y0) / G.step); return i < 0 || j < 0 || i >= G.nx || j >= G.ny ? 1 : s.lambda[j * G.nx + i]; };
+    // Corridors are drawn at pedestrian height (1.5 m, owner decision 2026-11-16: the wind people feel).
+    // The plate note still says this is not a pedestrian-level wind speed.
+    const WIND_Z = 1.5;
+    const streets = ribbonSet(), paths = ribbonSet(), casing = ribbonSet(), tips = ribbonSet(), tipCasing = ribbonSet(), heads = [];
     const inExt = p => p[0] >= ext[0] && p[0] <= ext[2] && p[1] >= ext[1] && p[1] <= ext[3] && inShape(p[0], p[1]);   // also inside a circular site
     for (const f of api.data().roads || []) for (const line of f.lines) for (let i = 1; i < line.length; i++) {
       const a = line[i - 1], b = line[i], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
-      if (!l || !inExt(a) || !inExt(b)) continue;
+      if (!l || !inExt(a) || !inExt(b) || lambdaAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) > .4) continue;
       if (s.directions.some(t => Math.abs((dx * t.ux + dy * t.uy) / l) >= Math.cos(30 * RAD))) addRibbon(streets, [a, b], 2.5, .6);
     }
     s.directions.forEach((t, rank) => {
       for (const path of t.paths) {
-        const w = rank ? 7 : 11, a = rank ? 44 : 60;
-        const line = smoothPath(path.points);
+        const main = path.primary && !rank;                       // 1st corridor of the prevailing wind
+        const w = main ? 9 : 4.5, a = main ? 34 : 22;
+        const line = smoothPath(path.points, 3);
         // only the stretches inside the site (a circular site cuts the 25 m grid paths at its edge)
         let run = [], last = null;
-        const flush = () => { if (run.length > 1) { addRibbon(casing, run, w + 6, 1.5); addRibbon(paths, run, w, 1.5); last = run; } run = []; };
+        const runs = [];
+        const flush = () => { if (run.length > 1) { runs.push(run); last = run; } run = []; };
         for (const pt of line) { if (inExt(pt)) run.push(pt); else flush(); }
         flush();
+        // the line stops at its arrow head (it used to run on past the head to the edge)
+        const cut = last ? last.length - 1 - Math.ceil((a / 2 + 4) / 8) : -1;
+        runs.forEach(r => { const pts = r === last && cut >= 3 ? r.slice(0, cut + 1) : r; addRibbon(casing, pts, w + 3, WIND_Z - .2); addRibbon(paths, pts, w, WIND_Z); });
         // the head sits at the downwind end of the last visible stretch, just inside the site edge
-        const i = last ? last.length - 1 - Math.ceil(a / 16) : -1;
+        const i = !last ? -1 : last.length - 1 - Math.ceil((a / 2 + 4) / 8);   // every head at the end of its line, wholly inside the site edge (owner, 2026-11-16)
         if (i < 3) continue;
         // candidates share trunks and run side by side: one arrow head per ~90 m, not one per path
         const tip = last[i];
-        if (heads.some(h => Math.hypot(h[0] - tip[0], h[1] - tip[1]) < 90)) continue;
+        if (heads.some(h => Math.hypot(h[0] - tip[0], h[1] - tip[1]) < 45)) continue;
         heads.push(tip);
-        addArrow(casing, last[i - 3], tip, a + 12, 1.5);
-        addArrow(paths, last[i - 3], tip, a, 1.5);
+        addArrow(tips, last[i - 3], tip, a, WIND_Z + .4);
       }
     });
-    if (streets.idx.length) ov.add(ribbonMesh(streets, WIND3D.teal, 1, false));
+    if (streets.idx.length) ov.add(ribbonMesh(streets, WIND_B1.street, 1, false));
     // depth-tested: where a 25 m-grid path crosses a building it disappears behind it, exactly as the
     // plate draws building figures over the corridors (it used to run across the roofs)
     if (casing.idx.length) ov.add(ribbonMesh(casing, "#FFFFFF", .85, false, 0));
-    if (paths.idx.length) ov.add(ribbonMesh(paths, WIND3D.flow, .95, false, 1));
+    if (paths.idx.length) ov.add(ribbonMesh(paths, WIND_B1.corridor, .95, false, 1));
+    // heads in their own layers above every ribbon: where candidates run side by side or cross, a head used
+    // to merge into the neighbouring ribbon of the same colour and disappear
+    if (tips.idx.length) ov.add(ribbonMesh(tips, WIND_B1.corridor, 1, false, 3));
     return {
-      info: s.directions.map(t => `유입 ${t.from} · ${t.pct.toFixed(1)} %`).join(" · ") + " · 격자 25 m",
-      legend: swatch(WIND3D.teal, "λf &lt; 0.15", .5) + swatch(WIND3D.yellow, "λf 0.15–0.40", .5) + swatch(WIND3D.brown, "λf &gt; 0.40", .5) +
-        swatch(WIND3D.flow, "바람길 후보") + swatch(WIND3D.teal, "정렬 도로 ±30°") + " 화살표 = 바람 진행 방향"
+      info: s.directions.map(t => `유입 ${t.from} · ${t.pct.toFixed(1)} %`).join(" · ") + " · 격자 25 m · 화살표 높이 1.5 m(보행자 높이)",
+      legend: swatch(WIND_B1.low, "λf &lt; 0.15") + swatch(WIND_B1.mid, "λf 0.15–0.40") + swatch(WIND_B1.high, "λf &gt; 0.40") +
+        swatch(WIND_B1.corridor, `${KO_B1.primary}(굵게) · ${KO_B1.secondary}`) + swatch(WIND_B1.street, KO_B1.street.replace("≤", "&le;")) + " 화살표 = 바람 진행 방향"
     };
   }
   // B2: cold-air source cells and pooling cells on the ground + D8 flow lines with direction arrows.
@@ -1151,7 +1170,8 @@ export function createTabs(api) {
     g.scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
     const dl = new THREE.DirectionalLight(0xffffff, .7); dl.position.set(1, 2, 1); g.scene.add(dl);
     g.scene.add(terrain(pal), buildings(pal), siteOutline(pal));
-    { const wtr = water(pal); if (wtr) g.scene.add(wtr); }
+    // B1 paints opaque resistance classes on the ground: lift the water above them so the river stays a river
+    { const wtr = water(pal); if (wtr) { if (kind === "B1") { wtr.position.y += .35; wtr.material.transparent = true; wtr.renderOrder = 4; /* transparent pass, after the class overlay (order 3) */ } g.scene.add(wtr); } }
     const ov = new THREE.Group(); g.scene.add(ov);
     const S = surfaceOf(ctx, data);
     controls.innerHTML = viewToggle(kind) + lbFields(def, opts) + saveGroup(`<button type="button" data-lb3="png">PNG</button>`) +
@@ -1548,7 +1568,7 @@ export function createTabs(api) {
       if (e.target.dataset.a6 === "fit") { vb = [0, 0, VW, VH]; apply(); }
       if (e.target.dataset.a6 === "svg") api.download(new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + wrap.innerHTML], { type: "image/svg+xml" }), "a6_context.svg");
     };
-    note.textContent = "마우스 휠로 확대/축소, 드래그로 이동할 수 있습니다. 활성화된 레이어는 앞서 조회된 IGN·OSM 데이터입니다.";
+    note.textContent = (PHONE() ? "드래그로 이동할 수 있습니다." : "마우스 휠로 확대/축소, 드래그로 이동할 수 있습니다.") + " 활성화된 레이어는 앞서 조회된 IGN·OSM 데이터입니다.";
   }
 
   // ---- A7 merge sheets ----------------------------------------------------------------------------------------
@@ -1587,10 +1607,25 @@ export function createTabs(api) {
     };
     stage.innerHTML = `<div class="dg-2d" id="a7-preview" style="padding:8px"></div>`;
     panZoom($("a7-preview"));
-    controls.innerHTML = defs.map(d => `<label><input type="checkbox" data-m="${d.num}" ${state.merge.has(d.num) ? "checked" : ""}> ${d.num} ${d.ko}</label>`).join("") +
+    // phones only (CSS): the 28 layers fold behind one button; the layers that are on stay visible as chips
+    // with a × each, and the open list scrolls inside ~35 % of the screen so the sheet below stays in view
+    controls.innerHTML = `<button type="button" class="dg-fold" id="dg-a7-fold" aria-expanded="false" aria-controls="dg-a7-list"></button><div class="dg-a7-chips" id="dg-a7-chips"></div>` +
+      `<div class="dg-a7-list is-folded" id="dg-a7-list">` + defs.map(d => `<label><input type="checkbox" data-m="${d.num}" ${state.merge.has(d.num) ? "checked" : ""}> ${d.num} ${d.ko}</label>`).join("") + `</div>` +
       `${saveGroup(`<button type="button" data-a7="svg">SVG</button><button type="button" data-a7="png">PNG</button><button type="button" data-a7="pdf">PDF</button><button type="button" data-a7="dxf">DXF</button><button type="button" data-a7="3dm">3dm</button>`)}`;
-    controls.onchange = e => { if (e.target.dataset.m) { e.target.checked ? state.merge.add(e.target.dataset.m) : state.merge.delete(e.target.dataset.m); draw(); } };
+    const syncFold = () => {
+      const fold = $("dg-a7-fold"), open = fold.getAttribute("aria-expanded") === "true", n = state.merge.size;
+      fold.innerHTML = `<span>${open ? `레이어 목록 접기 (${n}개 선택)` : `레이어 선택 (${n}/${defs.length})`}</span><i aria-hidden="true">${open ? "▲" : "▼"}</i>`;
+      $("dg-a7-list").classList.toggle("is-folded", !open);
+      $("dg-a7-chips").innerHTML = defs.filter(d => state.merge.has(d.num)).map(d =>
+        `<span class="dg-chip">${d.num} ${d.ko}<button type="button" data-chip="${d.num}" aria-label="${d.ko} 레이어 끄기">×</button></span>`).join("");
+    };
+    syncFold();
+    controls.onchange = e => { if (e.target.dataset.m) { e.target.checked ? state.merge.add(e.target.dataset.m) : state.merge.delete(e.target.dataset.m); draw(); syncFold(); } };
     controls.onclick = async e => {
+      const fold = e.target.closest("#dg-a7-fold");
+      if (fold) { fold.setAttribute("aria-expanded", String(fold.getAttribute("aria-expanded") !== "true")); syncFold(); return; }
+      const chip = e.target.dataset.chip;
+      if (chip) { state.merge.delete(chip); const box = controls.querySelector(`[data-m="${chip}"]`); if (box) box.checked = false; draw(); syncFold(); $("dg-a7-fold").focus(); return; }
       const k = e.target.dataset.a7;
       if (!k || !state.mergedSheet) return;
       if (k === "pdf" || k === "dxf" || k === "3dm") api.exportTab(k, { def: state.mergedDef, sheet: state.mergedSheet, name: "a7_merged" }, e.target);
@@ -1809,6 +1844,7 @@ export function createTabs(api) {
   function show(id) {
     active = id;
     bar.querySelectorAll("[data-tab]").forEach(b => { b.setAttribute("aria-selected", String(b.dataset.tab === id)); b.tabIndex = b.dataset.tab === id ? 0 : -1; });
+    { const cur = bar.querySelector(`[data-tab="${id}"]`); if (cur && bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: cur.offsetLeft - bar.clientWidth / 2 + cur.offsetWidth / 2 }); }   // phones: the bar scrolls sideways
     stage.setAttribute("aria-label", TABS.find(t => t[0] === id)?.[1] || id);
     clearStage();
     fitStage();

@@ -3,7 +3,7 @@
 // Ported from SiteLaser/web/drafts/climate (common.js, draft-a2/a3/a4.js), re-targeted at the real site (ctx, buildings, DEM
 // surface, EPW station) with the climate-only colour set (briefs/sitelaser_climate_build_v01.md).
 // Owner graphic rules: white background, line based, no hatch, Noto Sans, no area labels. #E6B89C / #B87D5B only on the site.
-import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261115m";
+import { sunPosition, parisDate, daySun, shadowMask, nearestStation } from "./dgenv_v02.js?v=20261116n";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import { UTCI_CATS, UTCI_RANGE, utciCat, utciShade, utciSun, deltaMrtSun, clearSkyDni } from "./dgutci.js?v=20261113x";
 

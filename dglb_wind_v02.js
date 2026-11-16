@@ -1,7 +1,8 @@
 // North-up A3 plan plates. Pure ES module; no DOM or external libraries.
 // Inputs use EPSG:2154 metres. ctx.convergence follows dgenv/climate convention.
 // No input object or array is mutated.
-import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261115m";
+import { contourRings, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
+import { makeSurface, nearestStation } from "./dgenv_v02.js?v=20261116n";
 
 export const LB_KINDS = [
   {
@@ -27,8 +28,12 @@ const W = 420, H = 297;
 const INK = "#1E293B", SUB = "#475569", EDGE = "#CBD5E1";
 const TEAL = "#168F89", YELLOW = "#E8CB68", BROWN = "#946044";
 const LILAC = "#B69BCB";
+// B1 (2026-11-16): the resistance classes are neutral-to-warm and only the corridors are blue, as on
+// urban climate maps (VDI 3787-1 convention); before, classes, corridors, aligned streets and water were all teal.
+export const WIND_B1 = { low: "#ECEAE4", mid: "#E6C994", high: "#C98A70", corridor: "#005A9C", street: "#168F89" };
 const FONT = "'Noto Sans','Noto Sans KR','Malgun Gothic',sans-serif";
 const DISCLAIMER = "참고용 시뮬레이션 · CFD 아님 · 법적 효력 없음";
+export const KO_B1 = { primary: "1차 바람길", secondary: "2차 바람길", street: "정렬 도로 ±30° · λf ≤ 0.40", avoid: "2차는 1차 주변 90 m를 피해 탐색", limit: "보행자 높이 풍속 아님" };
 const DIRS = [
   "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
   "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
@@ -247,6 +252,19 @@ function paintRuns(d, G, classify, colors, P, layer, opacity = 1) {
     }
   }
 }
+// Bilinear resample of a cell-centred grid to a finer step, then a gaussian blur (sigma in fine cells).
+function refine(G, values, step, sigma) {
+  const f = G.step / step, nx = Math.round(G.nx * f), ny = Math.round(G.ny * f);
+  const out = new Float64Array(nx * ny);
+  const at = (i, j) => values[Math.max(0, Math.min(G.ny - 1, j)) * G.nx + Math.max(0, Math.min(G.nx - 1, i))];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const gx = (i + .5) / f - .5, gy = (j + .5) / f - .5;
+    const i0 = Math.floor(gx), j0 = Math.floor(gy), u = gx - i0, v = gy - j0;
+    out[j * nx + i] = at(i0, j0) * (1 - u) * (1 - v) + at(i0 + 1, j0) * u * (1 - v) +
+      at(i0, j0 + 1) * (1 - u) * v + at(i0 + 1, j0 + 1) * u * v;
+  }
+  return { x0: G.x0, y0: G.y0, step, nx, ny, values: gaussian(out, nx, ny, sigma) };
+}
 function drawWorldLine(d, pts, e, P, color, width, layer, opacity = 1) {
   for (let i = 1; i < pts.length; i++) {
     const seg = clipSegment(pts[i - 1], pts[i], e);
@@ -332,65 +350,109 @@ class Heap {
   }
 }
 
-// Multi-source Dijkstra: positive cost, forward/lateral eight-neighbour graph.
-// Five cheapest distinct downwind terminal paths; shared trunks are retained.
-function corridors(G, lambda, ux, uy) {
-  const n = G.nx * G.ny;
+// Corridor candidates that do not pile up on the one open axis (a river, a boulevard). The cheapest
+// path is the primary corridor; each further search avoids the surroundings of the paths already found
+// (cost x4 within 90 m: iterative penalty, a k-dissimilar-paths variant of the least-cost-path method of
+// Wong et al. 2010). A secondary path that ploughs through built-up cells (mean lambda_f > 0.35) is
+// not a corridor and is dropped.
+const CORRIDOR = { count: 3, avoid: 90, penalty: 4, maxLambda: .35 };   // 1 primary + up to 2 secondary per wind direction
+function corridors(G, lambda, ux, uy, S) {
+  // Routing runs on the 4 m surface raster and never enters a building cell: at pedestrian height the
+  // wind goes round buildings, not through them (on the 25 m grid a path could cross a built-up cell).
+  // The cost of a step is the frontal-area resistance of the 25 m cell it lies in; cells next to a
+  // facade cost more, so a path keeps to the middle of a street.
+  const n = S.nx * S.ny, cost = new Float32Array(n), lam = new Float32Array(n);
+  const near = new Uint8Array(n).fill(3);                         // cells to the nearest building, capped at 3
+  for (let k = 0; k < n; k++) if (S.bld[k]) near[k] = 0;
+  for (let pass = 1; pass <= 2; pass++) for (let j = 0; j < S.ny; j++) for (let i = 0; i < S.nx; i++) {
+    const k = j * S.nx + i;
+    if (near[k] < 3) continue;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const x = i + di, y = j + dj;
+      if (x >= 0 && y >= 0 && x < S.nx && y < S.ny && near[y * S.nx + x] === pass - 1) near[k] = pass;
+    }
+  }
+  const side = [0, 2.2, 1.4, 1];
+  for (let k = 0; k < n; k++) {
+    const g = indexAt(G, ...center(S, k));
+    lam[k] = g < 0 ? 1 : lambda[g];
+    cost[k] = (.02 + lam[k]) * side[near[k]];
+  }
+  const pen = new Float32Array(n).fill(1), out = [];
+  const reach = Math.ceil(CORRIDOR.avoid / S.step);
+  for (let round = 0; round < CORRIDOR.count; round++) {
+    const path = cheapestPath(S, cost, ux, uy, pen);
+    if (!path) break;
+    path.meanLambda = path.ids.reduce((sum, k) => sum + lam[k], 0) / path.ids.length;
+    path.primary = !round;
+    if (!round || path.meanLambda <= CORRIDOR.maxLambda) out.push(path);
+    const mark = new Uint8Array(n);
+    for (let q = 0; q < path.ids.length; q += 2) {
+      const k = path.ids[q], i = k % S.nx, j = Math.floor(k / S.nx);
+      for (let dj = -reach; dj <= reach; dj++) for (let di = -reach; di <= reach; di++) {
+        const x = i + di, y = j + dj;
+        if (x < 0 || y < 0 || x >= S.nx || y >= S.ny) continue;
+        if (di * di + dj * dj <= reach * reach) mark[y * S.nx + x] = 1;
+      }
+    }
+    for (let k = 0; k < n; k++) if (mark[k]) pen[k] *= CORRIDOR.penalty;
+  }
+  return out;
+}
+// Multi-source Dijkstra on the surface raster R: positive cost, forward/lateral eight-neighbour graph,
+// building cells impassable, no diagonal step between two building corners. `pen` multiplies the cell
+// cost. Returns the cheapest downwind terminal path only.
+function cheapestPath(R, cost, ux, uy, pen) {
+  const n = R.nx * R.ny;
   const distance = new Float64Array(n); distance.fill(Infinity);
   const previous = new Int32Array(n); previous.fill(-1);
   const heap = new Heap(), sinks = [];
   const ax = Math.abs(ux), ay = Math.abs(uy);
   const source = (i, j) =>
-    (ax > 1e-8 && i === (ux > 0 ? 0 : G.nx - 1)) ||
-    (ay > 1e-8 && j === (uy > 0 ? 0 : G.ny - 1));
+    (ax > 1e-8 && i === (ux > 0 ? 0 : R.nx - 1)) ||
+    (ay > 1e-8 && j === (uy > 0 ? 0 : R.ny - 1));
   const sink = (i, j) =>
-    (ax > 1e-8 && i === (ux > 0 ? G.nx - 1 : 0)) ||
-    (ay > 1e-8 && j === (uy > 0 ? G.ny - 1 : 0));
-  const projectedSpan =
-    (G.extent[2] - G.extent[0]) * ax +
-    (G.extent[3] - G.extent[1]) * ay;
+    (ax > 1e-8 && i === (ux > 0 ? R.nx - 1 : 0)) ||
+    (ay > 1e-8 && j === (uy > 0 ? R.ny - 1 : 0));
+  const e = R.extent;
+  const projectedSpan = (e[2] - e[0]) * ax + (e[3] - e[1]) * ay;
   // Exclude corner shortcuts: sources/sinks must occupy outer projection thirds.
   let minQ = Infinity, maxQ = -Infinity;
-  for (const p of [
-    [G.extent[0], G.extent[1]], [G.extent[2], G.extent[1]],
-    [G.extent[2], G.extent[3]], [G.extent[0], G.extent[3]]
-  ]) {
+  for (const p of [[e[0], e[1]], [e[2], e[1]], [e[2], e[3]], [e[0], e[3]]]) {
     const q = p[0] * ux + p[1] * uy;
     minQ = Math.min(minQ, q); maxQ = Math.max(maxQ, q);
   }
-  for (let j = 0; j < G.ny; j++) for (let i = 0; i < G.nx; i++) {
-    const k = j * G.nx + i, p = center(G, k);
-    const q = p[0] * ux + p[1] * uy;
-    if (source(i, j) && q <= minQ + projectedSpan / 3) {
-      distance[k] = 0; heap.push(k, 0);
-    }
+  for (let j = 0; j < R.ny; j++) for (let i = 0; i < R.nx; i++) {
+    if (i && j && i < R.nx - 1 && j < R.ny - 1) continue;          // border cells only
+    const k = j * R.nx + i;
+    if (R.bld[k]) continue;
+    const p = center(R, k), q = p[0] * ux + p[1] * uy;
+    if (source(i, j) && q <= minQ + projectedSpan / 3) { distance[k] = 0; heap.push(k, 0); }
     if (sink(i, j) && q >= maxQ - projectedSpan / 3) sinks.push(k);
   }
   while (heap.a.length) {
-    const [k, cost] = heap.pop();
-    if (cost !== distance[k]) continue;
-    const i = k % G.nx, j = Math.floor(k / G.nx);
+    const [k, d0] = heap.pop();
+    if (d0 !== distance[k]) continue;
+    const i = k % R.nx, j = Math.floor(k / R.nx);
     for (const [di, dj] of MOVES) {
       if (di * ux + dj * uy < -1e-8) continue;
       const x = i + di, y = j + dj;
-      if (x < 0 || y < 0 || x >= G.nx || y >= G.ny) continue;
-      const next = y * G.nx + x;
-      const p = center(G, k), q = center(G, next);
-      const length = Math.hypot(q[0] - p[0], q[1] - p[1]);
-      const v = cost + (.02 + (lambda[k] + lambda[next]) / 2) * length;
-      if (v < distance[next]) {
-        distance[next] = v; previous[next] = k; heap.push(next, v);
-      }
+      if (x < 0 || y < 0 || x >= R.nx || y >= R.ny) continue;
+      const next = y * R.nx + x;
+      if (R.bld[next]) continue;
+      if (di && dj && (R.bld[j * R.nx + x] || R.bld[y * R.nx + i])) continue;
+      const length = R.step * (di && dj ? Math.SQRT2 : 1);
+      const v = d0 + (cost[k] * pen[k] + cost[next] * pen[next]) / 2 * length;
+      if (v < distance[next]) { distance[next] = v; previous[next] = k; heap.push(next, v); }
     }
   }
-  return sinks.filter(k => finite(distance[k]))
-    .sort((a, b) => distance[a] - distance[b]).slice(0, 5)
-    .map(k => {
-      const ids = [], end = k;
-      while (k >= 0) { ids.push(k); k = previous[k]; }
-      ids.reverse();
-      return { ids, cost: distance[end], points: ids.map(i => center(G, i)) };
-    }).filter(p => p.ids.length > 1);
+  let end = -1;
+  for (const k of sinks) if (finite(distance[k]) && (end < 0 || distance[k] < distance[end])) end = k;
+  if (end < 0) return null;
+  const ids = [];
+  for (let k = end; k >= 0; k = previous[k]) ids.push(k);
+  ids.reverse();
+  return ids.length > 1 ? { ids, cost: distance[end], points: ids.map(k => center(R, k)) } : null;
 }
 
 function frontal(S, G, ux, uy) {
@@ -451,11 +513,18 @@ function windPlate(env, opts, S, d, P) {
     return {
       from: DIRS[t.direction], degrees: t.direction * 22.5,
       pct: t.count / total * 100, ux, uy, ...f,
-      paths: corridors(G, f.lambda, ux, uy)
+      paths: corridors(G, f.lambda, ux, uy, S)
     };
   });
-  paintRuns(d, G, k => mean[k] < .15 ? 0 : mean[k] <= .4 ? 1 : 2,
-    [TEAL, YELLOW, BROWN], P, "lambda_f", .5);
+  // Drawing only: the 25 m classes were painted as square cells (a staircase around every block).
+  // The same values, resampled to 5 m and slightly blurred, are drawn as three smooth bands.
+  const fine = refine(G, mean, 5, 1.6);
+  const e = ctx.extent;
+  d.poly([[[e[0], e[1]], [e[2], e[1]], [e[2], e[3]], [e[0], e[3]]].map(p => P(...p))], WIND_B1.low, "none", 0, "lambda_f", .9);
+  contourRings(fine.values, fine.nx, fine.ny, fine.x0, fine.y0, fine.step, [.15, .4]).forEach((rings, i) => {
+    const clipped = rings.map(r => clipRing(r, e)).filter(r => r.length >= 3);
+    if (clipped.length) d.poly(clipped.map(r => r.map(p => P(...p))), [WIND_B1.mid, WIND_B1.high][i], "none", 0, "lambda_f", 1);
+  });
   const hasWater = drawPlateWater(d, data, ctx.extent, P, env.pal);
   let alignedSegments = 0;
   for (const road of features(data.roads)) for (const line of roadLines(road)) {
@@ -463,46 +532,63 @@ function windPlate(env, opts, S, d, P) {
       const a = line[i - 1], b = line[i];
       const dx = b[0] - a[0], dy = b[1] - a[1], length = Math.hypot(dx, dy);
       if (!length) continue;
-      if (directions.some(t =>
+      const cell = indexAt(G, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      if (cell >= 0 && mean[cell] <= .4 && directions.some(t =>
         Math.abs((dx * t.ux + dy * t.uy) / length) >= Math.cos(30 * R))) {
-        drawWorldLine(d, [a, b], ctx.extent, P, TEAL, .25, "aligned_streets");
+        drawWorldLine(d, [a, b], ctx.extent, P, WIND_B1.street, .3, "aligned_streets");
         alignedSegments++;
       }
     }
   }
+  const e0 = ctx.extent, cc = ctx.center || [(e0[0] + e0[2]) / 2, (e0[1] + e0[3]) / 2], rr = (e0[2] - e0[0]) / 2;
+  const inside = p => p[0] >= e0[0] + 6 && p[0] <= e0[2] - 6 && p[1] >= e0[1] + 6 && p[1] <= e0[3] - 6 &&
+    (ctx.shape?.kind !== "circle" || Math.hypot(p[0] - cc[0], p[1] - cc[1]) <= rr - 6);
+  // All corridor lines first, then the heads on top: candidates share trunks and run side by side, so one
+  // head per path piled up into a blur. One head per ~12 mm of sheet, in the darker 3D corridor colour.
+  const heads = [];
   directions.forEach((t, rank) => {
     for (const path of t.paths) {
-      const pts = smoothPath(path.points).map(p => P(...p));
-      d.line(pts, TEAL, rank ? 1.3 : 2.1, "corridors", .3);
-      const i = Math.max(1, Math.floor(pts.length * .7));
-      d.arrow(pts[Math.max(0, i - 3)], pts[i], TEAL, rank ? 2 : 2.5, "corridors");
+      const world = smoothPath(path.points, 3), pts = world.map(p => P(...p));
+      const main = path.primary && !rank;
+      // head at the end of the line, at the last point inside the site (circle) or the extent;
+      // the line itself stops at the base of the head
+      let i = world.length - 1;
+      while (i > 3 && !inside(world[i])) i--;
+      i = Math.max(3, i - 1);
+      const shown = pts.slice(0, Math.max(2, i - 1));
+      d.line(shown, "#FFFFFF", main ? 2.6 : 1.5, "corridors", .9);          // casing: readable on water and on the classes
+      d.line(shown, WIND_B1.corridor, main ? 1.8 : .8, "corridors", 1);
+      if (heads.some(h => Math.hypot(h.b[0] - pts[i][0], h.b[1] - pts[i][1]) < 5)) continue;
+      heads.push({ a: pts[i - 3], b: pts[i], size: main ? 3.2 : 2.3 });
     }
   });
+  for (const h of heads) d.arrow(h.a, h.b, WIND_B1.corridor, h.size, "corridors");
   legend(d, [
-    [TEAL, "λf < 0.15", .5],
-    [YELLOW, "λf 0.15–0.40", .5],
-    [BROWN, "λf > 0.40", .5],
-    [TEAL, "바람길 후보", .3],
-    [TEAL, "정렬 도로 ±30°", 1],
+    [WIND_B1.low, "λf < 0.15", .9],
+    [WIND_B1.mid, "λf 0.15–0.40", .9],
+    [WIND_B1.high, "λf > 0.40", .9],
+    [WIND_B1.corridor, KO_B1.primary, 1, 1.8],
+    [WIND_B1.corridor, KO_B1.secondary, 1, .8],
+    [WIND_B1.street, KO_B1.street, 1, .3],
     ...(hasWater ? [[env.pal?.water || "#A8C8D8", "수면", .92]] : [])
   ]);
-  d.text(322, 91, "격자 25 m · λf 무차원", 2.5);
+  d.text(322, 98, "격자 25 m · λf 무차원", 2.5);
   directions.forEach((t, i) => {
-    d.text(322, 100 + i * 6, `유입 ${t.from} · ${t.pct.toFixed(1)} %`, 2.7);
+    d.text(322, 106 + i * 6, `유입 ${t.from} · ${t.pct.toFixed(1)} %`, 2.7);
   });
-  d.text(322, 120, "화살표 = 바람 진행 방향", 2.4);
-  d.text(322, 126, "후보 간 공통 구간 허용", 2.4);
+  d.text(322, 124, "화살표 = 바람 진행 방향", 2.4);
+  d.text(322, 130, KO_B1.avoid, 2.4);
   return {
     stats: {
-      season, station: st.name, km: found.km, grid: G,
+      season, station: st.name, km: found.km, grid: G, fine,
       lambda: mean, directions, alignedSegments,
       unknownHeight: S.unknownHeight,
-      method: "Raster frontal exposure; top-two frequency-weighted map"
+      method: "Raster frontal exposure; top-two frequency-weighted map; penalised least-cost corridors"
     },
     source: `EPW ${String(st.name || st.wmo || "").slice(0, 30)} · ` +
       `${found.km.toFixed(1)} km · IGN BD TOPO · AVA / Gál–Unger 2009 / Wong 2010`,
-    note: "λf=ΣA노출/셀면적; z0=0.1h̄(1−exp(−λf)) m, 경험식; 비용=(λf+0.02)×거리; " +
-      DISCLAIMER
+    note: "λf=ΣA노출/셀면적; z0=0.1h̄(1−exp(−λf)) m, 경험식; 비용=(λf+0.02)×거리, 4 m 격자·건물 통과 불가; " +
+      KO_B1.limit + " · " + DISCLAIMER
   };
 }
 
@@ -710,9 +796,10 @@ function drawPlateWater(d, data, e, P, pal) {
 }
 function legend(d, rows) {
   d.text(322, 38, "범례", 3.2);
-  rows.forEach(([color, label, op], i) => {
+  rows.forEach(([color, label, op, lineWidth], i) => {
     const y = 46 + i * 7;
-    d.rect(322, y - 3, 10, 3.5, color, "none", .1, "legend", op);
+    if (lineWidth) d.line([[322, y - 1.2], [332, y - 1.2]], color, lineWidth, "legend", op);
+    else d.rect(322, y - 3, 10, 3.5, color, "none", .1, "legend", op);
     d.text(336, y, label, 2.6);
     d.legend.push({ kind: "line", stroke: color, sw: .5, label });
   });
@@ -746,6 +833,11 @@ export function buildLbPlate(kind, env, opts = {}) {
     d.poly(rings, "#EEF0F2", "#94A3B8", .1, "bld");
   }
   const site = ctx.site?.ring;
+  if (kind === "B1" && ctx.shape?.kind === "circle" && site?.length > 8) {
+    // the analysis runs on the square extent; what lies outside the circular site is context only
+    const outer = [[e[0], e[1]], [e[2], e[1]], [e[2], e[3]], [e[0], e[3]]].map(p => P(...p));
+    d.svg.push(`<path d="${pathD(outer, true)}${pathD(site.map(p => P(...p)), true)}" fill="#FFFFFF" fill-rule="evenodd" opacity=".72" stroke="none"/>`);
+  }
   if (site?.length) {
     const ring = clipRing(site, e);
     if (ring.length >= 3) d.poly([ring.map(p => P(...p))],

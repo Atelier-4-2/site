@@ -10,7 +10,7 @@
 // Comfort and strategy regions are illustrative screening assumptions,
 // not ASHRAE 55 compliance calculations or predicted energy savings.
 
-import { nearestStation } from "./dgenv_v02.js?v=20261115m";
+import { nearestStation } from "./dgenv_v02.js?v=20261116n";
 
 const W = 420, H = 297;
 const FONT = "'Noto Sans','Noto Sans KR','Malgun Gothic',sans-serif";

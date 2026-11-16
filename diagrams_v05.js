@@ -6,18 +6,18 @@ import {
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
 } from "./ign.js?v=20261113p";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
-import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261115m";
+import { DIAGRAMS, isReady } from "./dgdefs_v05.js?v=20261116n";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261114t1";
-import { STYLES } from "./dgsemantic_v02.js?v=20261115m";
+import { STYLES } from "./dgsemantic_v02.js?v=20261116n";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114t1";
-import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261115m";
+import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261116n";
 const DETAIL_ZOOM_HINT = "더블클릭하면 그 지점을 확대하고, 다시 더블클릭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다.";
-import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261115m";
-import { toDxf } from "./dgdxf_v03.js?v=20261115m";
+import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET } from "./dgcore_v04.js?v=20261116n";
+import { toDxf } from "./dgdxf_v03.js?v=20261116n";
 import { buildPdf } from "./dgpdf.js?v=20261114t1";
-import { build3dm } from "./dg3dm_v03.js?v=20261115m";
+import { build3dm } from "./dg3dm_v03.js?v=20261116n";
 
 const $ = s => document.querySelector(s);
 const body = document.body;
@@ -64,6 +64,7 @@ function showDgStep(n, focus = false) {
     b.disabled = busy || (s >= 2 && !ignMap.bounds) || (s >= 3 && !results);
   }
   const idx = { 1: 1, 3: 2, 4: 3 }[n];
+  dgStepIdx = idx;
   $("#step-count").textContent = `단계 ${idx}/3`;
   if (changed || focus) window.scrollTo({ top: 0, behavior: "auto" });
   if (n === 1) setTimeout(() => ignMap.resize(), 50);
@@ -72,7 +73,14 @@ function showDgStep(n, focus = false) {
   if (focus) $(n === 1 ? "#dg-step-title-1" : `#dg-step-title-${n}`)?.focus({ preventScroll: true });
 }
 
+// app.js rewrites the counter as "n/4" (laser flow) after our own update; in diagram mode it is always n/3
+let dgStepIdx = 1;
+new MutationObserver(() => {
+  const el = $("#step-count"), want = `단계 ${dgStepIdx}/3`;
+  if (body.dataset.mode === "diagrams" && el.textContent !== want) el.textContent = want;
+}).observe($("#step-count"), { childList: true, characterData: true, subtree: true });
 function enterMode() {
+  dgStepIdx = 1; $("#step-count").textContent = "단계 1/3";
   body.dataset.mode = "diagrams";
   $("#laser-stepper").hidden = true;
   $("#dg-stepper").hidden = false;
@@ -212,6 +220,28 @@ for (const b of document.querySelectorAll("[data-dg-pal]")) {
     if (step === 4) tabs?.refresh();
     if (results) renderCards();
   });
+}
+// phones only (CSS): the ten themes fold behind one row showing the current theme and its colour strip;
+// picking a theme closes the list again. On wider screens the button is hidden and the list never folds.
+{
+  const tray = document.querySelector("#dg-panel-3 .dg-settings-inline .dg-palettes");
+  if (tray) {
+    tray.id ||= "dg-theme-list";
+    const fold = document.createElement("button");
+    fold.type = "button"; fold.className = "dg-fold"; fold.id = "dg-theme-fold";
+    fold.setAttribute("aria-expanded", "false"); fold.setAttribute("aria-controls", tray.id);
+    const sync = () => {
+      const open = fold.getAttribute("aria-expanded") === "true";
+      const cur = tray.querySelector('[aria-checked="true"]') || tray.querySelector("[data-dg-pal]");
+      const name = [...cur.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim();
+      fold.innerHTML = open ? `<span>테마 목록 접기</span><i aria-hidden="true">▲</i>`
+        : `<span>${name} · 변경</span>${cur.querySelector(".dg-palette-strip")?.outerHTML || ""}<i aria-hidden="true">▼</i>`;
+      tray.classList.toggle("is-folded", !open);
+    };
+    fold.addEventListener("click", () => { fold.setAttribute("aria-expanded", String(fold.getAttribute("aria-expanded") !== "true")); sync(); });
+    tray.addEventListener("click", e => { if (e.target.closest("[data-dg-pal]")) setTimeout(() => { fold.setAttribute("aria-expanded", "false"); sync(); }, 150); });
+    tray.before(fold); sync();
+  }
 }
 $("#dg-lw").addEventListener("input", e => {
   baseLw = Number(e.target.value);

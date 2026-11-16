@@ -1,4 +1,4 @@
-import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?v=20261115m";
+import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?v=20261116n";
 // Diagram registry. One entry per plate; the 28 reference slots are all listed,
 // those without `build` are shown as "준비 중" cards and plug in later:
 //   { num, fr, en, needs:[dataKeys], color, build(ctx, data, opt) -> sheet }
@@ -6,8 +6,8 @@ import { semanticPalette, ROAD_COLOURS, ROAD_WIDTHS } from "./dgsemantic_v02.js?
 // opt   = { mono:boolean, color:hex|null, lw:number (line-weight multiplier) }
 import { ringArea, clipRingRect, mix } from "./dgcore.js?v=20261113s";
 import { bands, gaussian } from "./dgcontour.js?v=20261113b";
-import { IMPL2 } from "./dgdefs2_v04.js?v=20261115m";
-import { IMPL3 } from "./dgdefs3_v05.js?v=20261115m";
+import { IMPL2 } from "./dgdefs2_v04.js?v=20261116n";
+import { IMPL3 } from "./dgdefs3_v05.js?v=20261116n";
 import { KO } from "./dgstrings.js?v=20261114t1";
 import { heightOf, heightEstimated } from "./dganalysis.js?v=20261113p";
 

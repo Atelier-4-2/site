@@ -1,4 +1,4 @@
-import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261115m";
+import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261116n";
 // Diagram cards 06-08, 10-12, 14-16, 21, 25, 27 (vector data only). Merged into
 // the registry by dgdefs.js. Data colours are resolved by dgsemantic.js.
 import { ringArea, clipRingRect, circleRing, mix } from "./dgcore.js?v=20261113s";
