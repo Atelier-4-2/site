@@ -80,6 +80,40 @@ const SYNTAX = colours("2563EB 38BDF8 FACC15 F97316 DC2626");
   };
 });
 
+// Standard theme (owner 2026-11-16): each plate uses the colour convention most used for that kind of map,
+// verified at the source rather than invented:
+//  03 use      APA LBCS 1-digit Function/Structure codes (2001): residential FFFF00, sales/services FF0000,
+//              institutional 0000FF, manufacturing A020F0, transport/other BEBEBE; office = light tint of the
+//              2000 red because LBCS files offices under 2000
+//  22/23/24    Ladybug Tools default "original" colorset (ladybug/color.py _colors[0]), blue -> yellow -> red
+//  25 syntax   depthmapX default AXMANESQUE scale (salalib/pafcolor.cpp g_nicecolor), blue 3333DD -> red DD3333
+//  15 walk     green 5 / orange 10 / red 15 min, as in the Stadia Maps and MapAtlas isochrone tutorials
+//  18 terrain  conventional hypsometric tints, green lowlands -> yellow -> brown highlands
+//  19 slope    ColorBrewer RdYlGn reversed; 04 year YlOrBr; 05 height / 17 density YlOrRd (ColorBrewer)
+//  base        white page, neutral grey buildings, OSM-carto water AAD3DF and park C8FACC
+const LADYBUG = colours("4B6BA9 AAC8F7 F5EF67 EF9C15 EA2600");
+STYLES.standard = {
+  name: "표준", bg: "#FFFFFF", building: "#D9D9D9", figure: "#1A1A1A",
+  road: "#FFFFFF", site: "#E41A1C", water: "#AAD3DF", green: "#C8FACC", trees: "#6FA35F",
+  use6: colours("FFFF00 FF0000 FF8080 0000FF A020F0 BEBEBE"),
+  warm: colours("FFFFD4 FED98E FE9929 D95F0E 993404"),
+  cool: colours("EFF3FF BDD7E7 6BAED6 3182BD 08519C"),
+  diverging: colours("2C7BB6 F7F7F7 D7191C"),
+  sun: [...LADYBUG], zoning: [...ZONING], heritage: "#7A2048",
+  syntax: colours("3333DD 22CCDD 88DD22 DD8833 DD3333"),
+  isochrone: colours("33CC33 FF9900 CC3300 BEBEBE"),
+  aspect8: colours("E41A1C FF7F00 FFFF33 4DAF4A 1B9E77 377EB8 984EA3 F781BF"),
+  sem: {
+    height: colours("FFFFB2 FECC5C FD8D3C F03B20 BD0026"),
+    density: colours("FFFFB2 FECC5C FD8D3C F03B20 BD0026"),
+    terrain: colours("71A65A B9D486 F2E8A0 D9B377 A47448"),
+    slope: colours("1A9850 91CF60 FEE08B FC8D59 D73027"),
+    sun: [...LADYBUG], svf: [...LADYBUG], wind: [...LADYBUG],
+    syntax: colours("3333DD 22CCDD 88DD22 DD8833 DD3333"),
+    isoRamp: colours("33CC33 FF9900 CC3300")
+  }
+};
+
 const mix = (a, b, t) => "#" + [1, 3, 5].map(i =>
   Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) +
     parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
@@ -119,6 +153,9 @@ export function semanticPalette(pal) {
     terrain: s.warm, slope: s.warm, parcel: s.warm[1], plot: s.cool, sun: [...SUN],
     svf: [...s.cool].reverse(), syntax: [...SYNTAX], visibility: [s.cool[1], s.cool[2], s.cool[4]],
     dh: s.cool, aspect: s.aspect8.map(desaturate),
-    wind, windSeason: wind.map(c => mix(c, "#FFFFFF", .2))
+    wind, windSeason: wind.map(c => mix(c, "#FFFFFF", .2)),
+    // per-plate conventions of a theme (STYLES.standard.sem) override the derived ramps
+    ...(raw.sem || {}),
+    ...(raw.sem?.wind ? { windSeason: raw.sem.wind.map(c => mix(c, "#FFFFFF", .2)) } : {})
   };
 }

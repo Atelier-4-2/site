@@ -319,7 +319,8 @@
           <div>
             <span class="dg-label" id="dg-color-label">다이어그램 테마</span>
             <div class="segmented dg-palettes" role="radiogroup" aria-labelledby="dg-color-label">
-              <button type="button" role="radio" aria-checked="true" data-dg-pal="swiss">스위스 아틀라스</button>
+              <button type="button" role="radio" aria-checked="true" data-dg-pal="standard">표준</button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="swiss">스위스 아틀라스</button>
 <button type="button" role="radio" aria-checked="false" data-dg-pal="paris">파리 카다스트르</button>
 <button type="button" role="radio" aria-checked="false" data-dg-pal="datascape">더치 데이터</button>
 <button type="button" role="radio" aria-checked="false" data-dg-pal="nocturne">다크 스펙트럼</button>
@@ -737,7 +738,7 @@
   <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v05.js?v=20261116n"); import("./app.js?v=20261114t1").catch(error => {
+    import("./diagrams_v05.js?v=20261116p"); import("./app.js?v=20261114t1").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";

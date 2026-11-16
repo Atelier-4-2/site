@@ -1,7 +1,7 @@
 // Base-map tokens only. Data colours are resolved by dgsemantic.js.
-import { STYLES } from "./dgsemantic.js?v=20261114t1";
+import { STYLES } from "./dgsemantic_v02.js?v=20261116p";
 
-export const PALETTE_ORDER = ["swiss","paris","datascape","nocturne","poche","critical","atlas","dutch","minimal","eco"];
+export const PALETTE_ORDER = ["standard","swiss","paris","datascape","nocturne","poche","critical","atlas","dutch","minimal","eco"];
 export const PALETTES = Object.fromEntries(PALETTE_ORDER.map(id => {
   const s = STYLES[id];
   return [id, {

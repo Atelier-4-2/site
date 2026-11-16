@@ -1,10 +1,10 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261116n";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261116p";
 // Rhino .3dm export for the site diagrams (rhino3dm 8.35.0, already loaded by index.html).
 // Units m. The model origin is the SITE CENTRE (Lambert-93 coordinates are ~6.8e6 m north and Rhino loses
 // precision that far from the origin); the shift is stored in the document UserText and on every object.
 // One parent layer per diagram ("NN 제목"), the diagram layers below it; no hatches or fills.
 import { ExtrudeGeometry, Shape, Path, Vector2 } from "three";
-import { prepareSheet, stdWeight } from "./dgexport_v03.js?v=20261116n";
+import { prepareSheet, stdWeight } from "./dgexport_v04.js?v=20261116p";
 import { demAt } from "./dgenv_v02.js?v=20261116n";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 

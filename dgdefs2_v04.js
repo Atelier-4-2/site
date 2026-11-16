@@ -1,4 +1,4 @@
-import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261116n";
+import { semanticPalette, STOP_COLOUR, ISO_ALPHA } from "./dgsemantic_v02.js?v=20261116p";
 // Diagram cards 06-08, 10-12, 14-16, 21, 25, 27 (vector data only). Merged into
 // the registry by dgdefs.js. Data colours are resolved by dgsemantic.js.
 import { ringArea, clipRingRect, circleRing, mix } from "./dgcore.js?v=20261113s";
@@ -442,14 +442,16 @@ export const IMPL2 = {
     build(ctx, data, opt) {
       const pal = P(opt);
       const order = [...data.iso].sort((a, b) => b.min - a.min); // largest first (painted underneath)
-      const fills = Object.fromEntries([5, 10, 15].map(m => [m, pal.isochrone + ISO_ALPHA[m]]));
-      const line = pal.isochrone;
+      // a theme may give one colour per ring (standard: green 5 / orange 10 / red 15 min)
+      const ring = m => pal.isoRamp ? pal.isoRamp[[5, 10, 15].indexOf(m)] || pal.isoRamp[2] : pal.isochrone;
+      const fills = Object.fromEntries([5, 10, 15].map(m => [m, ring(m) + (pal.isoRamp ? "4D" : ISO_ALPHA[m])]));
+      const line = pal.isochrone, lineOf = m => pal.isoRamp ? ring(m) : line;
       return {
         layers: [...order.map(z => ({
           id: `iso_${z.min}`, name: `도보 ${z.min}분`,
-          items: z.polygons.map(rings => ({ k: "poly", rings: rings.map(smoothRing), fill: fills[z.min] || fills[15], stroke: line, sw: lw(opt, .4), dash: "1.8 1.2" }))
+          items: z.polygons.map(rings => ({ k: "poly", rings: rings.map(smoothRing), fill: fills[z.min] || fills[15], stroke: lineOf(z.min), sw: lw(opt, .4), dash: "1.8 1.2" }))
         })), waterOver(opt, data), ctxBuildings(opt, data)],
-        legend: [...[5, 10, 15].map(m => ({ kind: "fill", fill: fills[m], stroke: line, sw: .4, dash: "1.8 1.2", label: `도보 ${m}분 (약 ${Math.round(m * 80)} m 보행)` })),
+        legend: [...[5, 10, 15].map(m => ({ kind: "fill", fill: fills[m], stroke: lineOf(m), sw: .4, dash: "1.8 1.2", label: `도보 ${m}분 (약 ${Math.round(m * 80)} m 보행)` })),
           ctxLegend(opt), SITE],
         notes: ["IGN 경로 서비스(isochrone, bdtopo-valhalla, 보행)로 대지 중심에서 산출한 보행 등시간권입니다. 다이어그램 범위를 벗어나는 영역은 생략될 수 있습니다.",
           "보행 속도 및 도로망 모델은 기본값 기준이며, 지형 경사나 횡단 대기 시간은 반영되지 않습니다. " + SIM],

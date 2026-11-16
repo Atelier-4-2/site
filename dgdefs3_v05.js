@@ -1,4 +1,4 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261116n";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261116p";
 // Diagram cards 18, 19, 22, 23, 24, 26, 28 (computed from terrain / buildings / climate).
 // Every result is a reference simulation: "참고용 시뮬레이션, 법적 효력 없음".
 import { heightOf } from "./dganalysis.js?v=20261113p";

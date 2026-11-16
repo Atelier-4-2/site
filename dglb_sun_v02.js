@@ -26,7 +26,7 @@ import {
   nearestStation, sunPosition, parisDate, runRects, contours
 } from "./dgenv_v02.js?v=20261116n";
 import { utciEnv, CLIMATE } from "./dgclimplate_v03.js?v=20261116n";
-import { STYLES } from "./dgsemantic_v02.js?v=20261116n";
+import { STYLES } from "./dgsemantic_v02.js?v=20261116p";
 import { contourRings, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 
 const W = 420;

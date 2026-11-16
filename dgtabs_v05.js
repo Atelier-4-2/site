@@ -1,23 +1,23 @@
-import { semanticPalette } from "./dgsemantic_v02.js?v=20261116n";
+import { semanticPalette } from "./dgsemantic_v02.js?v=20261116p";
 // Analysis tabs A1-A8 of the site-diagram mode (step 4). three.js for the 3D tabs
 // (same three build / importmap as viewer3d.js), plain SVG for section, context,
 // merge and axonometric export. All computed results are reference simulations.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261116n";
+import { mix, renderSvg, ringArea, seqOf, clipRingRect } from "./dgcore_v04.js?v=20261116p";
 import { heightOf } from "./dganalysis.js?v=20261113p";
 import {
   sunPosition, parisDate, parisOffset, KEY_DAYS, demAt, sunHours, shadowMask, nearestStation
 } from "./dgenv_v02.js?v=20261116n";
-import { surfaceOf } from "./dgdefs3_v05.js?v=20261116n";
+import { surfaceOf } from "./dgdefs3_v05.js?v=20261116p";
 import { extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
 import { UTCI_CATS, UTCI_RANGE, utciCat } from "./dgutci.js?v=20261113x";
 import { buildPlate, utciEnv, utciInfoText, CLIMATE, KO_PLATE, SPEED_LABELS, SHADOW_DAYS, SHADOW_HOURS } from "./dgclimplate_v03.js?v=20261116n";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath, WIND_B1, KO_B1 } from "./dglb_wind_v02.js?v=20261116n";
-import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116n";
+import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116p";
 import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261116n";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
