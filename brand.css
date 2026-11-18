@@ -207,23 +207,40 @@ footer .brand-name {
 .legal-link:hover,
 .legal-link:focus-visible { color: var(--ink); }
 
-/* top-right site switcher */
-.page-header select.site-switcher {
+/* top-right segmented site switcher */
+.site-switch {
   flex: none;
-  min-height: 34px;
-  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
   border-radius: 980px;
+  background: var(--surface, #f5f5f7);
   border: 1px solid var(--line, #d2d2d7);
-  background: var(--paper, #ffffff);
-  color: var(--ink, #1d1d1f);
-  font-family: "Pretendard Variable", "Pretendard", sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  cursor: pointer;
 }
 
-.page-header select.site-switcher:hover,
-.page-header select.site-switcher:focus-visible {
-  border-color: var(--ink, #1d1d1f);
+.site-switch a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 980px;
+  font-family: "Pretendard Variable", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--muted, #6e6e73);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.site-switch a:hover {
+  color: var(--ink, #1d1d1f);
+}
+
+.site-switch a[aria-current="page"] {
+  background: var(--paper, #ffffff);
+  color: var(--ink, #1d1d1f);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
