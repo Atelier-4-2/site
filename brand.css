@@ -197,3 +197,12 @@ footer .brand-name {
     gap: 8px;
   }
 }
+
+/* credits + legal page link (intro note, footer) */
+.legal-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal-link:hover,
+.legal-link:focus-visible { color: var(--ink); }
