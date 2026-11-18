@@ -206,3 +206,24 @@ footer .brand-name {
 }
 .legal-link:hover,
 .legal-link:focus-visible { color: var(--ink); }
+
+/* top-right site switcher */
+.page-header select.site-switcher {
+  flex: none;
+  min-height: 34px;
+  padding: 5px 12px;
+  border-radius: 980px;
+  border: 1px solid var(--line, #d2d2d7);
+  background: var(--paper, #ffffff);
+  color: var(--ink, #1d1d1f);
+  font-family: "Pretendard Variable", "Pretendard", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.page-header select.site-switcher:hover,
+.page-header select.site-switcher:focus-visible {
+  border-color: var(--ink, #1d1d1f);
+}
