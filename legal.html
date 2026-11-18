@@ -117,8 +117,9 @@
     <li>Pour produire les diagrammes et les modèles, votre navigateur interroge directement les services publics
         listés ci-dessous (adresse recherchée, coordonnées et emprise du site). Comme pour toute requête web,
         ces services reçoivent votre adresse IP et la traitent selon leur propre politique de confidentialité.</li>
-    <li>Les bibliothèques et polices sont chargées depuis jsDelivr, cdnjs (Cloudflare) et Google Fonts, qui
-        reçoivent également votre adresse IP.</li>
+    <li>Les polices Noto Sans, Noto Sans KR, Noto Sans Mono et Instrument Sans sont hébergées sur le site
+        lui-même : aucune requête n’est envoyée à Google Fonts. Les bibliothèques et la police Pretendard sont
+        chargées depuis jsDelivr et cdnjs (Cloudflare), qui reçoivent votre adresse IP.</li>
     <li>Le lien « Google Maps » n’ouvre Google que si vous cliquez dessus.</li>
   </ul>
 
@@ -183,8 +184,23 @@
 
   <h2>Logiciels et polices</h2>
   <p class="muted">three.js (MIT), Leaflet (BSD-2), Proj4js (MIT), d3-contour (ISC), fflate (MIT), jsPDF (MIT),
-     svg2pdf.js (MIT), rhino3dm (MIT) ; polices Noto Sans, Noto Sans KR, Instrument Sans et Pretendard
-     (SIL Open Font License).</p>
+     svg2pdf.js (MIT), rhino3dm (MIT) ; polices Noto Sans, Noto Sans KR, Noto Sans Mono, Instrument Sans
+     (versions Fontsource) et Pretendard (SIL Open Font License 1.1).</p>
+
+  <h2>Palettes et références graphiques</h2>
+  <p>Les couleurs des diagrammes suivent des conventions établies, reprises pour que les planches restent
+     lisibles par les habitués de chaque outil :</p>
+  <ul>
+    <li>Rampes séquentielles et divergentes : <a href="https://colorbrewer2.org">ColorBrewer</a>,
+        Cynthia A. Brewer, Pennsylvania State University (licence Apache 2.0).</li>
+    <li>Ensoleillement, facteur de vue du ciel, vent : jeu de couleurs par défaut de
+        <a href="https://www.ladybug.tools">Ladybug Tools</a>.</li>
+    <li>Syntaxe spatiale : échelle « Axmanesque » de
+        <a href="https://github.com/SpaceGroupUCL/depthmapX">depthmapX</a> (Space Syntax Laboratory, UCL).</li>
+    <li>Usage des sols : codes LBCS de l’American Planning Association.</li>
+    <li>Mises en page des diagrammes solaires et éoliens inspirées de 3D Sun-Path (Andrew Marsh), Ladybug
+        et Eddy3D.</li>
+  </ul>
 
   <h2>Propriété intellectuelle</h2>
   <p>Le code, la mise en page et les textes du site appartiennent à l’Atelier 4·2. Toute reproduction ou
@@ -204,8 +220,11 @@
        88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, 미국.</p>
     <h3>개인정보</h3>
     <p>쿠키, 방문자 분석, 계정이 없습니다. 올린 DXF·3DM 파일은 브라우저 안에서만 처리됩니다. 다이어그램을 만들 때
-       브라우저가 위 표의 공공 데이터 서비스와 jsDelivr·cdnjs·Google Fonts에 직접 요청하므로, 이 서비스들은
-       방문자의 IP 주소와 검색한 대지 위치를 받습니다.</p>
+       브라우저가 위 표의 공공 데이터 서비스와 jsDelivr·cdnjs에 직접 요청하므로, 이 서비스들은 방문자의 IP 주소와
+       검색한 대지 위치를 받습니다. Noto·Instrument Sans 폰트는 사이트 안에 있어 Google Fonts로는 요청하지 않습니다.</p>
+    <h3>색과 그래픽 참고</h3>
+    <p>다이어그램 색은 ColorBrewer(Apache 2.0), Ladybug Tools 기본 색, depthmapX Axmanesque, APA LBCS 관례를 따릅니다.
+       일조·바람 도면 구성은 Andrew Marsh 3D Sun-Path, Ladybug, Eddy3D를 참고했습니다.</p>
     <h3>데이터 출처와 라이선스</h3>
     <p>IGN Géoplateforme(BD TOPO, 지적, 표고, 항공사진, 주소 검색)와 Géoportail de l’Urbanisme(PLU)은
        Licence Ouverte 2.0, OpenStreetMap·파리시 가로수·IDFM 노선은 ODbL입니다. 만든 시트에는 출처를 함께 적어 주세요.
