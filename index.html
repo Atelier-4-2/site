@@ -19,7 +19,7 @@
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
   <link rel="stylesheet" href="./style.css?v=20261109zr">
-  <link rel="stylesheet" href="brand.css?v=20261118l1">
+  <link rel="stylesheet" href="brand.css?v=20261118h">
   <!-- Instrument Sans, Noto Sans, Noto Sans KR, Noto Sans Mono: self-hosted (SIL OFL), no Google Fonts request -->
   <link rel="stylesheet" href="./fonts.css?v=20261118f1">
   <link rel="stylesheet" href="./diagrams_v02.css?v=20261116a">
@@ -70,9 +70,9 @@
 
   <header class="page-header">
     <div class="nav-inner">
-      <a id="brand-home" class="product-name" href="#top" aria-label="4·2 Terrain 처음으로">
-        <span class="brand-mark">4·2</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-tool">Terrain</span>
-      </a>
+      <div id="brand-home" class="product-name">
+        <a class="brand-mark" href="https://atelier-4-2.github.io/" aria-label="4·2 메인페이지로">4·2</a><span class="brand-divider" aria-hidden="true"></span><a class="brand-tool" href="#top" aria-label="Terrain 처음으로">Terrain</a>
+      </div>
 
       <nav id="laser-stepper" class="stepper" aria-label="제작 단계">
         <ol>
@@ -743,7 +743,7 @@
   <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v05.js?v=20261116p"); import("./app.js?v=20261114t1").catch(error => {
+    import("./diagrams_v05.js?v=20261118h"); import("./app.js?v=20261118h").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";

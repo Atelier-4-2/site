@@ -1573,7 +1573,7 @@ function setupInterface() {
 // Intro screen first; "시작하기" opens step 1.
 showPage(0);
 $("#start").addEventListener("click", () => showStep(1, true));
-$("#brand-home")?.addEventListener("click", event => { event.preventDefault(); showPage(0); });
+$("#brand-home")?.addEventListener("click", event => { if (event.target.closest(".brand-mark")) return; event.preventDefault(); showPage(0); });
 
 
 // ---------------------------------------------------------------------

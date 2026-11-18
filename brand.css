@@ -38,6 +38,8 @@ footer .brand-name,
   background-color: #d2d2d7;
 }
 
+#brand-home a { text-decoration: none; }
+
 #brand-home .brand-tool {
   flex: none;
   font-family: "Pretendard Variable", "Pretendard", sans-serif;

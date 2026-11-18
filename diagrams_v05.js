@@ -107,7 +107,7 @@ function leaveMode() {
 
 $("#start-diagrams").addEventListener("click", enterMode);
 $("#start").addEventListener("click", leaveMode);
-$("#brand-home")?.addEventListener("click", leaveMode);
+$("#brand-home")?.addEventListener("click", event => { if (event.target.closest(".brand-mark")) return; leaveMode(); });
 for (const b of document.querySelectorAll("[data-dgstep]")) {
   b.addEventListener("click", () => { if (!b.disabled) showDgStep(Number(b.dataset.dgstep), true); });
 }
