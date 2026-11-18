@@ -1,0 +1,1684 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>Histoire — 4·2</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="brand.css?v=20261118l1">
+  <link rel="stylesheet" href="./fonts.css?v=20261118f1">
+
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d1d1f;
+      --muted: #6e6e73;
+      --accent: #e6b89c;
+      --paper: #ffffff;
+      --background: #ffffff;
+      --surface: #f5f5f7;
+      --line: #d2d2d7;
+      --nav: rgb(255 255 255 / 80%);
+      --on-primary: #ffffff;
+      --ok: #15803d;
+      --ok-bg: #dcfce7;
+      --bad: #b91c1c;
+      --bad-bg: #fee2e2;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --ink: #f5f5f7;
+        --muted: #a1a1a6;
+        --accent: #e6b89c;
+        --paper: #000000;
+        --background: #000000;
+        --surface: #1d1d1f;
+        --line: #48484a;
+        --nav: rgb(0 0 0 / 80%);
+        --on-primary: #1d1d1f;
+        --ok: #4ade80;
+        --ok-bg: rgb(21 128 61 / 22%);
+        --bad: #f87171;
+        --bad-bg: rgb(185 28 28 / 22%);
+      }
+      #brand-home .brand-mark,
+      #brand-home .brand-tool,
+      footer .brand-name {
+        color: #f5f5f7;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font: 16px/1.6 "Pretendard Variable", "Pretendard", -apple-system,
+        BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      overflow-wrap: anywhere;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select, textarea { font: inherit; color: inherit; }
+
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--nav);
+      backdrop-filter: saturate(180%) blur(16px);
+      -webkit-backdrop-filter: saturate(180%) blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #brand-home {
+      text-decoration: none;
+    }
+
+    .nav-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      border-radius: 980px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .stat-pill.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+    .stat-pill.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 16px 88px;
+    }
+
+    .hero-head {
+      margin-bottom: 20px;
+    }
+
+    .hero-head .eyebrow {
+      margin: 0 0 4px;
+    }
+
+    .hero-head h1 {
+      margin: 0;
+      font-size: clamp(24px, 3.6vw, 32px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .hero-head p.sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 5px;
+      background: var(--surface);
+      border-radius: 980px;
+      overflow: hidden;
+      margin: 14px 0 22px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--ink);
+      transition: width 250ms ease;
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    button.pill-btn {
+      appearance: none;
+      min-height: 40px;
+      padding: 8px 16px;
+      border-radius: 980px;
+      border: 1px solid var(--line);
+      background: var(--background);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+    }
+
+    button.pill-btn:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    button.pill-btn.active {
+      background: var(--ink);
+      color: var(--on-primary);
+      border-color: var(--ink);
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .controls-bar label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .controls-bar select,
+    .controls-bar input[type="text"] {
+      min-height: 38px;
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-size: 14px;
+    }
+
+    .btn {
+      appearance: none;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 980px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 180ms ease, border-color 180ms ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface);
+      border-color: var(--ink);
+    }
+
+    .btn.primary {
+      background: var(--ink);
+      color: var(--on-primary);
+      border-color: var(--ink);
+    }
+
+    .btn.primary:hover:not(:disabled) {
+      opacity: 0.88;
+      background: var(--ink);
+    }
+
+    .btn.ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+      border-color: transparent;
+    }
+
+    .btn.bad {
+      background: var(--bad-bg);
+      color: var(--bad);
+      border-color: transparent;
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .chapter-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 980px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .counter {
+      font-family: "Instrument Sans", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .photo-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      max-height: 360px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-fallback {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .photo-fallback a {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--ink);
+      font-weight: 600;
+      text-underline-offset: 3px;
+    }
+
+    .project-title {
+      margin: 0 0 6px;
+      font-size: clamp(22px, 3vw, 28px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .sub-hint {
+      margin: 0 0 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .options-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: border-color 140ms ease, background-color 140ms ease;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--ink);
+      background: var(--surface);
+    }
+
+    .option-key {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: "Instrument Sans", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .option-btn.correct {
+      border-color: var(--ok);
+      background: var(--ok-bg);
+    }
+    .option-btn.correct .option-key { background: var(--ok); color: #fff; }
+
+    .option-btn.wrong {
+      border-color: var(--bad);
+      background: var(--bad-bg);
+    }
+    .option-btn.wrong .option-key { background: var(--bad); color: #fff; }
+
+    .answer-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .meta-item {
+      background: var(--paper);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
+
+    .meta-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .meta-val {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .desc-fr {
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+    }
+
+    .ko-tip {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--paper);
+    }
+
+    .card-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .kbd-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .exam-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .exam-inputs input,
+    .field-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      font-size: 14px;
+    }
+
+    .grid-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .pairs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .pair-card {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+    }
+
+    .pair-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .pair-card p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      align-items: start;
+    }
+
+    .list-thumb {
+      width: 112px;
+      height: 78px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .list-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    footer {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+      border-top: 1px solid var(--line);
+    }
+
+    @media (max-width: 560px) {
+      .card { padding: 16px; }
+      .list-row { grid-template-columns: 1fr; }
+      .list-thumb { width: 100%; height: 150px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="nav-inner">
+      <a id="brand-home" class="product-name" href="./" aria-label="4·2 홈으로">
+        <span class="brand-mark">4·2</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-tool">Histoire</span>
+      </a>
+      <div class="nav-stats" id="statsBar"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero-head">
+      <p class="eyebrow brand-eyebrow">4·2 Study — Histoire globale</p>
+      <h1>30개 프로젝트 퀴즈 &amp; 플래시카드</h1>
+      <p class="sub">Paul Wolkenstein 기말시험 대비 · 사진 / 건축가 / 프로젝트명 / 장소 / 슬라이드 연도 / FR 설명</p>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+
+    <div class="mode-tabs" id="modeTabs">
+      <button class="pill-btn active" data-mode="photo">사진 퀴즈</button>
+      <button class="pill-btn" data-mode="flashcard">플래시카드</button>
+      <button class="pill-btn" data-mode="quiz">4지선다</button>
+      <button class="pill-btn" data-mode="exam">실전 1번 모의 (3개)</button>
+      <button class="pill-btn" data-mode="pairs">헷갈리는 6쌍</button>
+      <button class="pill-btn" data-mode="list">전체 30개</button>
+    </div>
+
+    <div class="controls-bar" id="controlsBar"></div>
+    <section id="mainView"></section>
+  </main>
+
+  <footer>
+    <p class="brand-footer"><span class="brand-name">4·2</span> · Histoire globale (1960–1990) 기말 대비 학습 페이지</p>
+    <p><a href="./" style="color:inherit;">4·2 Terrain으로 돌아가기</a> · <a href="legal.html" style="color:inherit;">Mentions légales</a></p>
+  </footer>
+
+  <script>
+    const PROJECTS = [
+      {
+        id: 1,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Pruitt-Igoe",
+        architect: "Minoru Yamasaki",
+        location: "St. Louis, États-Unis",
+        year: "1950 (슬라이드), démolition 1972",
+        desc: "Grand ensemble de logements sociaux, application radicale du fonctionnalisme. Dégradation rapide, démoli en 1972 : symbole de l'échec du modernisme.",
+        koTip: "기능주의의 급진적 적용 → 빠른 노후화 → 1972년 폭파 철거 (모더니즘 실패의 상징).",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Pruitt-igoeUSGS02.jpg/640px-Pruitt-igoeUSGS02.jpg"
+      },
+      {
+        id: 2,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Robin Hood Gardens",
+        architect: "Alison & Peter Smithson (Team 10)",
+        location: "Londres, Poplar",
+        year: "1972",
+        desc: "Logement social expérimental, « streets in the sky ». Tentative d'humaniser le modernisme, résultats mitigés, démoli récemment.",
+        koTip: "Smithson 부부 (Team 10) · '하늘 길(streets in the sky)' · Byker Wall과 구분!",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Robin_Hood_Gardens_AP_Smithson.jpg/640px-Robin_Hood_Gardens_AP_Smithson.jpg"
+      },
+      {
+        id: 3,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Byker Wall",
+        architect: "Ralph Erskine",
+        location: "Newcastle, Royaume-Uni",
+        year: "1982",
+        desc: "Logement social participatif : les habitants intègrent le processus. Architecture adaptée au contexte local (climat), alternative au grand ensemble.",
+        koTip: "주민 참여형(participatif) + 북쪽 바람 막는 긴 벽(기후 적응).",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Tomcollinshouse_1.jpg/640px-Tomcollinshouse_1.jpg"
+      },
+      {
+        id: 4,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Espaces d'Abraxas",
+        architect: "Ricardo Bofill (Taller de Arquitectura)",
+        location: "Noisy-le-Grand, France",
+        year: "1983",
+        desc: "Logement monumental, réintroduction de formes classiques. Critique du fonctionnalisme, architecture comme décor, ambiguïté entre utopie et spectacle.",
+        koTip: "파리 근교(Noisy-le-Grand), 고전 기둥·아치 형태의 거대 기념비적 주거 (Walden 7과 구분!).",
+        img: "https://thumb.wikimedia.org/wikipedia/fr/thumb/8/8e/Espaces_d%27Abraxas_2.jpeg/640px-Espaces_d%27Abraxas_2.jpeg"
+      },
+      {
+        id: 5,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Habitat 67",
+        architect: "Moshe Safdie",
+        location: "Montréal, Canada (Expo 67)",
+        year: "1967",
+        desc: "Prototype de logement modulaire expérimental. Réponse critique aux grands ensembles : densité compatible avec la qualité de vie.",
+        koTip: "몬트리올 엑스포 67 · 프리패브 모듈러 적층 주거.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Habitat_67_2019_dllu_01.jpg/640px-Habitat_67_2019_dllu_01.jpg"
+      },
+      {
+        id: 6,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Siedlung Halen",
+        architect: "Atelier 5",
+        location: "près de Berne, Suisse",
+        year: "1961",
+        desc: "Logement dense intégré au paysage (pente, forêt), échelle humaine. Alternative au grand ensemble, projet durable dans le temps.",
+        koTip: "베른 근처 경사지·숲에 통합된 고밀 저층 주거, 인간적 스케일.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Halen_002.jpg/640px-Halen_002.jpg"
+      },
+      {
+        id: 7,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "PREVI",
+        architect: "concours international (Aldo van Eyck, James Stirling, Atelier 5, Georges Candilis, Charles Correa…)",
+        location: "Lima, Pérou",
+        year: "1970",
+        desc: "Projet expérimental de logement évolutif : les habitants agrandissent leur maison. Critique du modèle standardisé.",
+        koTip: "국제 공모 · 거주자가 스스로 증축하는 진화형(évolutif) 주거.",
+        img: null
+      },
+      {
+        id: 8,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "La Grande Motte",
+        architect: "Jean Balladur",
+        location: "Hérault (Languedoc), France",
+        year: "1970",
+        desc: "Station balnéaire planifiée (Mission Racine), pyramides répétitives et iconiques. Modernisme touristique tardif, logique sérielle et économique.",
+        koTip: "Mission Racine 계획 휴양 도시 · 반복되는 피라미드 매스.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Grande_motte_01.jpg/640px-Grande_motte_01.jpg"
+      },
+      {
+        id: 9,
+        chapter: "#1 Crise du Mouvement moderne",
+        name: "Nakagin Capsule Tower",
+        architect: "Kisho Kurokawa",
+        location: "Tokyo (Ginza)",
+        year: "1972 (démolie en 2022)",
+        desc: "Projet métaboliste : capsules d'habitation remplaçables fixées sur deux noyaux. Vision évolutive de la ville. Démolie en 2022.",
+        koTip: "교체 가능한 캡슐 + 2개의 코어 (메타볼리즘, 2022년 철거).",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/26/Nakagin.jpg/640px-Nakagin.jpg"
+      },
+      {
+        id: 10,
+        chapter: "#2 Postmodernismes",
+        name: "Guild House",
+        architect: "Robert Venturi (& John Rauch)",
+        location: "Philadelphie, États-Unis",
+        year: "1963",
+        desc: "Logement pour personnes âgées, façade volontairement banale, antenne TV comme symbole. Référence ironique au modernisme : projet critique fondateur (« decorated shed »).",
+        koTip: "노인 주거 · 의도적으로 평범한 입면 + TV 안테나 상징 ('decorated shed').",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Venturi_Guild_House.jpg/640px-Venturi_Guild_House.jpg"
+      },
+      {
+        id: 11,
+        chapter: "#2 Postmodernismes",
+        name: "Piazza d'Italia",
+        architect: "Charles Moore",
+        location: "La Nouvelle-Orléans, États-Unis",
+        year: "1978",
+        desc: "Espace public scénographique pour la communauté italienne. Colonnes et arcs antiques en néon et inox, couleurs : architecture ludique et narrative.",
+        koTip: "이탈리아계 커뮤니티 광장 · 네온·스테인리스로 재해석한 고전 기둥과 아치.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f6/Piazza_D%27Italia.jpg/640px-Piazza_D%27Italia.jpg"
+      },
+      {
+        id: 12,
+        chapter: "#2 Postmodernismes",
+        name: "Teatro del Mondo",
+        architect: "Aldo Rossi",
+        location: "Venise (Biennale 1980)",
+        year: "1980",
+        desc: "Théâtre flottant temporaire en bois sur une barge. Formes archétypales simples, mémoire urbaine de Venise : architecture comme artefact.",
+        koTip: "베니스 비엔날레 수상 목조 가설 극장 · 원형적 형태와 도시의 기억.",
+        img: null
+      },
+      {
+        id: 13,
+        chapter: "#2 Postmodernismes",
+        name: "Sony Tower (AT&T Building)",
+        architect: "Philip Johnson & John Burgee",
+        location: "New York, Madison Avenue",
+        year: "1984",
+        desc: "Gratte-ciel au sommet en fronton brisé « Chippendale ». Citation historique explicite, architecture-signe, postmodernisme corporate.",
+        koTip: "치펜데일(Chippendale) 부서진 박공 지붕 · 기업형 포스트모더니즘.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/550_Madison_Avenue_July2015.JPG/640px-550_Madison_Avenue_July2015.JPG"
+      },
+      {
+        id: 14,
+        chapter: "#2 Postmodernismes",
+        name: "Walden 7",
+        architect: "Ricardo Bofill",
+        location: "Sant Just Desvern, près de Barcelone",
+        year: "1975",
+        desc: "Logements expérimentaux, organisation labyrinthique autour de cours. Référence aux formes méditerranéennes, couleur et monumentalité.",
+        koTip: "바르셀로나 근교 · 붉은 미로형 중정 집합주택 (Abraxas보다 먼저, 1975).",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Walden_%285%29.jpg/640px-Walden_%285%29.jpg"
+      },
+      {
+        id: 15,
+        chapter: "#2 Postmodernismes",
+        name: "Kanchanjunga Apartments",
+        architect: "Charles Correa",
+        location: "Mumbai, Inde",
+        year: "1983",
+        desc: "Tour de logements adaptée au climat tropical : jardins suspendus à double hauteur, orientation ouest. Hybridation modernisme / tradition (véranda).",
+        koTip: "뭄바이 고층 주거 · 2층 높이 공중 정원(베란다의 현대적 번역) · 서향 바람.",
+        img: null
+      },
+      {
+        id: 16,
+        chapter: "#3 Régionalisme critique",
+        name: "New Gourna",
+        architect: "Hassan Fathy",
+        location: "Gourna, près de Louxor, Égypte",
+        year: "1970 (슬라이드)",
+        desc: "Village en terre crue, voûtes et coupoles nubiennes. Techniques vernaculaires, adaptation climatique, architecture sociale, refus du modernisme importé.",
+        koTip: "생흙(흙벽돌) + 누비아식 볼트·돔 · 수입 모더니즘 거부.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Gurna_Mosque_R01.jpg/640px-Gurna_Mosque_R01.jpg"
+      },
+      {
+        id: 17,
+        chapter: "#3 Régionalisme critique",
+        name: "Hôtel de ville de Säynätsalo",
+        architect: "Alvar Aalto",
+        location: "Säynätsalo, Finlande",
+        year: "1952",
+        desc: "Bâtiment civique en brique organisé autour d'une cour surélevée. Relation au paysage, échelle humaine, modernité organique : précurseur du régionalisme critique.",
+        koTip: "벽돌 시청사 + 들어 올려진 중정 · 비판적 지역주의의 선구자.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/S%C3%A4ynatsalo.jpg/640px-S%C3%A4ynatsalo.jpg"
+      },
+      {
+        id: 18,
+        chapter: "#3 Régionalisme critique",
+        name: "Azuma House (Row House Sumiyoshi)",
+        architect: "Tadao Ando",
+        location: "Osaka, Japon",
+        year: "1976",
+        desc: "Maison en béton introvertie, cour centrale ouverte au ciel. Travail sur la lumière et le vide, minimalisme contextuel.",
+        koTip: "노출 콘크리트 · 외부에 닫히고 하늘로 열린 중정(빛과 비움).",
+        img: null
+      },
+      {
+        id: 19,
+        chapter: "#3 Régionalisme critique",
+        name: "Chapelle Saint-Benoît",
+        architect: "Peter Zumthor",
+        location: "Sumvitg, Grisons, Suisse",
+        year: "1989",
+        desc: "Église en bois (plan en goutte d'eau) intégrée au paysage alpin. Matériaux locaux, forme compacte, architecture sensorielle.",
+        koTip: "물방울 평면 목조 예배당 · 알프스 지역 재료와 감각적 건축.",
+        img: null
+      },
+      {
+        id: 20,
+        chapter: "#3 Régionalisme critique",
+        name: "Assemblée nationale du Koweït",
+        architect: "Jørn Utzon",
+        location: "Koweït City",
+        year: "1972 (슬라이드; achevée 1982)",
+        desc: "Inspirée de formes vernaculaires (tente, souk), grande toiture-auvent. Adaptation au climat désertique, hybridation culturelle hors d'Europe.",
+        koTip: "유촌(Utzon) · 베두인 텐트·수크(시장)에서 영감 받은 거대 캐노피 지붕.",
+        img: null
+      },
+      {
+        id: 21,
+        chapter: "#3 Régionalisme critique",
+        name: "Parlement du Bangladesh (Jatiya Sangsad)",
+        architect: "Louis Kahn",
+        location: "Dacca, Bangladesh",
+        year: "1982",
+        desc: "Projet monumental de formes géométriques simples (cercles, triangles évidés). Lumière et matière, adaptation au climat tropical, symbole politique.",
+        koTip: "루이스 칸 · 물 위의 기념비적 콘크리트 매스, 원·삼각형 개구부.",
+        img: "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/National_Assembly_of_Bangladesh_%2810%29.jpg/640px-National_Assembly_of_Bangladesh_%2810%29.jpg"
+      },
+      {
+        id: 22,
+        chapter: "#3 Régionalisme critique",
+        name: "FAU-USP",
+        architect: "João Batista Vilanova Artigas",
+        location: "São Paulo, Brésil",
+        year: "1972 (슬라이드; projet 1961–69)",
+        desc: "École d'architecture : grand espace libre central sous un toit en béton, rampes. Architecture sociale, modernité critique.",
+        koTip: "⚠ 슬라이드에 'argentin' 오타가 있지만 Artigas는 브라질(brésilien) 건축가! 거대 콘크리트 지붕 아래 열린 학교.",
+        img: null
+      },
+      {
+        id: 23,
+        chapter: "#4 Modernités tropicales",
+        name: "Gandhi Smarak Sangrahalaya",
+        architect: "Charles Correa",
+        location: "Ahmedabad (ashram Sabarmati), Inde",
+        year: "1963",
+        desc: "Musée pavillonnaire, modules carrés ouverts et fragmentés autour d'un bassin. Ventilation naturelle, brique et tuiles locales : architecture climatique exemplaire.",
+        koTip: "분절된 정사각형 파빌리온 + 수공간 + 자연 환기 (박물관).",
+        img: null
+      },
+      {
+        id: 24,
+        chapter: "#4 Modernités tropicales",
+        name: "MASP",
+        architect: "Lina Bo Bardi",
+        location: "São Paulo, Avenida Paulista",
+        year: "1968",
+        desc: "Musée suspendu entre deux portiques rouges, grande portée. Le rez-de-chaussée reste un espace public libre : architecture sociale, icône brésilienne.",
+        koTip: "빨간 포르티코(기둥) 2개에 매달린 미술관 · 1층을 완전한 공공 광장으로 비움.",
+        img: null
+      },
+      {
+        id: 25,
+        chapter: "#4 Modernités tropicales",
+        name: "IIM Bangalore",
+        architect: "Balkrishna Doshi",
+        location: "Bangalore, Inde",
+        year: "1983",
+        desc: "Campus structuré par des cours et des circulations ombragées (pergolas). Adaptation au climat tropical, référence aux villes traditionnelles : architecture comme système.",
+        koTip: "중정과 그늘진 동선(퍼골라)으로 엮인 캠퍼스 · 전통 도시 구조 참조.",
+        img: null
+      },
+      {
+        id: 26,
+        chapter: "#4 Modernités tropicales",
+        name: "Kandalama Hotel",
+        architect: "Geoffrey Bawa",
+        location: "Dambulla, Sri Lanka",
+        year: "1983 (슬라이드; ouvert 1994)",
+        desc: "Hôtel intégré dans la jungle et la falaise, couvert de végétation. Fusion architecture / paysage, ventilation naturelle : archétype du tropical modernism.",
+        koTip: "절벽과 정글에 스며든 호텔 · 식생 피복 + 자연 환기.",
+        img: null
+      },
+      {
+        id: 27,
+        chapter: "#5 Métabolisme japonais",
+        name: "Sky House",
+        architect: "Kiyonori Kikutake",
+        location: "Tokyo",
+        year: "1958",
+        desc: "Plateforme libre surélevée sur quatre voiles ; les espaces servis (« move-nets ») s'ajoutent au fil du temps. Prototype domestique du métabolisme.",
+        koTip: "4개 벽체 위에 들어 올린 주거 + 교체 가능한 'move-nets'.",
+        img: null
+      },
+      {
+        id: 28,
+        chapter: "#5 Métabolisme japonais",
+        name: "Yamanashi Broadcasting Center",
+        architect: "Kenzo Tange",
+        location: "Kofu, Japon",
+        year: "1967",
+        desc: "Bâtiment organisé autour de noyaux verticaux (cylindres) ; plateaux pouvant être prolongés. Idée de structure-support.",
+        koTip: "원통형 수직 코어들 사이에 바닥판을 끼워 확장 가능하게 만든 구조.",
+        img: null
+      },
+      {
+        id: 29,
+        chapter: "#7 Néo-capitales",
+        name: "Brasília",
+        architect: "Lúcio Costa (Plano Piloto) & Oscar Niemeyer (bâtiments)",
+        location: "Brésil (plateau central)",
+        year: "1960",
+        desc: "Ville planifiée ex nihilo, axe monumental + axes résidentiels (forme d'avion/croix). Zoning fonctionnel, projet politique national, icône du modernisme mondial.",
+        koTip: "백지 위 계획 수도 (비행기/십자 형태 Plano Piloto) · Costa(도시계획) + Niemeyer(건물).",
+        img: null
+      },
+      {
+        id: 30,
+        chapter: "#7 Néo-capitales",
+        name: "Chandigarh (Capitol Complex)",
+        architect: "Le Corbusier (avec Pierre Jeanneret)",
+        location: "Chandigarh, Pendjab, Inde",
+        year: "1963 (Capitol, slide) ; 1965",
+        desc: "Capitale du Pendjab après la Partition. Architecture monumentale en béton, modernisme exporté : symbole d'un État postcolonial (Nehru).",
+        koTip: "인도 분리독립 후 펀자브 주도 · 네루의 탈식민 국가 상징 · 노출 콘크리트 기념비성.",
+        img: null
+      }
+    ];
+
+    const CONFUSING_PAIRS = [
+      {
+        title: "1. Ricardo Bofill 2개",
+        body: "Walden 7 (1975, 바르셀로나 근교, 미로형 붉은 집합주택) vs Espaces d'Abraxas (1983, 파리 근교 Noisy-le-Grand, 고전 기둥 모양 거대 주거)"
+      },
+      {
+        title: "2. Charles Correa 2개",
+        body: "Gandhi Smarak Sangrahalaya (1963, 아메다바드, 열린 정사각형 파빌리온 박물관) vs Kanchanjunga Apartments (1983, 뭄바이 타워, 2층 높이 테라스)"
+      },
+      {
+        title: "3. São Paulo 2개",
+        body: "MASP (1968, Lina Bo Bardi, 빨간 기둥에 매단 미술관) vs FAU-USP (1972 slide, Artigas, 거대 콘크리트 지붕 아래 열린 건축학교)"
+      },
+      {
+        title: "4. 일본 메타볼리즘 3인방",
+        body: "원통 코어 = Kenzo Tange (Yamanashi, 1967) · 캡슐 = Kisho Kurokawa (Nakagin, 1972) · 들어 올린 집 = Kiyonori Kikutake (Sky House, 1958)"
+      },
+      {
+        title: "5. 국회 의사당 2개",
+        body: "Koweït = Jørn Utzon (1972 slide, 텐트·수크 같은 큰 지붕) vs Bangladesh = Louis Kahn (1982, 원·삼각형으로 뚫린 벽, 물 위)"
+      },
+      {
+        title: "6. 영국 집합주택 2개",
+        body: "하늘 길(streets in the sky) = Alison & Peter Smithson (Robin Hood Gardens, 1972) vs 주민 참여 + 긴 벽 = Ralph Erskine (Byker Wall, 1982)"
+      }
+    ];
+
+    const CHAPTERS = ["ALL", ...new Set(PROJECTS.map(p => p.chapter))];
+    const STORAGE_KEY = "atelier42_histoire_30_v1";
+
+    let progress = loadProgress();
+    let state = {
+      mode: "photo",
+      chapter: "ALL",
+      onlyWeak: false,
+      onlyWithPhoto: true,
+      quizType: "architect",
+      pool: [],
+      index: 0,
+      answered: false,
+      selectedOption: null,
+      photoRevealed: false,
+      flashFlipped: false,
+      flashHint: false,
+      sessionCorrect: 0,
+      sessionTotal: 0,
+      examSet: [],
+      examRevealed: {},
+      searchQuery: ""
+    };
+
+    function loadProgress() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+      } catch {}
+    }
+
+    function getStatus(id) {
+      return progress[id] || "new";
+    }
+
+    function setStatus(id, st) {
+      progress[id] = st;
+      saveProgress();
+      renderStats();
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function getFiltered() {
+      return PROJECTS.filter(p => {
+        if (state.chapter !== "ALL" && p.chapter !== state.chapter) return false;
+        if (state.onlyWeak && getStatus(p.id) === "mastered") return false;
+        if (state.mode === "photo" && state.onlyWithPhoto && !p.img) return false;
+        return true;
+      });
+    }
+
+    function rebuildPool() {
+      state.pool = shuffle(getFiltered());
+      state.index = 0;
+      state.answered = false;
+      state.selectedOption = null;
+      state.photoRevealed = false;
+      state.flashFlipped = false;
+    }
+
+    function googleImgUrl(p) {
+      return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p.name + " " + p.architect)}`;
+    }
+
+    function renderPhotoBox(p, hideTitle = false) {
+      if (p.img) {
+        return `
+          <div class="photo-frame">
+            <img src="${p.img}" alt="${hideTitle ? "Architecture project" : p.name}" loading="lazy"
+                 onerror="this.parentElement.innerHTML='<div class=photo-fallback>이미지를 불러올 수 없습니다.<br><a href=\\'${googleImgUrl(p)}\\' target=_blank rel=noopener>구글 이미지로 보기 ↗</a></div>'">
+          </div>
+        `;
+      }
+      return `
+        <div class="photo-frame">
+          <div class="photo-fallback">
+            <div>위키미디어 대표 사진 미수록 프로젝트</div>
+            <div style="margin-top:4px;font-size:13px;">단서: ${p.desc}</div>
+            <a href="${googleImgUrl(p)}" target="_blank" rel="noopener">구글 이미지로 사진 확인하기 ↗</a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStats() {
+      const mastered = PROJECTS.filter(p => getStatus(p.id) === "mastered").length;
+      const review = PROJECTS.filter(p => getStatus(p.id) === "review").length;
+      const pct = Math.round((mastered / PROJECTS.length) * 100);
+      document.getElementById("progressFill").style.width = `${pct}%`;
+      document.getElementById("statsBar").innerHTML = `
+        <span class="stat-pill ok">암기 ${mastered}/30</span>
+        <span class="stat-pill bad">복습 ${review}</span>
+        ${state.sessionTotal > 0 ? `<span class="stat-pill">정답 ${state.sessionCorrect}/${state.sessionTotal}</span>` : ""}
+      `;
+    }
+
+    function renderControls() {
+      const bar = document.getElementById("controlsBar");
+      if (state.mode === "pairs") {
+        bar.style.display = "none";
+        return;
+      }
+      bar.style.display = "flex";
+
+      let html = `
+        <label>단원
+          <select id="chapterSelect">
+            ${CHAPTERS.map(c => `<option value="${c}" ${state.chapter === c ? "selected" : ""}>${c === "ALL" ? "전체 (30개)" : c}</option>`).join("")}
+          </select>
+        </label>
+        <label style="cursor:pointer;">
+          <input type="checkbox" id="weakCheck" ${state.onlyWeak ? "checked" : ""}>
+          미암기·복습만
+        </label>
+      `;
+
+      if (state.mode === "photo") {
+        html += `
+          <label style="cursor:pointer;">
+            <input type="checkbox" id="photoOnlyCheck" ${state.onlyWithPhoto ? "checked" : ""}>
+            사진 있는 프로젝트만 (15개)
+          </label>
+          <button class="btn" id="shuffleBtn">순서 섞기</button>
+        `;
+      } else if (state.mode === "quiz") {
+        html += `
+          <label>출제
+            <select id="quizTypeSelect">
+              <option value="architect" ${state.quizType === "architect" ? "selected" : ""}>건축가 맞히기</option>
+              <option value="name" ${state.quizType === "name" ? "selected" : ""}>건물명 맞히기</option>
+              <option value="year" ${state.quizType === "year" ? "selected" : ""}>연도 맞히기</option>
+              <option value="location" ${state.quizType === "location" ? "selected" : ""}>장소 맞히기</option>
+            </select>
+          </label>
+          <button class="btn" id="shuffleBtn">순서 섞기</button>
+        `;
+      } else if (state.mode === "flashcard") {
+        html += `<button class="btn" id="shuffleBtn">카드 섞기</button>`;
+      } else if (state.mode === "exam") {
+        html += `<button class="btn primary" id="newExamBtn">새로 3개 뽑기</button>`;
+      } else if (state.mode === "list") {
+        html += `
+          <input type="text" id="searchInput" placeholder="건물명, 건축가, 도시 검색..." value="${state.searchQuery}" style="flex:1;min-width:180px;">
+          <button class="btn" id="resetBtn">진행률 초기화</button>
+        `;
+      }
+
+      bar.innerHTML = html;
+
+      document.getElementById("chapterSelect")?.addEventListener("change", e => {
+        state.chapter = e.target.value;
+        rebuildPool();
+        renderMain();
+      });
+      document.getElementById("weakCheck")?.addEventListener("change", e => {
+        state.onlyWeak = e.target.checked;
+        rebuildPool();
+        renderMain();
+      });
+      document.getElementById("photoOnlyCheck")?.addEventListener("change", e => {
+        state.onlyWithPhoto = e.target.checked;
+        rebuildPool();
+        renderMain();
+      });
+      document.getElementById("quizTypeSelect")?.addEventListener("change", e => {
+        state.quizType = e.target.value;
+        state.answered = false;
+        state.selectedOption = null;
+        renderMain();
+      });
+      document.getElementById("shuffleBtn")?.addEventListener("click", () => {
+        rebuildPool();
+        renderMain();
+      });
+      document.getElementById("newExamBtn")?.addEventListener("click", () => {
+        const src = getFiltered();
+        state.examSet = shuffle(src.length >= 3 ? src : PROJECTS).slice(0, 3);
+        state.examRevealed = {};
+        renderMain();
+      });
+      document.getElementById("searchInput")?.addEventListener("input", e => {
+        state.searchQuery = e.target.value;
+        renderMain();
+      });
+      document.getElementById("resetBtn")?.addEventListener("click", () => {
+        if (confirm("암기 상태를 모두 초기화할까요?")) {
+          progress = {};
+          saveProgress();
+          render();
+        }
+      });
+    }
+
+    function renderDetailBlock(p) {
+      return `
+        <div class="answer-box">
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Projet</div>
+              <div class="meta-val">${p.name}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Architecte</div>
+              <div class="meta-val">${p.architect}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Lieu</div>
+              <div class="meta-val">${p.location}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Date (Slide)</div>
+              <div class="meta-val">${p.year}</div>
+            </div>
+          </div>
+          <div class="desc-fr">${p.desc}</div>
+          ${p.koTip ? `<div class="ko-tip">${p.koTip}</div>` : ""}
+        </div>
+      `;
+    }
+
+    let cachedKey = "";
+    let cachedQ = null;
+
+    function buildQuestion(p, type) {
+      const others = shuffle(PROJECTS.filter(x => x.id !== p.id));
+      let title = "", sub = "", correct = "", opts = [];
+      if (type === "architect") {
+        title = p.name;
+        sub = `${p.location} · 건축가는?`;
+        correct = p.architect;
+        const picks = [];
+        for (const o of others) {
+          if (o.architect !== correct && !picks.includes(o.architect)) {
+            picks.push(o.architect);
+            if (picks.length === 3) break;
+          }
+        }
+        opts = shuffle([correct, ...picks]);
+      } else if (type === "name") {
+        title = `${p.architect} (${p.year})`;
+        sub = p.desc;
+        correct = p.name;
+        opts = shuffle([correct, ...others.slice(0, 3).map(o => o.name)]);
+      } else if (type === "year") {
+        title = p.name;
+        sub = `${p.architect} · 슬라이드 기준 연도는?`;
+        correct = p.year;
+        const picks = [];
+        for (const o of others) {
+          if (o.year !== correct && !picks.includes(o.year)) {
+            picks.push(o.year);
+            if (picks.length === 3) break;
+          }
+        }
+        opts = shuffle([correct, ...picks]);
+      } else {
+        title = p.name;
+        sub = `${p.architect} · 장소는?`;
+        correct = p.location;
+        const picks = [];
+        for (const o of others) {
+          if (o.location !== correct && !picks.includes(o.location)) {
+            picks.push(o.location);
+            if (picks.length === 3) break;
+          }
+        }
+        opts = shuffle([correct, ...picks]);
+      }
+      return { title, sub, correct, opts };
+    }
+
+    function renderPhotoQuiz(main) {
+      if (state.pool.length === 0) rebuildPool();
+      if (state.pool.length === 0) {
+        main.innerHTML = `<div class="card"><p>조건에 맞는 프로젝트가 없습니다. 필터를 조정해 주세요.</p></div>`;
+        return;
+      }
+      const idx = state.index % state.pool.length;
+      const p = state.pool[idx];
+
+      main.innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            <span class="chapter-badge">${state.photoRevealed ? p.chapter : "사진 보고 맞히기"}</span>
+            <span class="counter">${idx + 1} / ${state.pool.length}</span>
+          </div>
+
+          ${renderPhotoBox(p, true)}
+
+          ${!state.photoRevealed ? `
+            <p class="sub-hint">건물 이름 · 건축가 · 장소 · 연도를 떠올린 뒤 아래에 적어보거나 바로 확인하세요.</p>
+            <div class="exam-inputs">
+              <div><label class="field-label">건물명</label><input type="text" placeholder="Projet"></div>
+              <div><label class="field-label">건축가</label><input type="text" placeholder="Architecte"></div>
+              <div><label class="field-label">연도</label><input type="text" placeholder="Date"></div>
+            </div>
+            <button class="btn primary" id="revealPhotoBtn">정답 확인 (Space)</button>
+          ` : renderDetailBlock(p)}
+
+          <div class="card-actions">
+            <div style="display:flex;gap:8px;">
+              <button class="btn ${getStatus(p.id) === "mastered" ? "ok" : ""}" id="pMastered">암기 완료 (1)</button>
+              <button class="btn ${getStatus(p.id) === "review" ? "bad" : ""}" id="pReview">복습 필요 (2)</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="pPrev">← 이전</button>
+              <button class="btn primary" id="pNext">다음 →</button>
+            </div>
+          </div>
+          <div class="kbd-hint">단축키: Space 정답 확인 · 1 암기 완료 · 2 복습 필요 · ←/→ 이동</div>
+        </div>
+      `;
+
+      document.getElementById("revealPhotoBtn")?.addEventListener("click", () => {
+        state.photoRevealed = true;
+        renderMain();
+      });
+      document.getElementById("pMastered")?.addEventListener("click", () => {
+        setStatus(p.id, "mastered");
+        state.index = (state.index + 1) % state.pool.length;
+        state.photoRevealed = false;
+        renderMain();
+      });
+      document.getElementById("pReview")?.addEventListener("click", () => {
+        setStatus(p.id, "review");
+        state.index = (state.index + 1) % state.pool.length;
+        state.photoRevealed = false;
+        renderMain();
+      });
+      document.getElementById("pPrev")?.addEventListener("click", () => {
+        state.index = (state.index - 1 + state.pool.length) % state.pool.length;
+        state.photoRevealed = false;
+        renderMain();
+      });
+      document.getElementById("pNext")?.addEventListener("click", () => {
+        state.index = (state.index + 1) % state.pool.length;
+        state.photoRevealed = false;
+        renderMain();
+      });
+    }
+
+    function renderFlashcard(main) {
+      if (state.pool.length === 0) rebuildPool();
+      if (state.pool.length === 0) {
+        main.innerHTML = `<div class="card"><p>조건에 맞는 프로젝트가 없습니다.</p></div>`;
+        return;
+      }
+      const idx = state.index % state.pool.length;
+      const p = state.pool[idx];
+
+      main.innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            <span class="chapter-badge">${state.flashFlipped || state.flashHint ? p.chapter : "단원 숨김"}</span>
+            <span class="counter">${idx + 1} / ${state.pool.length}</span>
+          </div>
+
+          <h2 class="project-title">${p.name}</h2>
+          ${!state.flashFlipped ? `
+            <p class="sub-hint">건축가 · 장소 · 연도 · 프랑스어 설명을 떠올려 보세요.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn primary" id="flipBtn">카드 뒤집기 (Space)</button>
+              <button class="btn" id="hintBtn">${state.flashHint ? "힌트 숨기기" : "단원 힌트"}</button>
+            </div>
+          ` : `
+            ${p.img ? renderPhotoBox(p) : ""}
+            ${renderDetailBlock(p)}
+            <div style="margin-top:12px;">
+              <button class="btn" id="flipBtn">앞면으로</button>
+            </div>
+          `}
+
+          <div class="card-actions">
+            <div style="display:flex;gap:8px;">
+              <button class="btn ${getStatus(p.id) === "mastered" ? "ok" : ""}" id="fcOk">암기 완료 (1)</button>
+              <button class="btn ${getStatus(p.id) === "review" ? "bad" : ""}" id="fcBad">복습 필요 (2)</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="fcPrev">← 이전</button>
+              <button class="btn primary" id="fcNext">다음 →</button>
+            </div>
+          </div>
+          <div class="kbd-hint">단축키: Space 뒤집기 · 1 암기 완료 · 2 복습 필요 · ←/→ 이동</div>
+        </div>
+      `;
+
+      document.getElementById("flipBtn")?.addEventListener("click", () => {
+        state.flashFlipped = !state.flashFlipped;
+        renderMain();
+      });
+      document.getElementById("hintBtn")?.addEventListener("click", () => {
+        state.flashHint = !state.flashHint;
+        renderMain();
+      });
+      document.getElementById("fcOk")?.addEventListener("click", () => {
+        setStatus(p.id, "mastered");
+        state.index = (state.index + 1) % state.pool.length;
+        state.flashFlipped = false;
+        renderMain();
+      });
+      document.getElementById("fcBad")?.addEventListener("click", () => {
+        setStatus(p.id, "review");
+        state.index = (state.index + 1) % state.pool.length;
+        state.flashFlipped = false;
+        renderMain();
+      });
+      document.getElementById("fcPrev")?.addEventListener("click", () => {
+        state.index = (state.index - 1 + state.pool.length) % state.pool.length;
+        state.flashFlipped = false;
+        renderMain();
+      });
+      document.getElementById("fcNext")?.addEventListener("click", () => {
+        state.index = (state.index + 1) % state.pool.length;
+        state.flashFlipped = false;
+        renderMain();
+      });
+    }
+
+    function renderQuiz(main) {
+      if (state.pool.length === 0) rebuildPool();
+      if (state.pool.length === 0) {
+        main.innerHTML = `<div class="card"><p>조건에 맞는 프로젝트가 없습니다.</p></div>`;
+        return;
+      }
+      const idx = state.index % state.pool.length;
+      const p = state.pool[idx];
+      const key = `${p.id}-${state.quizType}-${idx}`;
+      if (cachedKey !== key) {
+        cachedKey = key;
+        cachedQ = buildQuestion(p, state.quizType);
+      }
+      const q = cachedQ;
+
+      main.innerHTML = `
+        <div class="card">
+          <div class="card-top">
+            <span class="chapter-badge">${p.chapter}</span>
+            <span class="counter">${idx + 1} / ${state.pool.length}</span>
+          </div>
+          <h2 class="project-title">${q.title}</h2>
+          <p class="sub-hint">${q.sub}</p>
+
+          <div class="options-grid">
+            ${q.opts.map((opt, i) => {
+              let cls = "option-btn";
+              if (state.answered) {
+                if (opt === q.correct) cls += " correct";
+                else if (opt === state.selectedOption) cls += " wrong";
+              }
+              return `
+                <button class="${cls}" data-opt="${i}" ${state.answered ? "disabled" : ""}>
+                  <span class="option-key">${i + 1}</span>
+                  <span>${opt}</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+
+          ${state.answered ? renderDetailBlock(p) : ""}
+
+          <div class="card-actions">
+            <div style="display:flex;gap:8px;">
+              <button class="btn ${getStatus(p.id) === "mastered" ? "ok" : ""}" id="qOk">암기 완료</button>
+              <button class="btn ${getStatus(p.id) === "review" ? "bad" : ""}" id="qBad">복습 필요</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="qPrev">← 이전</button>
+              <button class="btn primary" id="qNext">다음 →</button>
+            </div>
+          </div>
+          <div class="kbd-hint">단축키: 숫자 1–4 선택 · Enter / → 다음</div>
+        </div>
+      `;
+
+      main.querySelectorAll("[data-opt]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (state.answered) return;
+          const chosen = q.opts[Number(btn.dataset.opt)];
+          state.selectedOption = chosen;
+          state.answered = true;
+          state.sessionTotal += 1;
+          if (chosen === q.correct) {
+            state.sessionCorrect += 1;
+            if (getStatus(p.id) === "new") setStatus(p.id, "mastered");
+          } else {
+            setStatus(p.id, "review");
+          }
+          renderStats();
+          renderMain();
+        });
+      });
+
+      document.getElementById("qOk")?.addEventListener("click", () => { setStatus(p.id, "mastered"); renderMain(); });
+      document.getElementById("qBad")?.addEventListener("click", () => { setStatus(p.id, "review"); renderMain(); });
+      document.getElementById("qPrev")?.addEventListener("click", () => {
+        state.index = (state.index - 1 + state.pool.length) % state.pool.length;
+        state.answered = false;
+        state.selectedOption = null;
+        renderMain();
+      });
+      document.getElementById("qNext")?.addEventListener("click", () => {
+        state.index = (state.index + 1) % state.pool.length;
+        state.answered = false;
+        state.selectedOption = null;
+        renderMain();
+      });
+    }
+
+    function renderExam(main) {
+      if (state.examSet.length === 0) {
+        const src = getFiltered();
+        state.examSet = shuffle(src.length >= 3 ? src : PROJECTS).slice(0, 3);
+      }
+
+      main.innerHTML = `
+        <div class="grid-list">
+          ${state.examSet.map((p, idx) => {
+            const rev = !!state.examRevealed[p.id];
+            return `
+              <div class="card">
+                <div class="card-top">
+                  <span class="chapter-badge">시험 1번 · 문제 ${idx + 1}/3</span>
+                  <span class="counter">${rev ? p.chapter : ""}</span>
+                </div>
+                ${p.img ? renderPhotoBox(p, !rev) : ""}
+                <h2 class="project-title">${p.name}</h2>
+                <div class="exam-inputs">
+                  <div><label class="field-label">Architecte</label><input type="text" placeholder="예: Alvar Aalto"></div>
+                  <div><label class="field-label">Lieu</label><input type="text" placeholder="예: Säynätsalo, Finlande"></div>
+                  <div><label class="field-label">Date</label><input type="text" placeholder="예: 1952"></div>
+                </div>
+                <div>
+                  <label class="field-label">Courte description (FR)</label>
+                  <textarea class="field-textarea" rows="2" placeholder="핵심 키워드 위주로 작성..."></textarea>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn primary" data-rev="${p.id}">${rev ? "정답 접기" : "정답 확인"}</button>
+                  ${rev ? `
+                    <button class="btn ${getStatus(p.id) === "mastered" ? "ok" : ""}" data-ex-ok="${p.id}">암기 완료</button>
+                    <button class="btn ${getStatus(p.id) === "review" ? "bad" : ""}" data-ex-bad="${p.id}">복습 필요</button>
+                  ` : ""}
+                </div>
+                ${rev ? renderDetailBlock(p) : ""}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      main.querySelectorAll("[data-rev]").forEach(b => {
+        b.addEventListener("click", () => {
+          const id = Number(b.dataset.rev);
+          state.examRevealed[id] = !state.examRevealed[id];
+          renderMain();
+        });
+      });
+      main.querySelectorAll("[data-ex-ok]").forEach(b => {
+        b.addEventListener("click", () => { setStatus(Number(b.dataset.exOk), "mastered"); renderMain(); });
+      });
+      main.querySelectorAll("[data-ex-bad]").forEach(b => {
+        b.addEventListener("click", () => { setStatus(Number(b.dataset.exBad), "review"); renderMain(); });
+      });
+    }
+
+    function renderPairs(main) {
+      main.innerHTML = `
+        <div class="pairs-grid">
+          ${CONFUSING_PAIRS.map(pair => `
+            <div class="pair-card">
+              <h3>${pair.title}</h3>
+              <p>${pair.body}</p>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderList(main) {
+      const q = state.searchQuery.trim().toLowerCase();
+      const items = getFiltered().filter(p => {
+        if (!q) return true;
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.architect.toLowerCase().includes(q) ||
+          p.location.toLowerCase().includes(q) ||
+          p.year.toLowerCase().includes(q) ||
+          p.desc.toLowerCase().includes(q)
+        );
+      });
+
+      main.innerHTML = `
+        <div class="grid-list">
+          ${items.map(p => {
+            const st = getStatus(p.id);
+            return `
+              <div class="list-row">
+                <div class="list-thumb">
+                  ${p.img
+                    ? `<img src="${p.img}" alt="${p.name}" loading="lazy">`
+                    : `<a href="${googleImgUrl(p)}" target="_blank" rel="noopener" style="color:inherit;padding:6px;">구글 이미지 ↗</a>`}
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <div>
+                      <span class="chapter-badge" style="margin-right:6px;">${p.chapter}</span>
+                      <strong>${p.id}. ${p.name}</strong>
+                    </div>
+                    <select data-st-id="${p.id}" style="min-height:32px;padding:4px 10px;border-radius:980px;border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:600;">
+                      <option value="new" ${st === "new" ? "selected" : ""}>미학습</option>
+                      <option value="review" ${st === "review" ? "selected" : ""}>복습 필요</option>
+                      <option value="mastered" ${st === "mastered" ? "selected" : ""}>암기 완료</option>
+                    </select>
+                  </div>
+                  <div style="font-size:14px;color:var(--muted);margin:4px 0;">
+                    <strong>${p.architect}</strong> · ${p.location} · <strong>${p.year}</strong>
+                  </div>
+                  <div style="font-size:14px;">${p.desc}</div>
+                  ${p.koTip ? `<div style="font-size:13px;color:var(--muted);margin-top:4px;">↳ ${p.koTip}</div>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      main.querySelectorAll("[data-st-id]").forEach(sel => {
+        sel.addEventListener("change", e => setStatus(Number(sel.dataset.stId), e.target.value));
+      });
+    }
+
+    function renderMain() {
+      const main = document.getElementById("mainView");
+      if (state.mode === "photo") renderPhotoQuiz(main);
+      else if (state.mode === "flashcard") renderFlashcard(main);
+      else if (state.mode === "quiz") renderQuiz(main);
+      else if (state.mode === "exam") renderExam(main);
+      else if (state.mode === "pairs") renderPairs(main);
+      else renderList(main);
+    }
+
+    function render() {
+      renderStats();
+      renderControls();
+      renderMain();
+    }
+
+    document.querySelectorAll("#modeTabs .pill-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#modeTabs .pill-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.mode = btn.dataset.mode;
+        rebuildPool();
+        render();
+      });
+    });
+
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (state.mode === "photo") {
+        if (e.code === "Space") { e.preventDefault(); document.getElementById("revealPhotoBtn")?.click(); }
+        else if (e.key === "1") document.getElementById("pMastered")?.click();
+        else if (e.key === "2") document.getElementById("pReview")?.click();
+        else if (e.key === "ArrowRight") document.getElementById("pNext")?.click();
+        else if (e.key === "ArrowLeft") document.getElementById("pPrev")?.click();
+      } else if (state.mode === "flashcard") {
+        if (e.code === "Space") { e.preventDefault(); document.getElementById("flipBtn")?.click(); }
+        else if (e.key === "1") document.getElementById("fcOk")?.click();
+        else if (e.key === "2") document.getElementById("fcBad")?.click();
+        else if (e.key === "ArrowRight") document.getElementById("fcNext")?.click();
+        else if (e.key === "ArrowLeft") document.getElementById("fcPrev")?.click();
+      } else if (state.mode === "quiz") {
+        if (["1", "2", "3", "4"].includes(e.key) && !state.answered) {
+          document.querySelector(`[data-opt="${Number(e.key) - 1}"]`)?.click();
+        } else if (e.key === "Enter" || e.key === "ArrowRight") {
+          document.getElementById("qNext")?.click();
+        } else if (e.key === "ArrowLeft") {
+          document.getElementById("qPrev")?.click();
+        }
+      }
+    });
+
+    rebuildPool();
+    render();
+  </script>
+</body>
+</html>
