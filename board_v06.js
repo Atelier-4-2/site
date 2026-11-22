@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261122M";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123a";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -11,15 +11,15 @@ import {
   FSTYLES, FSTYLE_LABEL,
   cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, STD_DENS, isNorthStamp, isBarStamp, isFigStamp, isPlanFig, clampHm,
   cleanSvgString, cleanPayload, sanitizeDoc, emptyDoc
-} from "./board_v06_doc.js?v=20261122M";
-import { FIGS, FIG_GROUPS, TREE_PRESETS } from "./board_v06_figs.js?v=20261122M";
-import * as X from "./board_v06_export.js?v=20261122M";
-import { icon } from "./board_v06_icons.js?v=20261122M";
-import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122M";
-import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122M";
-import * as RC from "./board_v06_record.js?v=20261122M";
-import * as PR from "./board_v06_parent.js?v=20261122M";
-import { createChrome } from "./board_v06_chrome.js?v=20261122M";
+} from "./board_v06_doc.js?v=20261123a";
+import { FIGS, FIG_GROUPS, TREE_PRESETS } from "./board_v06_figs.js?v=20261123a";
+import * as X from "./board_v06_export.js?v=20261123a";
+import { icon } from "./board_v06_icons.js?v=20261123a";
+import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261123a";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261123a";
+import * as RC from "./board_v06_record.js?v=20261123a";
+import * as PR from "./board_v06_parent.js?v=20261123a";
+import { createChrome } from "./board_v06_chrome.js?v=20261123a";
 await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
@@ -757,7 +757,7 @@ function updateCardEl(g, c) {
     t.setAttribute("x", 3); t.setAttribute("y", 7); t.setAttribute("font-size", 4.4); t.textContent = (c.title || "").slice(0, mc) + ((c.title || "").length > mc ? "…" : "");
     h.setAttribute("x", 3); h.setAttribute("y", c.h - 4); h.setAttribute("font-size", 3.2); h.textContent = RC.hostOf(c.url);
   } else if (c.kind === "stamp") {
-    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}`;
+    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}|${c.fill ? 1 : 0}`;
     if (sg.dataset.k !== key) { sg.dataset.k = key; sg.innerHTML = stampSvg(c, c.den); }   // vector, numbers only
   } else {
     const ovl = g.querySelector(".bd-ovlr"); if (ovl) { ovl.setAttribute("width", c.w); ovl.setAttribute("height", c.h); ovl.style.display = c.from_parent && ui.layout === "print" ? "" : "none"; }
@@ -1695,7 +1695,8 @@ function commands() {
     C(_t('board.160'), duplicate, "⌘D", _t('board.161')), C(_t('board.162'), deleteSelection, "Del", _t('board.163')),
     C(_t('board.164'), groupSel, "⌘G", _t('board.165')), C(_t('board.166'), ungroupSel, "⌘⇧G", _t('board.167')), C(_t('board.168'), toggleLock, "", _t('board.169')),
     C(_t('board.170'), rotate90, "", _t('board.171')), C(_t('board.087'), () => { const c = selCards()[0]; if (c) fillCells(c); }, "", _t('board.172')),
-    C(_t('board.173'), newBoard, "", _t('board.174')), C(_t('board.175'), saveFile, "", _t('board.176')), C(_t('board.177'), () => $("#bd-file-proj").click(), "", _t('board.178'))
+    C(_t("lw.menu"), () => $("#bd-file-lw").click(), "", "linework line weight hierarchy pen pdf svg trait 선 위계"),
+        C(_t('board.173'), newBoard, "", _t('board.174')), C(_t('board.175'), saveFile, "", _t('board.176')), C(_t('board.177'), () => $("#bd-file-proj").click(), "", _t('board.178'))
   ];
   for (const [k, l] of [["l", _t('board.081')], ["c", _t('board.082')], ["r", _t('board.083')], ["t", _t('board.179')], ["m", _t('board.180')], ["b", _t('board.181')]]) list.push(C(_t('board.182', { 0: l }), () => alignSel(k), "", _t('board.183')));
   list.push(C(_t('board.184'), () => distribute("h"), "", _t('board.185')), C(_t('board.186'), () => distribute("v"), "", _t('board.185')));
@@ -1707,7 +1708,7 @@ function present() {
   chrome.present(f ? Math.max(0, S.frames.indexOf(f)) : 0);
 }
 function onKey(e) {
-  if (!isOpen || chrome?.isBlocking()) return;
+  if (!isOpen || chrome?.isBlocking() || document.querySelector(".lw-dlg")) return;   // the Linework dialog is modal: no board shortcuts behind it
   if (pdfClose) { if (e.key === "Escape") { e.preventDefault(); pdfClose(); } return; }   // the PDF picker is modal
   const t = e.target;
   const typing = t.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(t.tagName) && !/^(checkbox|radio|file|button)$/.test(t.type || ""));
@@ -1772,7 +1773,7 @@ addEventListener("keydown", onKey);
 addEventListener("keyup", e => { if (e.key === " ") spaceDown = false; });
 addEventListener("blur", () => { spaceDown = false; });
 document.addEventListener("paste", e => {
-  if (!isOpen || chrome?.isBlocking() || ui.preview || pdfClose) return;
+  if (!isOpen || chrome?.isBlocking() || ui.preview || pdfClose || document.querySelector(".lw-dlg")) return;
   const t = e.target;
   if (t.isContentEditable) return;   // text card editing has its own paste handler
   if (/^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
@@ -2896,6 +2897,7 @@ function stampSection(c) {
     parts.push(hf);
     if (FIGS[c.stamp].cat === "tree") parts.push(prow(...TREE_PRESETS.map(h => pbtn(h + " m", null, () => upd(k => { k.hm = h; }), { pressed: hm === h }))));
     parts.push(chkField("flip", _t("st.flip"), c.flip, on => upd(k => { k.flip = on; })));
+    if (!isPlanFig(c.stamp)) parts.push(chkField("fill", _t("st.fill"), c.fill === true, on => upd(k => { k.fill = on; })));
     parts.push(selField("tone", _t("st.tone"), [["ink", _t("st.tone.ink")], ["soft", _t("st.tone.soft")]], c.tone || "ink", v => upd(k => { k.tone = v === "soft" ? "soft" : "ink"; })));
     parts.push(prow(pbtn(_t("st.refit"), null, () => refitFigs())));
   }
@@ -3498,7 +3500,7 @@ async function importPdf(file) {
 async function openLineworkTool(src) {
   status(_t("lw.loading"));
   try {
-    const mod = await import("./board_v06_linework.js?v=20261122N");
+    const mod = await import("./board_v06_linework.js?v=20261123a");
     status("");
     await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
   } catch (e) { console.warn(e); status(_t("lw.err.read")); }

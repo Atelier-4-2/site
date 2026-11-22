@@ -1,11 +1,11 @@
-import { t as _t } from "./i18n.js?v=20261122M";
-import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm } from "./board_v06_figs.js?v=20261122M";
+import { t as _t } from "./i18n.js?v=20261123a";
+import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm } from "./board_v06_figs.js?v=20261123a";
 export { isFigStamp, isPlanFig, clampHm };
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.
-import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261122M";
-import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261122M";
+import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261123a";
+import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261123a";
 export const DOC_VERSION = 5;
 export const LAYERS = ["bg", "art", "text"];   // stacking order, bottom to top
 export const LAYER_LABEL = { get bg() { return _t('board.doc.001'); }, get art() { return _t('board.doc.002'); }, get text() { return _t('board.doc.003'); } };
@@ -85,7 +85,7 @@ export function stampSvg(st, den = st.den, opt = {}) {
 }
 
 // figure stamps carry a real height (m), a mirror flag and a tone; other stamps carry none of these
-export const cleanFig = it => isFigStamp(it.stamp) ? { hm: clampHm(it.hm, FIGS[it.stamp].hm), flip: it.flip === true, tone: FIG_TONES.includes(it.tone) ? it.tone : "ink" } : {};
+export const cleanFig = it => isFigStamp(it.stamp) ? { hm: clampHm(it.hm, FIGS[it.stamp].hm), flip: it.flip === true, tone: FIG_TONES.includes(it.tone) ? it.tone : "ink", fill: it.fill === true } : {};
 export const PAPER = { A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297] };   // portrait w x h (mm)
 export const SIZES = Object.keys(PAPER);
 export const ROLES = ["title", "h1", "h2", "subtitle", "body", "caption", "scale", "number"];
@@ -203,6 +203,7 @@ export function sanitizeSvgTree(root) {
       const ln = (a.localName || a.name).toLowerCase(), v = a.value, vc = strip(v);   // localName: any prefix (xlink:href, x:href, plain href)
       let bad = ln.startsWith("on") || a.name.toLowerCase().startsWith("on") || /javascript:|vbscript:/i.test(vc) || /url\(\s*['"]?(?!#)/i.test(v);
       if (!bad && ln === "href" && !(vc.startsWith("#") || /^data:image\/(png|jpeg|webp|gif)[;,]/i.test(vc))) bad = true;
+      if (ln === "src" || ln === "srcset") bad = true;   // nothing in a drawing loads by src / srcset
       if (bad) e.removeAttribute(a.name);
     }
     if (e.localName === "style") {

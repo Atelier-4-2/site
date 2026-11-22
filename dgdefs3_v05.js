@@ -7,7 +7,7 @@ import {
   nearestStation, KEY_DAYS
 } from "./dgenv_v02.js?v=20261116n";
 import { bands, contourRings, extendGround, gaussian } from "./dgcontour_v03.js?v=20261113cards2";
-import { toWGS84 } from "./ign.js?v=20261122i";
+import { toWGS84 } from "./ign.js?v=20261123a";
 
 const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 const UNK = "정보 없음";

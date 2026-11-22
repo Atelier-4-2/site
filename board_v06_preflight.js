@@ -1,6 +1,6 @@
-import { t as _t } from "./i18n.js?v=20261122M";
+import { t as _t } from "./i18n.js?v=20261123a";
 // Build 4a-2: output preflight (B11) and PDF presets (B12). Pure (no DOM) so node can test it.
-import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261122M";
+import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261123a";
 
 export const PRESETS = {
   print: { get label() { return _t('board.preflight.001'); }, fmt: "pdf", bleed: true, booklet: false, tiles: false, maxPpi: 300 },

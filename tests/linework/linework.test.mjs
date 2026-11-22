@@ -43,7 +43,7 @@ function makeStyler(root) {
     const cs = { stroke: "none", "stroke-width": "1", fill: "black", "stroke-dasharray": "none", "font-size": "16", "text-anchor": "start" };
     for (const e of chain) { const o = own(e); for (const k of INH) if (o[k] != null) cs[k] = o[k]; }
     const u = own(el);
-    return { stroke: cs.stroke, strokeWidth: parseFloat(cs["stroke-width"]), fill: cs.fill, dash: cs["stroke-dasharray"], display: u.display || "inline", fillOpacity: "1", strokeOpacity: "1", fontSize: parseFloat(cs["font-size"]), textAnchor: cs["text-anchor"] };
+    return { stroke: cs.stroke, strokeWidth: cs["stroke-width"], fill: cs.fill, dash: cs["stroke-dasharray"], display: u.display || "inline", fillOpacity: "1", strokeOpacity: "1", fontSize: parseFloat(cs["font-size"]), textAnchor: cs["text-anchor"] };
   };
 }
 
@@ -163,6 +163,64 @@ ok("output svg 1/200 table", () => { assert.match(L.renderLineworkSvg(model.elem
 ok("output svg survives well-formed XML + override per element", () => {
   const e0 = model.elements.find(e => e.text); const o = L.renderLineworkSvg(model.elements, e => e === e0 ? "hide" : clsOf(e), table, model.paper);
   assert.ok(!o.includes("Séjour") || e0.text.str !== "Séjour"); assert.ok(L.renderOriginalSvg(model.elements, model.paper).includes("stroke-width=\"0.7\""));
+});
+
+// ---- fixes v02 (items 1, 2, 3, 5) --------------------------------------------------------------------------------------------------
+ok("fix 1: ground line takes the top step, the remaining single step is cut (lw.r.top)", () => {
+  const g = L.classifyPens([lp(0.9, { count: 2, longHoriz: 2 }), lp(0.3)]).assign;
+  assert.equal(g["0.9|#000|0|"].cls, "ground"); assert.equal(g["0.3|#000|0|"].cls, "cut"); assert.equal(g["0.3|#000|0|"].reason.k, "lw.r.top");
+  const only = L.classifyPens([lp(0.3)]).assign; assert.equal(Object.values(only)[0].cls, "vis");   // a real single width stays vis
+});
+ok("fix 2: dark fill on a stroked shape is no double outline (svg and pdf); light fill is kept", () => {
+  const r = parseXml('<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm" viewBox="0 0 100 100"><rect x="1" y="1" width="10" height="10" stroke="#000" stroke-width="0.3" fill="#111"/><rect x="20" y="1" width="10" height="10" stroke="#000" stroke-width="0.3" fill="#EEE"/></svg>');
+  const m = L.svgDomToElements(r, makeStyler(r));
+  assert.equal(m.elements.length, 3); assert.equal(m.elements[0].origFill, "#111111"); assert.equal(m.elements.filter(e => e.fill === "#111111").length, 0);
+  assert.ok(L.renderOriginalSvg(m.elements, m.paper).includes('fill="#111111"'));
+  const OPS = Object.fromEntries(["constructPath", "setLineWidth", "setStrokeRGBColor", "setFillRGBColor", "fillStroke", "rectangle"].map((k, i) => [k, i + 1]));
+  const p = L.pdfOpsToElements({ fnArray: [OPS.setStrokeRGBColor, OPS.setFillRGBColor, OPS.constructPath, OPS.fillStroke], argsArray: [[0, 0, 0], [10, 10, 10], [[OPS.rectangle], [0, 0, 5, 5]], []] }, OPS, [1, 0, 0, -1, 0, 100]);
+  assert.equal(p.elements.length, 1); assert.ok(p.elements[0].stroke && p.elements[0].origFill);
+});
+ok("fix 3: dark fill split into many triangles is hidden (lw.r.splitfill); single polygon poche stays cut", () => {
+  const tri = i => ({ id: i, d: "", w_mm: 0, stroke: null, fill: "#101010", dash: false, closed: true, len_mm: 3, bbox: [i, 0, i + 2, 2], sub: [[i, 0, i + 2, 0, i + 1, 2, i, 0]], nv: 3 });
+  const els = Array.from({ length: 60 }, (_, i) => tri(i * 3)), pens = L.buildPens(els, { w: 420, h: 297 });
+  assert.equal(pens[0].small, 60);
+  const a = L.classifyPens(pens).assign[pens[0].key]; assert.equal(a.cls, "hide"); assert.equal(a.reason.k, "lw.r.splitfill");
+  const one = [{ ...tri(0), nv: 6, bbox: [0, 0, 50, 50] }], p1 = L.buildPens(one, { w: 420, h: 297 }); assert.equal(L.classifyPens(p1).assign[p1[0].key].cls, "cut");
+  const few = Array.from({ length: 10 }, (_, i) => tri(i * 3)), p2 = L.buildPens(few, { w: 420, h: 297 }); assert.equal(L.classifyPens(p2).assign[p2[0].key].cls, "cut");   // 10 pieces is not a mesh
+  // geometry: a triangle from a path has 3 vertices, closed or not
+  const g = L.segsToGeom(L.parsePathData("M0 0L4 0L2 3Z"), L.IDENT); assert.equal(g.sub[0].length / 2 - 1, 3);
+});
+ok("fix 5: tspans with coordinates are separate labels; plain tspans stay one label", () => {
+  const r = parseXml('<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm" viewBox="0 0 100 100"><text x="5" y="10"><tspan x="5" y="10">Salon</tspan><tspan x="40" y="10">Cuisine</tspan><tspan x="5" y="20">Entrée</tspan></text><text x="5" y="50"><tspan>Un</tspan><tspan> deux</tspan></text></svg>');
+  const t = L.svgDomToElements(r, makeStyler(r)).elements.filter(e => e.text);
+  assert.deepEqual(t.map(e => e.text.str), ["Salon", "Cuisine", "Entrée", "Un deux"]); near(t[1].text.x, 40); near(t[2].text.y, 20);
+});
+ok("fix 5: CSS-unit stroke widths are converted once (user units = px, then the matrix)", () => {
+  // root in mm without viewBox: 1 user unit = 1 px = 0.2646 mm, so 0.25mm = 0.945 px -> 0.25 mm on paper
+  const a = parseXml('<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm"><path d="M0 0L50 0" stroke="#000" stroke-width="0.25mm" fill="none"/><path d="M0 5L50 5" stroke="#000" stroke-width="1pt" fill="none"/></svg>');
+  const ea = L.svgDomToElements(a, makeStyler(a)).elements; near(ea[0].w_mm, 0.25, 0.002); near(ea[1].w_mm, 25.4 / 72, 0.002);
+  // viewBox 1:1 in mm: per SVG spec 0.25mm is 0.945 user units = 0.945 mm (what a browser draws); never multiplied again
+  const b = parseXml('<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="100mm" viewBox="0 0 100 100"><path d="M0 0L50 0" stroke="#000" stroke-width="0.25mm" fill="none"/></svg>');
+  near(L.svgDomToElements(b, makeStyler(b)).elements[0].w_mm, 0.25 * 96 / 25.4, 0.002);
+  // use / image are reported
+  const c = parseXml('<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="10mm"><use href="#x"/><image href="a.png"/><path d="M0 0L5 5" stroke="#000"/></svg>');
+  assert.deepEqual(L.svgDomToElements(c, makeStyler(c)).warnings.sort(), ["image", "use"]);
+});
+ok("pdf clip: shapes fully outside a rectangular clip are dropped, complex clips counted", () => {
+  const OPS = Object.fromEntries(["save", "restore", "constructPath", "clip", "endPath", "stroke", "rectangle", "moveTo", "lineTo", "curveTo"].map((k, i) => [k, i + 1]));
+  const fn = [], ar = [], op = (k, a) => { fn.push(OPS[k]); ar.push(a); };
+  op("save"); op("constructPath", [[OPS.rectangle], [0, 0, 50, 50]]); op("clip"); op("endPath");
+  op("constructPath", [[OPS.moveTo, OPS.lineTo], [10, 10, 20, 10]]); op("stroke");      // inside
+  op("constructPath", [[OPS.moveTo, OPS.lineTo], [100, 100, 120, 100]]); op("stroke");  // outside
+  op("restore"); op("constructPath", [[OPS.moveTo, OPS.lineTo], [100, 100, 120, 100]]); op("stroke");   // clip gone with restore
+  op("constructPath", [[OPS.moveTo, OPS.curveTo, OPS.lineTo], [0, 0, 5, 5, 8, 0, 10, 10]]); op("clip"); op("endPath");
+  const r = L.pdfOpsToElements({ fnArray: fn, argsArray: ar }, OPS, [1, 0, 0, -1, 0, 200]);
+  assert.equal(r.elements.length, 2); assert.equal(r.clipped, 1); assert.equal(r.complexClip, 1);
+});
+ok("pdf: unexpected constructPath layout is skipped, not guessed", () => {
+  const OPS = { constructPath: 1, stroke: 2 }, w = console.warn; let warned = 0; console.warn = () => { warned++; };
+  const r = L.pdfOpsToElements({ fnArray: [1, 2], argsArray: [[91, [[0, 0]]], []] }, OPS, [1, 0, 0, -1, 0, 100]);
+  console.warn = w; assert.equal(r.elements.length, 0); assert.equal(r.badOps, 1); assert.equal(warned, 1);
 });
 fs.writeFileSync(new URL("./out_sample_linework.svg", import.meta.url), out);
 console.log(`\n${n} test groups passed; wrote tests/linework/out_sample_linework.svg (${out.length} bytes)`);

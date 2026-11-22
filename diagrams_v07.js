@@ -4,7 +4,7 @@ import {
   fetchBuildingsDetailed, fetchVegetation, fetchWaterSurfaces, fetchWaterLines,
   fetchRoads, fetchParcels, fetchOrthophoto, toWGS84,
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
-} from "./ign.js?v=20261122i";
+} from "./ign.js?v=20261123a";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 import { DIAGRAMS, isReady } from "./dgdefs_v06.js?v=20261116p";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261116p";
