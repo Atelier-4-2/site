@@ -70,63 +70,63 @@
 </head>
 
 <body data-page="0">
-  <a class="skip-link" href="#input-title">제작 단계로 이동</a>
+  <a class="skip-link" href="#input-title" data-i18n="home.001"></a>
 
   <header class="page-header">
     <div class="nav-inner">
       <div id="brand-home" class="product-name">
-        <a class="brand-mark" href="https://atelier-4-2.github.io/" aria-label="4·2 메인페이지로">4·2</a><span class="brand-divider" aria-hidden="true"></span><a class="brand-tool" href="#top" aria-label="Terrain 처음으로">Terrain</a>
+        <a class="brand-mark" href="https://atelier-4-2.github.io/" aria-label="" data-i18n-attr="aria-label:home.002">4·2</a><span class="brand-divider" aria-hidden="true"></span><a class="brand-tool" href="#top" aria-label="" data-i18n-attr="aria-label:home.003">Terrain</a>
       </div>
 
-      <nav id="laser-stepper" class="stepper" aria-label="제작 단계">
+      <nav id="laser-stepper" class="stepper" aria-label="" data-i18n-attr="aria-label:home.004">
         <ol>
           <li>
             <button id="step-button-1" type="button" data-step="1"
                     aria-controls="step-panel-1"
                     aria-current="step">
               <span class="step-number" aria-hidden="true">1</span>
-              <span class="step-label">대지</span>
-              <span class="step-state">현재</span>
+              <span class="step-label" data-i18n="home.005"></span>
+              <span class="step-state" data-i18n="home.006"></span>
             </button>
           </li>
           <li>
             <button id="step-button-2" type="button" data-step="2"
                     aria-controls="step-panel-2" disabled>
               <span class="step-number" aria-hidden="true">2</span>
-              <span class="step-label">설정</span>
-              <span class="step-state">대기</span>
+              <span class="step-label" data-i18n="home.007"></span>
+              <span class="step-state" data-i18n="home.008"></span>
             </button>
           </li>
           <li>
             <button id="step-button-3" type="button" data-step="3"
                     aria-controls="step-panel-3" disabled>
               <span class="step-number" aria-hidden="true">3</span>
-              <span class="step-label">확인</span>
-              <span class="step-state">대기</span>
+              <span class="step-label" data-i18n="home.009"></span>
+              <span class="step-state" data-i18n="home.008"></span>
             </button>
           </li>
           <li>
             <button id="step-button-4" type="button" data-step="4"
                     aria-controls="step-panel-4" disabled>
               <span class="step-number" aria-hidden="true">4</span>
-              <span class="step-label">파일 받기</span>
-              <span class="step-state">대기</span>
+              <span class="step-label" data-i18n="home.010"></span>
+              <span class="step-state" data-i18n="home.008"></span>
             </button>
           </li>
         </ol>
       </nav>
 
-      <nav id="dg-stepper" class="stepper" aria-label="다이어그램 단계" hidden>
+      <nav id="dg-stepper" class="stepper" aria-label="" hidden data-i18n-attr="aria-label:home.011">
         <ol>
-          <li><button id="dg-step-button-1" type="button" data-dgstep="1" aria-current="step"><span class="step-number" aria-hidden="true">1</span><span class="step-label">대지</span><span class="step-state">현재</span></button></li>
+          <li><button id="dg-step-button-1" type="button" data-dgstep="1" aria-current="step"><span class="step-number" aria-hidden="true">1</span><span class="step-label" data-i18n="home.005"></span><span class="step-state" data-i18n="home.006"></span></button></li>
 
-          <li><button id="dg-step-button-3" type="button" data-dgstep="3" disabled><span class="step-number" aria-hidden="true">2</span><span class="step-label">다이어그램</span><span class="step-state">대기</span></button></li>
-          <li><button id="dg-step-button-4" type="button" data-dgstep="4" disabled><span class="step-number" aria-hidden="true">3</span><span class="step-label">분석</span><span class="step-state">대기</span></button></li>
+          <li><button id="dg-step-button-3" type="button" data-dgstep="3" disabled><span class="step-number" aria-hidden="true">2</span><span class="step-label" data-i18n="home.012"></span><span class="step-state" data-i18n="home.008"></span></button></li>
+          <li><button id="dg-step-button-4" type="button" data-dgstep="4" disabled><span class="step-number" aria-hidden="true">3</span><span class="step-label" data-i18n="home.013"></span><span class="step-state" data-i18n="home.008"></span></button></li>
         </ol>
       </nav>
 
-      <p id="step-count" class="step-count" aria-live="polite">단계 1/4</p>
-      <nav class="site-switch" aria-label="Atelier 4·2 사이트 전환">
+      <p id="step-count" class="step-count" aria-live="polite" data-i18n="home.014"></p>
+      <nav class="site-switch" aria-label="" data-i18n-attr="aria-label:home.015">
         <a href="./" aria-current="page">Terrain</a>
         <a href="https://atelier-4-2.github.io/quiz/">Quiz</a>
       </nav>
@@ -140,84 +140,83 @@
   <main id="top">
     <section class="intro" aria-labelledby="hero-title">
       <p class="eyebrow brand-eyebrow">Atelier 4·2</p>
-      <h1 id="hero-title">건축 설계를 위한<br>다이어그램과 모형</h1>
-      <p class="subhead">주소 검색으로 IGN·지적·PLU 데이터를 취합해<br class="wide-break"> 대지 다이어그램과 지형·건물 모형을 만듭니다.</p>
+      <h1 id="hero-title" data-i18n-html="home.016"></h1>
+      <p class="subhead" data-i18n-html="home.017"></p>
       <ul class="tool-cards">
         <li class="tool-card">
           <p class="tool-card-number">01</p>
-          <h2 class="tool-card-title">대지 다이어그램</h2>
-          <p class="tool-card-description">주소 검색으로 다이어그램과 3D 매스를 생성합니다.</p>
+          <h2 class="tool-card-title" data-i18n="home.018"></h2>
+          <p class="tool-card-description" data-i18n="home.019"></p>
           <p class="tool-card-formats">PDF · SVG · DXF · 3DM</p>
-          <button id="start-diagrams" type="button" class="tool-card-button">다이어그램 만들기 ›</button>
+          <button id="start-diagrams" type="button" class="tool-card-button" data-i18n="home.020"></button>
         </li>
         <li class="tool-card">
           <p class="tool-card-number">02</p>
-          <h2 class="tool-card-title">레이저 모형</h2>
-          <p class="tool-card-description">지형 등고선과 건물 모형의 레이저 도면을 만듭니다.</p>
+          <h2 class="tool-card-title" data-i18n="home.021"></h2>
+          <p class="tool-card-description" data-i18n="home.022"></p>
           <p class="tool-card-formats">SVG · DXF · STL · 3DM</p>
-          <button id="start" type="button" class="tool-card-button">모형 만들기 ›</button>
+          <button id="start" type="button" class="tool-card-button" data-i18n="home.023"></button>
         </li>
         <li class="tool-card">
           <p class="tool-card-number">03</p>
-          <h2 class="tool-card-title">보드</h2>
-          <p class="tool-card-description">다이어그램·사진·글을 A3/A1 프레임에 배치해 패널로 출력합니다.</p>
+          <h2 class="tool-card-title" data-i18n="home.024"></h2>
+          <p class="tool-card-description" data-i18n="home.025"></p>
           <p class="tool-card-formats">PDF · PNG · .atelier</p>
-          <button id="start-board" type="button" class="tool-card-button">보드 열기 ›</button>
+          <button id="start-board" type="button" class="tool-card-button" data-i18n="home.026"></button>
         </li>
       </ul>
-      <p class="note">설치가 필요 없으며, 올린 파일은 기기 밖으로 나가지 않습니다.<br>
-        데이터 © IGN · © OpenStreetMap contributors · IDFM · <a class="legal-link" href="legal.html">출처·법적 고지</a></p>
+      <p class="note" data-i18n-html="home.027"></p>
     </section>
 
-    <h2 id="input-title" class="sr-only" tabindex="-1">지형 모형 제작</h2>
+    <h2 id="input-title" class="sr-only" tabindex="-1" data-i18n="home.028"></h2>
 
     <fieldset id="input-controls">
-      <legend class="sr-only">입력과 제작 설정</legend>
+      <legend class="sr-only" data-i18n="home.029"></legend>
 
       <section id="step-panel-1" class="step-panel content-section"
                aria-labelledby="step-title-1">
         <div class="section-intro dg-only">
-          <p class="eyebrow">01 · 대지</p>
-          <h3 id="dg-step-title-1" tabindex="-1">어디를 분석할까요?</h3>
-          <p class="subhead">주소를 검색하고 대지 위치와 분석 반경을 설정하세요.</p>
+          <p class="eyebrow" data-i18n="home.030"></p>
+          <h3 id="dg-step-title-1" tabindex="-1" data-i18n="home.031"></h3>
+          <p class="subhead" data-i18n="home.032"></p>
         </div>
 
         <div class="section-intro laser-only">
-          <p class="eyebrow">01 · 대지</p>
-          <h3 id="step-title-1" tabindex="-1">어디를 만들까요?</h3>
-          <p class="subhead">주소를 검색해 대지 범위를 고르거나 DXF·3DM 도면을 올리세요.</p>
+          <p class="eyebrow" data-i18n="home.030"></p>
+          <h3 id="step-title-1" tabindex="-1" data-i18n="home.033"></h3>
+          <p class="subhead" data-i18n="home.034"></p>
         </div>
 
-        <div class="tabs source-tabs laser-only" role="tablist" aria-label="입력 방식">
+        <div class="tabs source-tabs laser-only" role="tablist" aria-label="" data-i18n-attr="aria-label:home.035">
           <button id="tab-ign" type="button" role="tab"
                   aria-selected="true" aria-controls="panel-ign"
-                  data-source="ign">지도 검색</button>
+                  data-source="ign" data-i18n="home.036"></button>
           <button id="tab-file" type="button" role="tab"
                   aria-selected="false" aria-controls="panel-file"
-                  tabindex="-1" data-source="file">도면 업로드</button>
+                  tabindex="-1" data-source="file" data-i18n="home.037"></button>
         </div>
 
         <section id="panel-ign" role="tabpanel" aria-labelledby="tab-ign">
           <div class="search-area">
-            <label for="search">프랑스 주소·장소 검색</label>
+            <label for="search" data-i18n="home.038"></label>
             <div class="inline">
               <input id="search" type="search" maxlength="120"
-                     autocomplete="off" placeholder="주소를 입력하세요"
-                     aria-describedby="search-note">
-              <button id="search-button" type="button">검색</button>
+                     autocomplete="off" placeholder=""
+                     aria-describedby="search-note" data-i18n-attr="placeholder:home.039">
+              <button id="search-button" type="button" data-i18n="home.040"></button>
             </div>
-            <div id="suggestions" aria-label="주소 검색 결과"></div>
+            <div id="suggestions" aria-label="" data-i18n-attr="aria-label:home.041"></div>
             <p id="search-note" class="note" aria-live="polite"></p>
           </div>
 
           <div class="grid two">
             <div>
-              <label for="radius">대지 반경 (m)</label>
+              <label for="radius" data-i18n="home.042"></label>
               <input id="radius" type="number" min="20" max="2500"
                      step="1" value="200" aria-describedby="range-note">
             </div>
             <div class="laser-only">
-              <label for="grid-step">지형 정밀도 (m)</label>
+              <label for="grid-step" data-i18n="home.043"></label>
               <input id="grid-step" type="number" min="1" max="100"
                      step="1" value="10">
             </div>
@@ -225,90 +224,80 @@
 
           <div class="grid two dg-only dg-shape">
             <div>
-              <label for="dg-shape">대지 경계 형태</label>
+              <label for="dg-shape" data-i18n="home.044"></label>
               <select id="dg-shape">
-                <option value="square">정방형 (반경 기준)</option>
-                <option value="circle">원형</option>
-                <option value="rect">장방형 (가로·세로)</option>
+                <option value="square" data-i18n="home.045"></option>
+                <option value="circle" data-i18n="home.046"></option>
+                <option value="rect" data-i18n="home.047"></option>
               </select>
             </div>
             <div id="dg-rect-field" hidden>
-              <label for="dg-w">가로 × 세로 (m)</label>
+              <label for="dg-w" data-i18n="home.048"></label>
               <div class="inline">
-                <input id="dg-w" type="number" min="20" max="4000" step="1" value="400" aria-label="가로 (m)">
-                <input id="dg-h" type="number" min="20" max="4000" step="1" value="300" aria-label="세로 (m)">
+                <input id="dg-w" type="number" min="20" max="4000" step="1" value="400" aria-label="" data-i18n-attr="aria-label:home.049">
+                <input id="dg-h" type="number" min="20" max="4000" step="1" value="300" aria-label="" data-i18n-attr="aria-label:home.050">
               </div>
             </div>
           </div>
 
-          <div class="toolbar map-tools" role="group" aria-label="지도 조작">
+          <div class="toolbar map-tools" role="group" aria-label="" data-i18n-attr="aria-label:home.051">
             <button type="button" data-map-mode="pan"
-                    aria-pressed="true">지도 이동</button>
+                    aria-pressed="true" data-i18n="home.052"></button>
             <button type="button" data-map-mode="draw"
-                    aria-pressed="false">범위 그리기</button>
+                    aria-pressed="false" data-i18n="home.053"></button>
             <button type="button" data-map-mode="point"
-                    aria-pressed="false">중심 찍기</button>
+                    aria-pressed="false" data-i18n="home.054"></button>
             <button type="button" class="laser-only" data-map-mode="building"
-                    aria-pressed="false">건물 선택</button>
-            <button id="range-view" type="button" aria-label="지도에서 대지 범위 보기">
+                    aria-pressed="false" data-i18n="home.055"></button>
+            <button id="range-view" type="button" aria-label="" data-i18n-attr="aria-label:home.056">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
                    stroke-linejoin="round" aria-hidden="true" focusable="false">
                 <path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/>
               </svg>
-              대지 범위
+              <span data-i18n="home.057"></span>
             </button>
           </div>
 
           <div class="grid two map-appearance">
             <div>
-              <label for="map-style">배경</label>
+              <label for="map-style" data-i18n="home.058"></label>
               <select id="map-style">
-                <option value="plan">지도</option>
-                <option value="photo">항공사진</option>
-                <option value="overlay">겹쳐보기</option>
+                <option value="plan" data-i18n="home.059"></option>
+                <option value="photo" data-i18n="home.060"></option>
+                <option value="overlay" data-i18n="home.061"></option>
               </select>
             </div>
             <div id="photo-opacity-field" hidden>
-              <label for="photo-opacity">항공사진 불투명도</label>
+              <label for="photo-opacity" data-i18n="home.062"></label>
               <input id="photo-opacity" type="range"
                      min="0" max="100" value="55">
-              <span class="range-ends" aria-hidden="true"><span>지도만</span><span>항공사진만</span></span>
+              <span class="range-ends" aria-hidden="true"><span data-i18n="home.063"></span><span data-i18n="home.064"></span></span>
             </div>
           </div>
 
-          <div id="map" aria-label="IGN 지도"
-               aria-describedby="map-note range-note"></div>
-          <p id="map-note" class="note" aria-live="polite">
-            지도를 눌러 중심을 찍거나 대지 범위를 직접 그리세요.
-          </p>
+          <div id="map" aria-label=""
+               aria-describedby="map-note range-note" data-i18n-attr="aria-label:home.065"></div>
+          <p id="map-note" class="note" aria-live="polite" data-i18n="home.066"></p>
           <p id="range-note" class="note"></p>
 
           <div class="toolbar building-tools laser-only">
-            <button id="load-buildings" type="button">건물 불러오기</button>
-            <button id="select-all" type="button" class="text-action">
-              모두 선택 <span aria-hidden="true">›</span>
-            </button>
-            <button id="select-none" type="button" class="text-action">
-              모두 해제 <span aria-hidden="true">›</span>
-            </button>
+            <button id="load-buildings" type="button" data-i18n="home.067"></button>
+            <button id="select-all" type="button" class="text-action" data-i18n-html="home.068"></button>
+            <button id="select-none" type="button" class="text-action" data-i18n-html="home.069"></button>
           </div>
-          <p id="building-note" class="note laser-only" aria-live="polite">
-            건물을 불러온 뒤 모형에 포함할 건물을 고르세요.
-          </p>
+          <p id="building-note" class="note laser-only" aria-live="polite" data-i18n="home.070"></p>
           <div id="building-list" class="building-list laser-only"
-               role="group" aria-label="포함할 건물"
-               aria-describedby="building-note"></div>
+               role="group" aria-label=""
+               aria-describedby="building-note" data-i18n-attr="aria-label:home.071"></div>
         </section>
 
         <section id="panel-file" class="laser-only" role="tabpanel"
                  aria-labelledby="tab-file" hidden>
-          <label for="file">DXF 또는 3DM</label>
+          <label for="file" data-i18n="home.072"></label>
           <input id="file" type="file" accept=".dxf,.3dm"
                  aria-describedby="file-help file-note">
-          <p id="file-help" class="note">
-            최대 100 MB. 대지 외곽선은 BOUNDARY 레이어, 등고선은 CONTOUR 레이어에 그려 주세요.
-          </p>
+          <p id="file-help" class="note" data-i18n="home.073"></p>
           <p id="file-note" class="note" aria-live="polite"></p>
         </section>
 
@@ -316,12 +305,10 @@
         <p id="dg-error" class="note error" aria-live="polite" style="text-align:right" hidden></p>
         <p id="site-error" class="note error" aria-live="polite" style="text-align:right" hidden></p>
         <div class="section-actions dg-only">
-          <button id="dg-site-next" type="button" class="primary full-width">다음 · 다이어그램 생성</button>
+          <button id="dg-site-next" type="button" class="primary full-width" data-i18n="home.074"></button>
         </div>
         <div class="section-actions laser-only">
-          <button id="site-next" type="button" class="primary full-width laser-only">
-            다음 · 설정
-          </button>
+          <button id="site-next" type="button" class="primary full-width laser-only" data-i18n="home.075"></button>
         </div>
       </section>
 
@@ -329,132 +316,130 @@
 
       <section id="dg-panel-3" class="step-panel content-section dg-results" aria-labelledby="dg-step-title-3">
         <div class="section-intro">
-          <p class="eyebrow">02 · 다이어그램</p>
-          <h3 id="dg-step-title-3" tabindex="-1">대지 다이어그램</h3>
+          <p class="eyebrow" data-i18n="home.076"></p>
+          <h3 id="dg-step-title-3" tabindex="-1" data-i18n="home.018"></h3>
           <p id="dg-progress" class="subhead dg-progress" aria-live="polite"></p>
           <p id="dg-site-summary" class="note"></p>
         </div>
         <div class="dg-settings dg-settings-inline">
           <div>
-            <span class="dg-label" id="dg-color-label">다이어그램 테마</span>
+            <span class="dg-label" id="dg-color-label" data-i18n="home.077"></span>
             <div class="segmented dg-palettes" role="radiogroup" aria-labelledby="dg-color-label">
-              <button type="button" role="radio" aria-checked="true" data-dg-pal="standard">표준</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="swiss">스위스 아틀라스</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="paris">파리 카다스트르</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="datascape">더치 데이터</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="nocturne">다크 스펙트럼</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="poche">미니멀 포셰</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="critical">지질·생태</button>
-<button type="button" role="radio" aria-checked="false" data-dg-pal="atlas">아틀라스형 (기존)</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="dutch">데이터형 (기존)</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="minimal">미니멀 (기존)</button>
-              <button type="button" role="radio" aria-checked="false" data-dg-pal="eco">생태형 (기존)</button>
+              <button type="button" role="radio" aria-checked="true" data-dg-pal="standard" data-i18n="home.078"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="swiss" data-i18n="home.079"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="paris" data-i18n="home.080"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="datascape" data-i18n="home.081"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="nocturne" data-i18n="home.082"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="poche" data-i18n="home.083"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="critical" data-i18n="home.084"></button>
+<button type="button" role="radio" aria-checked="false" data-dg-pal="atlas" data-i18n="home.085"></button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="dutch" data-i18n="home.086"></button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="minimal" data-i18n="home.087"></button>
+              <button type="button" role="radio" aria-checked="false" data-dg-pal="eco" data-i18n="home.088"></button>
             </div>
           </div>
           <div>
-            <label for="dg-lw">기본 선 두께 <output id="dg-lw-out">1.0×</output></label>
+            <label for="dg-lw"><span data-i18n="home.089"></span> <output id="dg-lw-out">1.0×</output></label>
             <input id="dg-lw" type="range" min="0.5" max="2" step="0.1" value="1">
           </div>
         </div>
         <div class="toolbar dg-toolbar">
-          <button id="dg-zip" type="button" class="primary" disabled>전체 ZIP 다운로드</button>
-          <button id="dg-pdf-all" type="button" disabled>전체 PDF</button>
-          <button id="dg-board-all" type="button" disabled>모두 보드로</button>
-          <button id="dg-3dm-all" type="button" disabled>전체 3dm</button>
-          <label class="dg-radius-note" for="dg-card-radius">카드 반경 (m)</label>
+          <button id="dg-zip" type="button" class="primary" disabled data-i18n="home.090"></button>
+          <button id="dg-pdf-all" type="button" disabled data-i18n="home.091"></button>
+          <button id="dg-board-all" type="button" disabled data-i18n="home.092"></button>
+          <button id="dg-3dm-all" type="button" disabled data-i18n="home.093"></button>
+          <label class="dg-radius-note" for="dg-card-radius" data-i18n="home.094"></label>
           <input id="dg-card-radius" type="number" min="20" max="2500" step="1" value="400" aria-describedby="dg-radius-help">
-          <button id="dg-radius-apply" type="button">반경 변경</button>
-          <button id="dg-to-analysis-top" type="button" data-dgstep-go="4">대지 분석 보기 ›</button>
+          <button id="dg-radius-apply" type="button" data-i18n="home.095"></button>
+          <button id="dg-to-analysis-top" type="button" data-dgstep-go="4" data-i18n="home.096"></button>
         </div>
-        <div id="dg-filters" class="dg-filters" role="group" aria-label="다이어그램 분류"></div>
-        <p id="dg-radius-help" class="note">설정한 반경은 모든 다이어그램에 일괄 적용됩니다 · 참고용 도면 · 법적 효력 없음</p>
+        <div id="dg-filters" class="dg-filters" role="group" aria-label="" data-i18n-attr="aria-label:home.097"></div>
+        <p id="dg-radius-help" class="note" data-i18n="home.098"></p>
         <div id="dg-grid" class="dg-grid"></div>
         <div class="section-actions dg-to-analysis dg-nav">
-          <button id="dg-back-2" type="button" class="secondary-action" data-dgstep-go="1">‹ 이전 · 대지</button>
-          <button id="dg-to-analysis" type="button" class="primary">대지 분석 보기 · 3D 매스 · 일조 · 바람 · 단면 ›</button>
+          <button id="dg-back-2" type="button" class="secondary-action" data-dgstep-go="1" data-i18n="home.099"></button>
+          <button id="dg-to-analysis" type="button" class="primary" data-i18n="home.100"></button>
         </div>
       </section>
 
       <section id="dg-panel-4" class="step-panel content-section dg-analysis" aria-labelledby="dg-step-title-4">
         <div class="section-intro">
-          <p class="eyebrow">03 · 분석</p>
-          <h3 id="dg-step-title-4" tabindex="-1">대지 분석</h3>
-          <p class="subhead">3D 매스, 일조, 바람, 단면을 동일한 대지 데이터로 분석합니다 · 참고용 시뮬레이션 · 법적 효력 없음</p>
+          <p class="eyebrow" data-i18n="home.101"></p>
+          <h3 id="dg-step-title-4" tabindex="-1" data-i18n="home.102"></h3>
+          <p class="subhead" data-i18n="home.103"></p>
         </div>
-        <div id="dg-tabbar" class="dg-tabbar" role="tablist" aria-label="분석 탭"></div>
+        <div id="dg-tabbar" class="dg-tabbar" role="tablist" aria-label="" data-i18n-attr="aria-label:home.104"></div>
         <div id="dg-controls" class="dg-controls"></div>
         <div id="dg-stage" class="dg-stage"></div>
         <p id="dg-tabnote" class="note"></p>
         <div class="section-actions">
-          <button id="dg-back-to-sheets" type="button" class="full-width secondary-action"><span aria-hidden="true">‹</span> 다이어그램으로 돌아가기</button>
+          <button id="dg-back-to-sheets" type="button" class="full-width secondary-action" data-i18n-html="home.105"></button>
         </div>
       </section>
 
       <section id="step-panel-2" class="step-panel content-section"
                aria-labelledby="step-title-2">
         <div class="section-intro">
-          <p class="eyebrow">02 · 설정</p>
-          <h3 id="step-title-2" tabindex="-1">어떻게 만들까요?</h3>
-          <p class="subhead">축척, 판 두께, 건물 제작 방식을 고르세요.</p>
+          <p class="eyebrow" data-i18n="home.106"></p>
+          <h3 id="step-title-2" tabindex="-1" data-i18n="home.107"></h3>
+          <p class="subhead" data-i18n="home.108"></p>
         </div>
 
-        <p id="settings-help" class="note section-help">
-          먼저 대지를 골라 주세요.
-        </p>
+        <p id="settings-help" class="note section-help" data-i18n="home.109"></p>
 
         <fieldset id="settings-controls" disabled
                   aria-describedby="settings-help">
-          <legend class="sr-only">축척과 제작 재료</legend>
+          <legend class="sr-only" data-i18n="home.110"></legend>
 
           <div class="settings-groups">
             <section class="settings-group" aria-labelledby="sg-terrain">
-              <h4 id="sg-terrain">지형</h4>
+              <h4 id="sg-terrain" data-i18n="home.111"></h4>
               <div class="group-fields">
             <div>
-              <label for="scale">축척 1:N</label>
+              <label for="scale" data-i18n="home.112"></label>
               <input id="scale" type="number" min="1" max="100000"
                      step="1" value="1000" required
                      aria-describedby="sheet-fit">
             </div>
             <div>
-              <label for="thickness">지형판 두께 (mm)</label>
+              <label for="thickness" data-i18n="home.113"></label>
               <input id="thickness" type="number" min="0.1" max="100"
                      step="0.1" value="2" required
                      aria-describedby="stack-note">
             </div>
             <div>
-              <label for="interval">등고 간격 (m)</label>
+              <label for="interval" data-i18n="home.114"></label>
               <input id="interval" type="number" min="0.1" max="1000"
                      step="0.1" value="2" required
                      aria-describedby="stack-note">
             </div>
             <label class="check-row" for="link-scale">
               <input id="link-scale" type="checkbox" checked>
-              <span>실제 비례에 맞추기 (판 두께에 맞춰 등고 간격 자동 계산)</span>
+              <span data-i18n="home.115"></span>
             </label>
               </div>
             </section>
             <section class="settings-group" aria-labelledby="sg-building">
-              <h4 id="sg-building">건물</h4>
+              <h4 id="sg-building" data-i18n="home.116"></h4>
               <div class="group-fields">
             <div class="span-2">
-              <label for="building-mode">건물 제작 방식</label>
+              <label for="building-mode" data-i18n="home.117"></label>
               <select id="building-mode" >
-                <option value="print">3D 프린트 · 일체형</option>
-                <option value="print_floor">3D 프린트 · 층별 분할</option>
-                <option value="laser">레이저 커팅 · 판 두께 기준</option>
-                <option value="laser_floor" selected>레이저 커팅 · 층고 기준</option>
+                <option value="print" data-i18n="home.118"></option>
+                <option value="print_floor" data-i18n="home.119"></option>
+                <option value="laser" data-i18n="home.120"></option>
+                <option value="laser_floor" selected data-i18n="home.121"></option>
               </select>
             </div>
             <div id="floor-height-field" hidden>
-              <label for="floor-height">층고 (m)</label>
+              <label for="floor-height" data-i18n="home.122"></label>
               <input id="floor-height" type="number" min="1" max="20"
                      step="0.1" value="3" required disabled
                      aria-describedby="board-hint">
             </div>
             <p id="board-hint" class="field-note board-hint" aria-live="polite" hidden></p>
             <div id="building-thickness-field" hidden>
-              <label for="building-thickness">건물 판 두께 (mm)</label>
+              <label for="building-thickness" data-i18n="home.123"></label>
               <input id="building-thickness" type="number" min="0.1" max="100"
                      step="0.1" value="1" required disabled
                      >
@@ -462,40 +447,40 @@
               </div>
             </section>
             <section class="settings-group" aria-labelledby="sg-paper">
-              <h4 id="sg-paper">용지</h4>
+              <h4 id="sg-paper" data-i18n="home.124"></h4>
               <div class="group-fields">
             <div>
-              <label for="paper">용지</label>
+              <label for="paper" data-i18n="home.124"></label>
               <select id="paper" aria-describedby="sheet-fit">
                 <option>A0</option>
                 <option>A1</option>
                 <option>A2</option>
                 <option>A3</option>
                 <option>A4</option>
-                <option value="site" selected>대지 범위에 맞춤</option>
-                <option value="custom">사용자 설정</option>
+                <option value="site" selected data-i18n="home.125"></option>
+                <option value="custom" data-i18n="home.126"></option>
               </select>
             </div>
             <div>
-              <label for="orientation">용지 방향</label>
+              <label for="orientation" data-i18n="home.127"></label>
               <select id="orientation" aria-describedby="sheet-fit">
-                <option value="landscape">가로</option>
-                <option value="portrait">세로</option>
+                <option value="landscape" data-i18n="home.128"></option>
+                <option value="portrait" data-i18n="home.129"></option>
               </select>
             </div>
             <div id="paper-custom" class="grid two" hidden>
               <div>
-                <label for="paper-width">용지 가로 (mm)</label>
+                <label for="paper-width" data-i18n="home.130"></label>
                 <input id="paper-width" type="number" min="50" max="5000" step="1" value="600" required disabled>
               </div>
               <div>
-                <label for="paper-height">용지 세로 (mm)</label>
+                <label for="paper-height" data-i18n="home.131"></label>
                 <input id="paper-height" type="number" min="50" max="5000" step="1" value="400" required disabled>
               </div>
             </div>
             <label class="check-row" for="paper-footer">
               <input id="paper-footer" type="checkbox" aria-describedby="sheet-fit">
-              <span>하단 도면 정보 추가</span>
+              <span data-i18n="home.132"></span>
             </label>
               </div>
             </section>
@@ -503,9 +488,7 @@
 
           <div class="settings-summary">
             <p id="model-summary" class="model-summary"
-               aria-live="polite" aria-atomic="true">
-              대지 범위와 축척을 정하면 모형 크기가 표시됩니다.
-            </p>
+               aria-live="polite" aria-atomic="true" data-i18n="home.133"></p>
             <div class="settings-summary-details">
               <p id="sheet-fit" class="note" aria-live="polite"></p>
               <p id="stack-note" class="note"></p>
@@ -515,15 +498,13 @@
 
           <div class="section-actions">
             <button id="run" type="button" class="primary"
-                    aria-describedby="generation-error">모형 만들기</button>
+                    aria-describedby="generation-error" data-i18n="home.134"></button>
           </div>
         </fieldset>
 
         <div class="section-actions">
           <button type="button" class="full-width secondary-action"
-                  data-go-step="1">
-            <span aria-hidden="true">‹</span> 이전 · 대지
-          </button>
+                  data-go-step="1" data-i18n-html="home.135"></button>
         </div>
       </section>
     </fieldset>
@@ -531,15 +512,15 @@
     <section id="step-panel-3" class="step-panel review-section"
              aria-labelledby="step-title-3">
       <div class="section-intro">
-        <p class="eyebrow">03 · 확인</p>
-        <h3 id="step-title-3" tabindex="-1">이렇게 만들어집니다</h3>
-        <p class="subhead">3D 모형을 돌려 보고, 지형판별 도면을 확인하세요.</p>
+        <p class="eyebrow" data-i18n="home.136"></p>
+        <h3 id="step-title-3" tabindex="-1" data-i18n="home.137"></h3>
+        <p class="subhead" data-i18n="home.138"></p>
       </div>
 
       <section class="viewer-card" aria-labelledby="viewer-title">
-        <h2 id="viewer-title" class="sr-only">모형 미리보기</h2>
+        <h2 id="viewer-title" class="sr-only" data-i18n="home.139"></h2>
 
-        <div class="tabs viewer-tabs" role="tablist" aria-label="미리보기 방식">
+        <div class="tabs viewer-tabs" role="tablist" aria-label="" data-i18n-attr="aria-label:home.140">
           <button id="view-tab-2d" type="button" role="tab"
                   data-view="2d" aria-selected="true"
                   aria-controls="view-panel-2d">2D</button>
@@ -553,25 +534,23 @@
                    role="tabpanel" aria-labelledby="view-tab-3d">
             <div class="viewer-options">
               <div class="section-heading">
-                <h3 id="model-title">3D 모형</h3>
-                <button id="reset-view" type="button" class="text-action" disabled>
-                  전체 보기 <span aria-hidden="true">›</span>
-                </button>
+                <h3 id="model-title" data-i18n="home.141"></h3>
+                <button id="reset-view" type="button" class="text-action" disabled data-i18n-html="home.142"></button>
               </div>
 
-              <div class="toolbar" role="group" aria-label="3D 표시 옵션">
+              <div class="toolbar" role="group" aria-label="" data-i18n-attr="aria-label:home.143">
                 <label class="check">
-                  <input id="show-plates" type="checkbox" checked> 지형판
+                  <input id="show-plates" type="checkbox" checked> <span data-i18n="home.144"></span>
                 </label>
                 <label class="check">
-                  <input id="show-buildings" type="checkbox" checked> 건물
+                  <input id="show-buildings" type="checkbox" checked> <span data-i18n="home.116"></span>
                 </label>
                 <label class="check">
-                  <input id="show-edges" type="checkbox" checked> 윤곽선
+                  <input id="show-edges" type="checkbox" checked> <span data-i18n="home.145"></span>
                 </label>
               </div>
 
-              <label for="layer-slider">적층 단계 보기</label>
+              <label for="layer-slider" data-i18n="home.146"></label>
               <div class="inline">
                 <input id="layer-slider" type="range"
                        min="0" max="0" value="0" disabled>
@@ -579,12 +558,9 @@
               </div>
             </div>
 
-            <div id="viewer" aria-label="3D 지형 모형"
-                 aria-describedby="viewer-help"></div>
-            <p id="viewer-help" class="note viewer-help">
-              드래그: 회전 · 휠: 확대 · 오른쪽 드래그: 이동.<br>
-              화면에서 숨겨도 내려받는 파일에는 모두 포함됩니다.
-            </p>
+            <div id="viewer" aria-label=""
+                 aria-describedby="viewer-help" data-i18n-attr="aria-label:home.147"></div>
+            <p id="viewer-help" class="note viewer-help" data-i18n-html="home.148"></p>
           </section>
 
           <section id="view-panel-2d" class="viewer-panel"
@@ -592,176 +568,161 @@
                    aria-hidden="true" inert>
             <div class="viewer-options">
               <div class="section-heading">
-                <h3 id="plate-title">2D 도면</h3>
+                <h3 id="plate-title" data-i18n="home.149"></h3>
               </div>
-              <label for="plate-select">도면 선택</label>
+              <label for="plate-select" data-i18n="home.150"></label>
               <select id="plate-select" disabled></select>
             </div>
 
             <div class="plate-stage">
               <img id="plate-preview"
-                   alt="선택한 지형판 SVG 미리보기" hidden>
-              <p id="plate-empty">모형을 만들면 여기에 보입니다.</p>
+                   alt="" hidden data-i18n-attr="alt:home.151">
+              <p id="plate-empty" data-i18n="home.152"></p>
             </div>
           </section>
         </div>
       </section>
 
       <fieldset id="review-controls" disabled>
-        <legend class="sr-only">검토 완료 및 다음 단계</legend>
-        <p class="note section-help">이대로 진행하려면 파일 받기로 넘어가세요.</p>
+        <legend class="sr-only" data-i18n="home.153"></legend>
+        <p class="note section-help" data-i18n="home.154"></p>
         <div class="section-actions">
           <button id="inspect-viewer" type="button"
-                  class="full-width text-action">
-            뷰어로 이동 <span aria-hidden="true">›</span>
-          </button>
+                  class="full-width text-action" data-i18n-html="home.155"></button>
           <button id="review-next" type="button"
-                  class="primary full-width secondary-action">
-            다음 · 파일 받기
-          </button>
+                  class="primary full-width secondary-action" data-i18n="home.156"></button>
         </div>
       </fieldset>
 
       <div class="section-actions">
         <button type="button" class="full-width secondary-action"
-                data-go-step="2">
-          <span aria-hidden="true">‹</span> 이전 · 설정
-        </button>
+                data-go-step="2" data-i18n-html="home.157"></button>
       </div>
     </section>
 
     <section id="step-panel-4" class="step-panel content-section export-section"
              aria-labelledby="step-title-4">
       <div class="section-intro">
-        <p class="eyebrow">04 · 파일 받기</p>
-        <h3 id="step-title-4" tabindex="-1">파일 받기</h3>
-        <p class="subhead">레이저 선 색상과 굵기를 정하고 ZIP 파일로 받으세요.</p>
+        <p class="eyebrow" data-i18n="home.158"></p>
+        <h3 id="step-title-4" tabindex="-1" data-i18n="home.010"></h3>
+        <p class="subhead" data-i18n="home.159"></p>
       </div>
 
       <div class="export-layout">
         <section class="export-card" aria-labelledby="export-files-title">
-          <h4 id="export-files-title">받을 파일</h4>
+          <h4 id="export-files-title" data-i18n="home.160"></h4>
           <ul class="export-files">
             <li class="sheet-formats">
               <fieldset>
-                <legend>레이저 가공 도면</legend>
+                <legend data-i18n="home.161"></legend>
                 <label><input type="checkbox" name="sheet-format" value="svg" checked> SVG</label>
                 <label><input type="checkbox" name="sheet-format" value="dxf" checked> DXF</label>
                 <label><input type="checkbox" name="sheet-format" value="3dm" checked> Rhino</label>
                 <label><input type="checkbox" name="sheet-format" value="pdf" checked> PDF</label>
               </fieldset>
             </li>
-            <li><strong>3D 프린트 파일</strong><span>STL, 건물 모형</span></li>
-            <li><strong>Rhino 3D 모형</strong><span>3DM, 닫힌 폴리서피스</span></li>
-            <li><strong>좌표·단위 정보</strong><span>JSON · README</span></li>
+            <li><strong data-i18n="home.162"></strong><span data-i18n="home.163"></span></li>
+            <li><strong data-i18n="home.164"></strong><span data-i18n="home.165"></span></li>
+            <li><strong data-i18n="home.166"></strong><span>JSON · README</span></li>
           </ul>
-          <p class="note">가공 전에 도면 단위와 재료 두께를 한 번 더 확인하세요.</p>
+          <p class="note" data-i18n="home.167"></p>
         </section>
         <section class="export-card line-style" aria-labelledby="line-style-title">
-          <h4 id="line-style-title">절단·각인선 설정</h4>
+          <h4 id="line-style-title" data-i18n="home.168"></h4>
           <div class="line-rows">
             <label class="line-row" for="cut-color">
               <input id="cut-color" type="color" value="#ff0000">
-              <span class="line-name">절단선</span>
+              <span class="line-name" data-i18n="home.169"></span>
               <code id="cut-color-value">#ff0000</code>
             </label>
             <label class="line-row" for="engrave-color">
               <input id="engrave-color" type="color" value="#0000ff">
-              <span class="line-name">각인선</span>
+              <span class="line-name" data-i18n="home.170"></span>
               <code id="engrave-color-value">#0000ff</code>
             </label>
             <label class="line-row" for="line-width">
-              <span class="line-name">선 굵기</span>
+              <span class="line-name" data-i18n="home.171"></span>
               <span class="line-width-input"><input id="line-width" type="number" min="0.001" max="2" step="0.01" value="0.1"> mm</span>
             </label>
           </div>
-          <svg class="line-preview" viewBox="0 0 240 90" role="img" aria-label="선 미리보기">
+          <svg class="line-preview" viewBox="0 0 240 90" role="img" aria-label="" data-i18n-attr="aria-label:home.172">
             <rect id="preview-cut" x="14" y="12" width="212" height="66" rx="2" fill="none" stroke="#ff0000" stroke-width="1"/>
             <path id="preview-engrave" d="M40 60 C 80 30, 140 70, 200 34" fill="none" stroke="#0000ff" stroke-width="1"/>
           </svg>
-          <p class="note">레이저 프로그램은 선 색상으로 절단과 각인을 구분합니다.</p>
+          <p class="note" data-i18n="home.173"></p>
         </section>
       </div>
       <p id="export-error" class="note error" aria-live="polite" hidden></p>
 
       <div class="section-actions">
         <button id="export" type="button" class="primary full-width"
-                aria-describedby="export-error" disabled>ZIP 받기</button>
+                aria-describedby="export-error" disabled data-i18n="home.174"></button>
         <button type="button" class="full-width secondary-action"
-                data-go-step="3">
-          <span aria-hidden="true">‹</span> 이전 · 확인
-        </button>
+                data-go-step="3" data-i18n-html="home.175"></button>
       </div>
     </section>
 
     <section id="step-panel-5" class="step-panel content-section done-section"
              aria-labelledby="step-title-5">
       <div class="section-intro">
-        <p class="eyebrow">05 · 완료</p>
-        <h3 id="step-title-5" tabindex="-1">파일을 받았습니다</h3>
-        <p class="subhead">받은 ZIP으로 이렇게 만드세요.</p>
+        <p class="eyebrow" data-i18n="home.176"></p>
+        <h3 id="step-title-5" tabindex="-1" data-i18n="home.177"></h3>
+        <p class="subhead" data-i18n="home.178"></p>
       </div>
 
       <ol class="done-steps">
         <li>
-          <strong>도면 열기</strong>
-          <span>PDF는 실제 크기 그대로입니다. 출력할 때 배율을 100%로 하세요.</span>
+          <strong data-i18n="home.179"></strong>
+          <span data-i18n="home.180"></span>
         </li>
         <li>
-          <strong>선 구분</strong>
-          <span><i id="done-cut-swatch" class="swatch"></i> 절단선은 자르고, <i id="done-engrave-swatch" class="swatch"></i> 각인선은 새깁니다.</span>
+          <strong data-i18n="home.181"></strong>
+          <span data-i18n-html="home.182"></span>
         </li>
         <li>
-          <strong>지형판 쌓기</strong>
-          <span>번호 순서대로, 1번이 맨 아래입니다. 판에 새겨진 선이 다음 판의 자리입니다.</span>
+          <strong data-i18n="home.183"></strong>
+          <span data-i18n="home.184"></span>
         </li>
         <li>
-          <strong>받침과 건물</strong>
-          <span>받침 조각은 B번호 건물 아래에 끼우고, 건물 판은 같은 B번호 자리에 쌓아 붙입니다. B27-1, B27-2는 아래에서 위 순서입니다.</span>
+          <strong data-i18n="home.185"></strong>
+          <span data-i18n="home.186"></span>
         </li>
       </ol>
 
       <div class="section-actions">
-        <button id="new-site" type="button" class="primary full-width">새 대지 만들기</button>
-        <button type="button" class="full-width secondary-action" data-go-step="4">
-          <span aria-hidden="true">‹</span> 이전 · 파일 받기
-        </button>
+        <button id="new-site" type="button" class="primary full-width" data-i18n="home.187"></button>
+        <button type="button" class="full-width secondary-action" data-go-step="4" data-i18n-html="home.188"></button>
       </div>
     </section>
 
-    <section class="status-card laser-only" aria-label="처리 상태">
+    <section class="status-card laser-only" aria-label="" data-i18n-attr="aria-label:home.189">
       <div class="status-meta">
-        <p id="engine-state" class="note" role="status" aria-live="polite">
-          단계 1 / 4 · 대지
-        </p>
-        <span id="elapsed" class="elapsed" aria-live="off" hidden>0초 경과</span>
+        <p id="engine-state" class="note" role="status" aria-live="polite" data-i18n="home.190"></p>
+        <span id="elapsed" class="elapsed" aria-live="off" hidden data-i18n="home.191"></span>
       </div>
       <div class="inline">
-        <p id="status" role="status" aria-live="polite" aria-atomic="true">
-          주소나 장소를 검색해 시작하세요.
-        </p>
-        <button id="cancel" type="button" disabled>취소</button>
+        <p id="status" role="status" aria-live="polite" aria-atomic="true" data-i18n="home.192"></p>
+        <button id="cancel" type="button" disabled data-i18n="home.193"></button>
       </div>
       <div id="operation-progress" class="progress-track"
-           role="progressbar" aria-label="작업 처리 중"
-           aria-describedby="status" hidden>
+           role="progressbar" aria-label=""
+           aria-describedby="status" hidden data-i18n-attr="aria-label:home.194">
         <span></span>
       </div>
     </section>
   </main>
 
   <footer>
-    <p class="brand-footer"><span class="brand-name">Atelier 4·2</span> — '사·이', 경계 공간을 짓는 작업실</p>
-    <p>데이터 © IGN, Géoportail de l’Urbanisme, © OpenStreetMap contributors (ODbL), Île-de-France Mobilités, Ville de Paris, Hauts-de-Seine · 올린 파일은 브라우저 안에서만 처리됩니다.<br>
-      <a class="legal-link" href="legal.html">Mentions légales · 출처와 라이선스</a></p>
+    <p class="brand-footer" data-i18n-html="home.195"></p>
+    <p data-i18n-html="home.196"></p>
   </footer>
 
-  <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
+  <noscript data-i18n="home.197"></noscript>
 
   <script type="module">
-    import("./diagrams_v07.js?v=20261121g"); import("./board_v06.js?v=20261122i"); import("./app.js?v=20261118h").catch(error => {
+    import("./diagrams_v07.js?v=20261122i"); import("./board_v06.js?v=20261122i"); import("./app.js?v=20261122i").catch(error => {
       const status = document.querySelector("#status");
-      status.textContent = "화면을 시작하지 못했습니다: " + error.message;
+      status.textContent = (globalThis.a42i18n ? globalThis.a42i18n.t('home.198') : '') + error.message;
       status.dataset.error = "true";
       
     });

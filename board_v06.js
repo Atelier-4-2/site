@@ -1,3 +1,4 @@
+import { t as _t, loadedPromise } from "./i18n.js?v=20261122i";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -14,10 +15,11 @@ import {
 import * as X from "./board_v06_export.js?v=20261122i";
 import { icon } from "./board_v06_icons.js?v=20261122i";
 import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122i";
-import { getLang, setLang } from "./i18n.js?v=20261122i";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122i";
 import * as RC from "./board_v06_record.js?v=20261122i";
 import * as PR from "./board_v06_parent.js?v=20261122i";
 import { createChrome } from "./board_v06_chrome.js?v=20261122i";
+await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 const NS = "http://www.w3.org/2000/svg";
@@ -149,18 +151,18 @@ function restore(i) {
 }
 const editFlag = i => hist[i] != null && hist[i].includes('"editParent":');
 const crossesEdit = i => editFlag(i) !== !!S.editParent;   // entering / leaving a parent edit is not undoable (it would drop the stash)
-const undo = () => { finishEdit(); if (hi > 0) { if (crossesEdit(hi - 1)) { status("부모 페이지 편집의 시작·끝은 되돌릴 수 없습니다."); return; } restore(hi - 1); } };
-const redo = () => { finishEdit(); if (hi < hist.length - 1) { if (crossesEdit(hi + 1)) { status("부모 페이지 편집의 시작·끝은 되돌릴 수 없습니다."); return; } restore(hi + 1); } };
+const undo = () => { finishEdit(); if (hi > 0) { if (crossesEdit(hi - 1)) { status(_t('board.002')); return; } restore(hi - 1); } };
+const redo = () => { finishEdit(); if (hi < hist.length - 1) { if (crossesEdit(hi + 1)) { status(_t('board.002')); return; } restore(hi + 1); } };
 
 // ---- persistence: IndexedDB autosave -------------------------------------------------------------
 const idb = {
   open: () => new Promise((res, rej) => {
-    if (typeof indexedDB === "undefined") return rej(new Error("IndexedDB 없음"));
+    if (typeof indexedDB === "undefined") return rej(new Error(_t('board.003')));
     const r = indexedDB.open("atelier-board", 2);   // v2 adds the snapshots store; kv is kept
     r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains("kv")) d.createObjectStore("kv"); if (!d.objectStoreNames.contains("snapshots")) d.createObjectStore("snapshots", { keyPath: "id" }); };
-    r.onsuccess = () => { const d = r.result; d.onversionchange = () => { d.close(); status("다른 탭에서 보드가 열려 있습니다 — 그 탭을 닫아 주세요"); }; res(d); };   // never fail silently when another tab wants the DB
-    r.onerror = () => rej(r.error || new Error("IndexedDB 열기 실패"));
-    r.onblocked = () => { status("다른 탭에서 보드가 열려 있습니다 — 그 탭을 닫아 주세요"); rej(new Error("IndexedDB 차단됨")); };
+    r.onsuccess = () => { const d = r.result; d.onversionchange = () => { d.close(); status(_t('board.004')); }; res(d); };   // never fail silently when another tab wants the DB
+    r.onerror = () => rej(r.error || new Error(_t('board.005')));
+    r.onblocked = () => { status(_t('board.004')); rej(new Error(_t('board.006'))); };
   }),
   async get(key) {
     const db = await this.open();
@@ -168,7 +170,7 @@ const idb = {
     finally { db.close(); }
   },
   async allSnaps() { const db = await this.open(); try { return await new Promise((res, rej) => { const q = db.transaction("snapshots").objectStore("snapshots").getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); }); } finally { db.close(); } },
-  async putSnap(rec) { const db = await this.open(); try { await new Promise((res, rej) => { const tx = db.transaction("snapshots", "readwrite"); tx.objectStore("snapshots").put(rec); tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error("저장 중단")); }); } finally { db.close(); } },
+  async putSnap(rec) { const db = await this.open(); try { await new Promise((res, rej) => { const tx = db.transaction("snapshots", "readwrite"); tx.objectStore("snapshots").put(rec); tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error(_t('board.007'))); }); } finally { db.close(); } },
   async delSnap(id) { const db = await this.open(); try { await new Promise((res, rej) => { const tx = db.transaction("snapshots", "readwrite"); tx.objectStore("snapshots").delete(id); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } finally { db.close(); } },
   async put(key, val) {
     const db = await this.open();
@@ -176,7 +178,7 @@ const idb = {
       await new Promise((res, rej) => {
         const tx = db.transaction("kv", "readwrite");
         tx.objectStore("kv").put(val, key);
-        tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error("저장 중단"));
+        tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error(_t('board.007')));
       });
     } finally { db.close(); }
   }
@@ -185,8 +187,8 @@ function renderSaveState() {
   const t = $("#bd-save-state");
   if (!t) return;
   const hh = d => pad2(d.getHours()) + ":" + pad2(d.getMinutes());
-  const full = saveState === "saving" ? "저장 중…" : saveState === "error" ? "자동저장 안 됨" : saveState === "saved" ? `자동저장됨 ${hh(new Date(savedAt))}` : "";
-  const short = saveState === "saving" ? "저장 중" : saveState === "error" ? "저장 안 됨" : saveState === "saved" ? "저장됨" : "";
+  const full = saveState === "saving" ? _t('board.008') : saveState === "error" ? _t('board.009') : saveState === "saved" ? _t('board.010', { 0: hh(new Date(savedAt)) }) : "";
+  const short = saveState === "saving" ? _t('board.011') : saveState === "error" ? _t('board.012') : saveState === "saved" ? _t('board.013') : "";
   t.dataset.state = saveState;
   const compact = !wideMQ.matches;   // below 1280 px: dot + short text, full text in the tooltip
   t.replaceChildren();
@@ -291,7 +293,7 @@ function freeSpot(f, w, h) {
   return { x: r2(ox), y: r2(f.y + side.length * 10), w, h };
 }
 function placeAsset(id, at) {
-  if (S.editParent) { status("부모 페이지에는 글과 스탬프만 놓을 수 있습니다."); return null; }
+  if (S.editParent) { status(_t('board.014')); return null; }
   const a = S.assets[id];
   if (!a) return null;
   let w = a.w, h = a.h;
@@ -324,7 +326,7 @@ function addText(role, at, text) {
 }
 function addMemo(at) {
   const sp = at ? { x: r2(at[0]), y: r2(at[1]) } : spotFor(60, 40);
-  const c = addCard({ kind: "memo", role: "memo", text: "메모", color: MEMO_COLORS[S.cards.filter(k => k.kind === "memo").length % MEMO_COLORS.length], x: sp.x, y: sp.y, w: 60, h: 40 });
+  const c = addCard({ kind: "memo", role: "memo", text: _t('board.015'), color: MEMO_COLORS[S.cards.filter(k => k.kind === "memo").length % MEMO_COLORS.length], x: sp.x, y: sp.y, w: 60, h: 40 });
   sel = new Set([c.id]); selFrame = null;
   commit();
   startEdit(c.id);
@@ -332,7 +334,7 @@ function addMemo(at) {
 function deleteSelection() {
   if (sel.size) {
     const del = new Set(selCards().filter(c => !isLocked(c)).map(c => c.id));
-    if (!del.size) { status("잠긴 카드는 지울 수 없습니다. 잠금을 먼저 푸세요."); return; }
+    if (!del.size) { status(_t('board.016')); return; }
     if (contentEdit && del.has(contentEdit)) contentEdit = null;
     S.cards = S.cards.filter(c => !del.has(c.id)); sel = new Set([...sel].filter(id => !del.has(id))); commit(); return;
   }
@@ -341,9 +343,9 @@ function deleteSelection() {
 function deleteFrame(id) {
   const f = frameById(id);
   if (!f) return;
-  if (S.frames.length < 2) { status("마지막 페이지는 지울 수 없습니다."); return; }
+  if (S.frames.length < 2) { status(_t('board.017')); return; }
   const n = S.cards.filter(c => frameOf(c) === f).length;
-  if (n && !confirm(`이 페이지를 지울까요? 안의 카드 ${n}장은 그대로 남습니다 (프레임 밖).`)) return;
+  if (n && !confirm(_t('board.018', { 0: n }))) return;
   S.frames = S.frames.filter(o => o.id !== id); normalizePages();
   for (const c of S.cards) if (c.page === id) c.page = null;   // cards stay, on the pasteboard
   S.guides = S.guides.filter(g => g.page !== id);               // page guides go with their page
@@ -456,7 +458,7 @@ function alignSel(how) {
 }
 function distribute(axis) {
   const bs = selCards().map(c => ({ c, b: visBox(c) }));
-  if (bs.length < 3) { status("간격을 같게 하려면 3개 이상 고르세요."); return; }
+  if (bs.length < 3) { status(_t('board.019')); return; }
   const k = axis === "h" ? "x" : "y", s = axis === "h" ? "w" : "h";
   bs.sort((a, b) => a.b[k] - b.b[k]);
   const first = bs[0].b[k], last = bs[bs.length - 1].b[k] + bs[bs.length - 1].b[s];
@@ -468,9 +470,9 @@ function distribute(axis) {
 // fit an image / diagram into the template cells its box covers (contain, centred)
 function fillCells(c) {
   const f = frameOf(c), cells = f && gridCells(f);
-  if (!cells) { status("이 페이지에는 템플릿이 없습니다."); return; }
-  if (isLocked(c)) { status("잠긴 카드입니다."); return; }
-  if (c.scale?.locked) { status("축척이 고정된 카드는 칸에 맞춰 크기를 바꿀 수 없습니다."); return; }
+  if (!cells) { status(_t('board.020')); return; }
+  if (isLocked(c)) { status(_t('board.021')); return; }
+  if (c.scale?.locked) { status(_t('board.022')); return; }
   const b = visBox(c), lx0 = b.x - f.x, lx1 = lx0 + b.w, ly0 = b.y - f.y, ly1 = ly0 + b.h;
   const pick = (cellsArr, a0, a1) => {
     const hit = [];
@@ -532,18 +534,18 @@ async function addImageFiles(files, at) {
   const pdfs = [...files].filter(f => f.type === "application/pdf" || /\.pdf$/i.test(f.name || ""));
   if (pdfs.length) importPdf(pdfs[0]);
   const list = [...files].filter(f => f.type.startsWith("image/"));
-  if (!list.length) { if (!pdfs.length) status("이미지나 PDF 파일이 아닙니다."); return; }
+  if (!list.length) { if (!pdfs.length) status(_t('board.023')); return; }
   let n = 0;
   const placed = [];
   for (const f of list) {
     try {
       const { dataUrl, w, h } = await downscale(f);
       const long = 120, mw = w >= h ? long : long * w / h, mh = w >= h ? long * h / w : long;
-      const id = registerAsset("image", (f.name || "붙여넣은 이미지").replace(/\.[^.]+$/, ""), r2(mw), r2(mh), { img: dataUrl });
+      const id = registerAsset("image", (f.name || _t('board.024')).replace(/\.[^.]+$/, ""), r2(mw), r2(mh), { img: dataUrl });
       const c = placeAsset(id, at ? [at[0] + n * 8, at[1] + n * 8] : null);
       if (c) { sel = new Set([c.id]); selFrame = null; placed.push(c.id); }
       n++;
-    } catch (e) { console.error(e); status(`이미지를 읽지 못했습니다: ${f.name}`); }
+    } catch (e) { console.error(e); status(_t('board.025', { 0: f.name })); }
   }
   if (n) commit();
   if (placed.length >= 4) offerGrid(placed);
@@ -560,7 +562,7 @@ function offerGrid(ids) {
   const pl = gridPlan(ids);
   if (!pl) return;
   gridIds = ids;
-  $("#bd-gridtxt").textContent = `격자로 놓기 ${pl.cols}×${pl.rows}, 간격 ${pl.gap} mm`;
+  $("#bd-gridtxt").textContent = _t('board.026', { 0: pl.cols, 1: pl.rows, 2: pl.gap });
   $("#bd-gridprompt").hidden = false;
 }
 function placeGrid() {
@@ -731,7 +733,7 @@ function updateCardEl(g, c) {
   const sb = g.querySelector(".bd-stackbadge"); if (sb) { const nst = c.stack ? S.cards.filter(k => k.stack === c.stack).length : 0; sb.textContent = nst > 1 ? String(nst) : ""; sb.style.transform = `translate(0px, 12px) scale(var(--inv, 1))`; }   // hidden layer / W preview / filters
   const dot = g.querySelector(".bd-sdot"), dt = g.querySelector(".bd-datetag");
   if (dot) { dot.style.transform = `translate(${c.w}px, 0px) scale(var(--inv, 1))`; dot.setAttribute("class", "bd-sdot is-" + stt); dot.style.display = ui.preview || ui.layout === "print" && !annoVisible() ? "none" : ""; }
-  if (dt) { dt.style.transform = `translate(0px, -4px) scale(var(--inv, 1))`; dt.textContent = c.created || ""; dt.style.display = ui.dates && !ui.preview ? "" : "none"; }
+  if (dt) { dt.style.transform = `translate(0px, -4px) scale(var(--inv, 1))`; dt.textContent = c.created ? fmtDate(c.created) : ""; dt.style.display = ui.dates && !ui.preview ? "" : "none"; }
   g.classList.toggle("is-layerlocked", layerLocked(c));
   g.querySelector(".bd-lockg").style.transform = `translate(${c.w}px, 0px) scale(var(--inv, 1))`;
   const hit = g.querySelector(".bd-hit");
@@ -818,8 +820,8 @@ function runPreflight() {
   const sm = summarize(pfList), b = $("#bd-pf");
   if (!b) return;
   b.dataset.state = sm.errors ? "error" : sm.total ? "warn" : "ok";
-  $("#bd-pf-t").textContent = sm.total ? String(sm.total) : "점검 OK";
-  b.setAttribute("aria-label", `출력 점검: ${sm.text}`); b.dataset.tip = sm.text;
+  $("#bd-pf-t").textContent = sm.total ? String(sm.total) : _t('board.027');
+  b.setAttribute("aria-label", _t('board.028', { 0: sm.text })); b.dataset.tip = sm.text;
   if (!$("#bd-pfpop").hidden) renderPfPop();
   renderOverset();
 }
@@ -827,7 +829,7 @@ const schedulePreflight = () => { clearTimeout(pfTimer); pfTimer = setTimeout(ru
 function renderPfPop() {
   const pop = $("#bd-pfpop");
   pop.replaceChildren();
-  if (!pfList.length) { pop.append(mk("p", "bd-pf-ok", "점검할 문제가 없습니다.")); return; }
+  if (!pfList.length) { pop.append(mk("p", "bd-pf-ok", _t('board.029'))); return; }
   for (const g of groupByPage(S, pfList)) {
     pop.append(mk("p", "bd-pf-h", g.title));
     for (const it of g.items) {
@@ -881,15 +883,15 @@ function renderChrome() {
   $("#bd-props").hidden = mobileMQ.matches || !(dockMQ.matches || hasSelection());
   $("#bd-minimap").hidden = !ui.minimap;
   const mm = (k, t) => { const e = document.querySelector(`#bd-more-pop [data-m="${k}"]`); if (e) e.firstChild.textContent = t; };
-  mm("minimap", ui.minimap ? "미니맵 숨기기" : "미니맵 보기");
-  mm("gh", ui.guidesHidden ? "가이드 보기" : "가이드 숨기기");
-  mm("gl", ui.guidesLocked ? "가이드 잠금 풀기" : "가이드 잠금");
-  mm("dates", ui.dates ? "날짜 숨기기" : "날짜 보기");
-  mm("annos", annoVisible() ? "코멘트·펜 숨기기" : "코멘트·펜 보기");
+  mm("minimap", ui.minimap ? _t('board.030') : _t('board.031'));
+  mm("gh", ui.guidesHidden ? _t('board.032') : _t('board.033'));
+  mm("gl", ui.guidesLocked ? _t('board.034') : _t('board.035'));
+  mm("dates", ui.dates ? _t('board.036') : _t('board.037'));
+  mm("annos", annoVisible() ? _t('board.038') : _t('board.039'));
   $("#bd-penbar").hidden = ui.tool !== "d";
   for (const b of document.querySelectorAll("#bd-penbar [data-pen]")) b.setAttribute("aria-pressed", String(b.dataset.pen === (ui.penColor || "ink")));
   $("#bd-stage").classList.toggle("has-rulers", rulersOn());
-  const pb = $("#bd-pbanner"); pb.hidden = !S.editParent; if (S.editParent) $("#bd-pbanner-t").textContent = `부모 페이지 ${S.editParent} 편집 중`;
+  const pb = $("#bd-pbanner"); pb.hidden = !S.editParent; if (S.editParent) $("#bd-pbanner-t").textContent = _t('board.040', { 0: S.editParent });
   $("#bd-pfwrap").hidden = ui.layout !== "print" || mobileMQ.matches;
   renderSaveState();
 }
@@ -953,11 +955,11 @@ function renderLayers() {
   box.replaceChildren();
   for (const L of [...LAYERS].reverse()) {   // top of the stack first
     const st = S.layers[L], row = mk("div", "bd-ly" + (st.hidden ? " is-off" : ""));
-    const name = mk("span", "bd-ly-n", LAYER_LABEL[L]); name.append(mk("small", "", `카드 ${n[L]}`));
+    const name = mk("span", "bd-ly-n", LAYER_LABEL[L]); name.append(mk("small", "", _t('board.041', { 0: n[L] })));
     const eye = mk("button", "bd-ib"); eye.type = "button"; eye.dataset.ly = L; eye.dataset.what = "hidden"; eye.innerHTML = icon(st.hidden ? "eyeoff" : "eye");
-    eye.setAttribute("aria-label", `${LAYER_LABEL[L]} ${st.hidden ? "보이기" : "숨기기"}`); eye.setAttribute("aria-pressed", String(st.hidden)); eye.dataset.tip = st.hidden ? "보이기" : "숨기기";
+    eye.setAttribute("aria-label", `${LAYER_LABEL[L]} ${st.hidden ? _t('board.042') : _t('board.043')}`); eye.setAttribute("aria-pressed", String(st.hidden)); eye.dataset.tip = st.hidden ? _t('board.042') : _t('board.043');
     const lk = mk("button", "bd-ib"); lk.type = "button"; lk.dataset.ly = L; lk.dataset.what = "locked"; lk.innerHTML = icon(st.locked ? "lock" : "unlock");
-    lk.setAttribute("aria-label", `${LAYER_LABEL[L]} ${st.locked ? "잠금 풀기" : "잠그기"}`); lk.setAttribute("aria-pressed", String(st.locked)); lk.dataset.tip = st.locked ? "잠금 풀기" : "잠그기";
+    lk.setAttribute("aria-label", `${LAYER_LABEL[L]} ${st.locked ? _t('board.044') : _t('board.045')}`); lk.setAttribute("aria-pressed", String(st.locked)); lk.dataset.tip = st.locked ? _t('board.044') : _t('board.045');
     row.append(name, eye, lk);
     box.append(row);
   }
@@ -982,7 +984,7 @@ function renderAssets() {
   const box = $("#bd-asset-grid");
   box.replaceChildren();
   if (!ids.length) {
-    if (nAll) box.append(mk("p", "bd-empty-note", "맞는 자료가 없습니다."));
+    if (nAll) box.append(mk("p", "bd-empty-note", _t('board.046')));
     return;
   }
   const order = ids;   // stable (insertion) order: only the badge changes when a card is placed
@@ -990,13 +992,13 @@ function renderAssets() {
     const a = S.assets[id], p = payloads.get(id) || {}, n = used.get(id) || 0;
     const card = mk("div", "bd-asset"); card.draggable = true; card.dataset.asset = id;
     const th = mk("div", "bd-thumb");
-    const pb = mk("button", "bd-thumbbtn"); pb.type = "button"; pb.dataset.place = id; pb.setAttribute("aria-label", `${a.title} 배치`);
+    const pb = mk("button", "bd-thumbbtn"); pb.type = "button"; pb.dataset.place = id; pb.setAttribute("aria-label", _t('board.047', { 0: a.title }));
     const img = mk("img"); img.alt = ""; img.draggable = false; img.src = (a.kind === "diagram" ? p.preview : p.img) || "";
     pb.append(img); th.append(pb);
-    if (n) th.append(mk("span", "bd-badge", `배치됨 ${n}`));
+    if (n) th.append(mk("span", "bd-badge", _t('board.048', { 0: n })));
     const rm = mk("button", "bd-x"); rm.type = "button"; rm.dataset.removeAsset = id; rm.innerHTML = icon("close", 16);
-    rm.setAttribute("aria-label", "자료 지우기");
-    if (n) { rm.setAttribute("aria-disabled", "true"); rm.title = "보드에 배치된 카드가 있어 지울 수 없습니다. 카드를 먼저 지우세요."; } else rm.title = "자료에서 지우기";
+    rm.setAttribute("aria-label", _t('board.049'));
+    if (n) { rm.setAttribute("aria-disabled", "true"); rm.title = _t('board.050'); } else rm.title = _t('board.051');
     th.append(rm);
     card.append(th, mk("span", "bd-asset-t", a.title || id));
     box.append(card);
@@ -1028,16 +1030,16 @@ function renderPages() {
   box.replaceChildren();
   S.frames.forEach((f, i) => {
     const row = mk("div", "bd-pg" + (f.id === selFrame ? " is-sel" : "")); row.dataset.frame = f.id;
-    const grip = mk("button", "bd-ib bd-grip"); grip.type = "button"; grip.innerHTML = icon("grip"); grip.setAttribute("aria-label", "끌어서 순서 바꾸기"); grip.title = "끌어서 순서 바꾸기";
+    const grip = mk("button", "bd-ib bd-grip"); grip.type = "button"; grip.innerHTML = icon("grip"); grip.setAttribute("aria-label", _t('board.052')); grip.title = _t('board.052');
     const main = mk("button", "bd-pg-main"); main.type = "button"; main.dataset.act = "pg-go";
     const th = mk("span", "bd-pg-thumb"); th.append(pageThumb(f));
     const t = mk("span", "bd-pg-t", `${pad2(f.page)} · ${f.size} ${orientLabel(f)}`);
     const n = S.cards.filter(c => frameOf(c) === f).length;
-    t.append(mk("small", "", `카드 ${n}${f.template ? ` · ${f.template.cols}단` : ""}${f.parent ? ` · 부모 ${f.parent}` : f.cartouche ? " · 카르투슈" : ""}${f.spread ? ` · 맞쪽 ${f.spread}` : ""}`));
+    t.append(mk("small", "", _t('board.057', { 0: n, 1: f.template ? _t('board.053', { 0: f.template.cols }) : "", 2: f.parent ? _t('board.054', { 0: f.parent }) : f.cartouche ? _t('board.055') : "", 3: f.spread ? _t('board.056', { 0: f.spread }) : "" })));
     main.append(th, t);
     const ud = mk("span", "bd-pg-ud");
-    const up = mk("button", "bd-ib"); up.type = "button"; up.innerHTML = icon("up", 16); up.dataset.act = "pg-up"; up.setAttribute("aria-label", "한 쪽 앞으로"); up.disabled = i === 0;
-    const dn = mk("button", "bd-ib"); dn.type = "button"; dn.innerHTML = icon("down", 16); dn.dataset.act = "pg-down"; dn.setAttribute("aria-label", "한 쪽 뒤로"); dn.disabled = i === S.frames.length - 1;
+    const up = mk("button", "bd-ib"); up.type = "button"; up.innerHTML = icon("up", 16); up.dataset.act = "pg-up"; up.setAttribute("aria-label", _t('board.058')); up.disabled = i === 0;
+    const dn = mk("button", "bd-ib"); dn.type = "button"; dn.innerHTML = icon("down", 16); dn.dataset.act = "pg-down"; dn.setAttribute("aria-label", _t('board.059')); dn.disabled = i === S.frames.length - 1;
     ud.append(up, dn);
     row.append(grip, main, ud);
     box.append(row);
@@ -1068,54 +1070,54 @@ function renderList() {
     const head = mk("div", "bd-lhead");
     head.append(mk("h3", "", frameLabel(f)));
     const acts = mk("div", "bd-lacts");
-    acts.append(btn("▲", "frame-up", f.id, "페이지 앞으로"), btn("▼", "frame-down", f.id, "페이지 뒤로"), btn("PDF", "frame-pdf", f.id, "이 페이지 PDF"), btn("PNG", "frame-png", f.id, "이 페이지 PNG"));
+    acts.append(btn("▲", "frame-up", f.id, _t('board.060')), btn("▼", "frame-down", f.id, _t('board.061')), btn("PDF", "frame-pdf", f.id, _t('board.062')), btn("PNG", "frame-png", f.id, _t('board.063')));
     head.append(acts);
     sec.append(head);
     cards.forEach((c, ci) => sec.append(listRow(c, ci, cards.length, btn)));
-    if (!cards.length) sec.append(mk("p", "bd-empty-note", "카드 없음"));
+    if (!cards.length) sec.append(mk("p", "bd-empty-note", _t('board.064')));
     box.append(sec);
   });
   if (loose.length) {
     const sec = mk("section", "bd-lframe");
-    const h = mk("div", "bd-lhead"); h.append(mk("h3", "", "프레임 밖")); sec.append(h);
+    const h = mk("div", "bd-lhead"); h.append(mk("h3", "", _t('board.065'))); sec.append(h);
     loose.forEach((c, ci) => sec.append(listRow(c, ci, loose.length, btn)));
     box.append(sec);
   }
   const dr = mk("section", "bd-lframe");
-  const dh = mk("div", "bd-lhead"); dh.append(mk("h3", "", "자료"));
+  const dh = mk("div", "bd-lhead"); dh.append(mk("h3", "", _t('board.066')));
   dr.append(dh);
   const ids = Object.keys(S.assets);
-  if (!ids.length) dr.append(mk("p", "bd-empty-note", "자료가 비어 있습니다."));
+  if (!ids.length) dr.append(mk("p", "bd-empty-note", _t('board.067')));
   for (const id of ids) {
     const a = S.assets[id], p = payloads.get(id) || {};
     const row = mk("div", "bd-lrow");
     const im = mk("img"); im.alt = ""; im.src = (a.kind === "diagram" ? p.preview : p.img) || "";
-    row.append(im, mk("span", "bd-lt", a.title || id), btn("넣기", "place", id, "프레임에 넣기"));
+    row.append(im, mk("span", "bd-lt", a.title || id), btn(_t('board.068'), "place", id, _t('board.069')));
     dr.append(row);
   }
   box.append(dr);
 }
 function listRow(c, i, n, btn) {
   const row = mk("div", "bd-lrow");
-  const label = c.kind === "memo" ? "메모" : ROLE_LABEL[c.role] || "텍스트";
+  const label = c.kind === "memo" ? _t('board.015') : ROLE_LABEL[c.role] || _t('board.070');
   if (c.kind === "diagram" || c.kind === "image") {
     const p = payloads.get(c.ref) || {};
     const im = mk("img"); im.alt = ""; im.src = (c.kind === "diagram" ? p.preview : p.img) || "";
     row.append(im, mk("span", "bd-lt", S.assets[c.ref]?.title || c.kind));
   } else if (c.kind === "link") {
-    row.append(mk("span", "bd-lk", "링크"), mk("span", "bd-lt", c.title || c.url));
+    row.append(mk("span", "bd-lk", _t('board.071')), mk("span", "bd-lt", c.title || c.url));
   } else if (c.kind === "stamp") {
-    row.append(mk("span", "bd-lk", "스탬프"), mk("span", "bd-lt", `${STAMP_LABEL[c.stamp] || c.stamp} · 1:${c.den}`));
+    row.append(mk("span", "bd-lk", _t('board.072')), mk("span", "bd-lt", `${STAMP_LABEL[c.stamp] || c.stamp} · 1:${c.den}`));
   } else {
     const ta = mk("textarea", "bd-ltext");
     ta.value = c.text || ""; ta.dataset.lid = c.id; ta.rows = 2;
     ta.setAttribute("aria-label", label);
-    if (c.locked || layerLocked(c)) { ta.readOnly = true; ta.title = "잠긴 카드"; }
+    if (c.locked || layerLocked(c)) { ta.readOnly = true; ta.title = _t('board.073'); }
     if (c.kind === "memo") ta.style.background = c.color || MEMO_COLORS[0];
     row.append(mk("span", "bd-lk", label), ta);
   }
-  const b1 = btn("▲", "up", c.id, "앞뒤 순서 위로"), b2 = btn("▼", "down", c.id, "앞뒤 순서 아래로"), b3 = btn("✕", "del", c.id, "삭제");
-  if (isLocked(c)) { b3.disabled = true; b3.title = "잠긴 카드"; }
+  const b1 = btn("▲", "up", c.id, _t('board.074')), b2 = btn("▼", "down", c.id, _t('board.075')), b3 = btn("✕", "del", c.id, _t('board.076'));
+  if (isLocked(c)) { b3.disabled = true; b3.title = _t('board.073'); }
   b1.disabled = i === 0; b2.disabled = i === n - 1;
   row.append(b1, b2, b3);
   return row;
@@ -1145,21 +1147,21 @@ function ctxHtml() {
   const cards = selCards();
   if (!cards.length) return "";
   const allLocked = cards.every(c => c.locked);
-  const lock = cb("lock", allLocked ? "lock" : "unlock", allLocked ? "잠금 풀기" : "잠금", allLocked);
+  const lock = cb("lock", allLocked ? "lock" : "unlock", allLocked ? _t('board.044') : _t('board.077'), allLocked);
   if (cards.length === 1) {
     const c = cards[0];
     if (c.kind === "text") {
       const al = c.align || "left";
-      return cs("t-style", "글 스타일", ROLES.map(r => [r, ROLE_LABEL[r] + (PR.hasOverride(c) && r === c.role ? " +" : "")]), c.role) + cs("t-field", "필드 삽입", [["", "필드"], ...PR.FIELDS.map(f => [f, `{${f}}`])], "") + cb("t-cycle", al === "left" ? "alignL" : al === "center" ? "alignC" : "alignR", `정렬: ${al === "left" ? "왼쪽" : al === "center" ? "가운데" : "오른쪽"} (눌러서 바꾸기)`) + cb("del", "trash", "삭제");
+      return cs("t-style", _t('board.078'), ROLES.map(r => [r, ROLE_LABEL[r] + (PR.hasOverride(c) && r === c.role ? " +" : "")]), c.role) + cs("t-field", _t('board.079'), [["", _t('board.080')], ...PR.FIELDS.map(f => [f, PR.fieldToken(f)])], "") + cb("t-cycle", al === "left" ? "alignL" : al === "center" ? "alignC" : "alignR", _t('board.084', { 0: al === "left" ? _t('board.081') : al === "center" ? _t('board.082') : _t('board.083') })) + cb("del", "trash", _t('board.076'));
     }
     const media = c.kind === "image" || c.kind === "diagram";
     if (media) {   // 채우기 · 맞추기 · (칸 채우기) · PPI badge · ⋯
       const pi = ppiInfo(c), badge = pi ? `<span class="bd-ppi is-${pi.cls}">${pi.text}</span>` : "";
-      return cb("cover", "cover", "채우기 (틀을 덮음)") + cb("contain", "contain", "맞추기 (틀 안에 전체)") + (frameOf(c)?.template ? cb("fill", "fill", "칸 채우기") : "") + badge + cb("more", "more", "더보기");
+      return cb("cover", "cover", _t('board.085')) + cb("contain", "contain", _t('board.086')) + (frameOf(c)?.template ? cb("fill", "fill", _t('board.087')) : "") + badge + cb("more", "more", _t('board.088'));
     }
-    return cb("more", "more", "앞뒤 순서") + cb("dup", "dup", "복제 (⌘D)") + lock + cb("del", "trash", "삭제");
+    return cb("more", "more", _t('board.089')) + cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
   }
-  return cb("dup", "dup", "복제 (⌘D)") + lock + cb("del", "trash", "삭제");
+  return cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
 }
 function ctxSignature() {
   if (editingId || ui.preview) return "";
@@ -1368,7 +1370,7 @@ function placeByTool(at) {
   if (t === "t") addText("body", at);
   else if (t === "n") addMemo(at);
   else if (t === "f") {
-    if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return; }
+    if (S.editParent) { status(_t('board.091')); return; }
     const [w, h] = frameSize(frameDefaults.orientation === "portrait" ? { size: frameDefaults.size, orientation: "portrait" } : { size: frameDefaults.size, orientation: "landscape" });
     const f = addFrame({ x: at[0] - w / 2, y: at[1] - h / 2 });
     selFrame = f.id; sel.clear(); commit();
@@ -1390,10 +1392,10 @@ function onPointerDown(e) {
   if (ui.tool === "k" && e.button === 0) { e.preventDefault(); addLinkAt(wx, wy); return; }
   if (ui.tool === "l" && e.button === 0) {
     e.preventDefault();
-    if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return; }
+    if (S.editParent) { status(_t('board.091')); return; }
     const ace = e.target.closest(".bd-card");
     if (ace && cardById(ace.dataset.id)) { cap(e.pointerId); const A = cardById(ace.dataset.id), cx = A.x + A.w / 2, cy = A.y + A.h / 2; drag = { type: "arrow", from: A.id, line: el("line", { x1: cx, y1: cy, x2: wx, y2: wy, class: "bd-arrow is-sel", "vector-effect": "non-scaling-stroke" }, layerGuides) }; }
-    else status("화살표는 카드에서 다른 카드로 끌어 그립니다.");
+    else status(_t('board.092'));
     return;
   }
   { const arEl = e.target.closest("[data-arrow]"); if (arEl) { e.preventDefault(); if (e.altKey) { S.arrows = S.arrows.filter(a => a.id !== arEl.dataset.arrow); commit(); } else { selArrow = arEl.dataset.arrow; sel.clear(); selFrame = null; renderArrows(); renderSel(); renderCtx(); renderProps(); renderChrome(); } return; } }
@@ -1401,14 +1403,14 @@ function onPointerDown(e) {
   if (ui.tool === "c" && e.button === 0) {
     e.preventDefault();
     const ce = e.target.closest(".bd-card"), cc = ce && cardById(ce.dataset.id);
-    if (cc && (isLocked(cc) || S.editParent)) status("잠긴 카드나 부모 페이지 편집 중에는 코멘트를 달 수 없습니다.");
-    else if (cc) addComment(cc, wx, wy); else status("코멘트는 카드 위를 눌러 달 수 있습니다.");
+    if (cc && (isLocked(cc) || S.editParent)) status(_t('board.093'));
+    else if (cc) addComment(cc, wx, wy); else status(_t('board.094'));
     return;
   }
   if (ui.tool === "d" && e.pointerType === "touch") { startPan(e); return; }   // a finger pans, it does not move cards
   if (ui.tool === "d" && e.button === 0) {
     e.preventDefault();
-    if (S.editParent) { status("부모 페이지 편집 중에는 펜을 쓸 수 없습니다."); return; }
+    if (S.editParent) { status(_t('board.095')); return; }
     const pce = e.target.closest(".bd-card"), pcc = pce && cardById(pce.dataset.id);
     cap(e.pointerId); startPen(e, wx, wy, pcc && !isLocked(pcc) ? pce : null); return;
   }
@@ -1419,7 +1421,7 @@ function onPointerDown(e) {
   if (tabEl) { const z = secById(tabEl.dataset.secTab); if (z) { selSection = z.id; sel.clear(); selFrame = null; selGuide = null; drag = { type: "secmove", id: z.id, start: [wx, wy], last: [wx, wy], moved: false, cap: RC.captureSection(S, z.id) }; try { svg.setPointerCapture(e.pointerId); } catch { /* ignore */ } render(); return; } }
   if (e.metaKey && e.shiftKey && !S.editParent && ui.tool === "v") {   // override a parent item on this page
     const pf = frameAt(wx, wy);
-    if (pf && pf.parent && (S.layers.text?.locked || S.layers.text?.hidden)) { status("글·주석 레이어가 잠겨 있거나 숨겨져 있어 재정의할 수 없습니다."); return; }
+    if (pf && pf.parent && (S.layers.text?.locked || S.layers.text?.hidden)) { status(_t('board.096')); return; }
     if (pf && pf.parent) { const lx = wx - pf.x, ly = wy - pf.y, hit = [...PR.itemsFor(S, pf)].reverse().find(i => (i.kind === "text" || i.kind === "stamp") && lx >= i.x && lx <= i.x + i.w && ly >= i.y && ly <= i.y + i.h); if (hit) { e.preventDefault(); makeOverride(pf, hit); return; } }
   }
   if (ui.tool === "s") { e.preventDefault(); placeStamp([wx, wy]); return; }
@@ -1613,45 +1615,45 @@ function finishEdit() {
 function commands() {
   const C = (label, run, hint, keys) => ({ label, run, hint, keys });
   const list = [
-    C("프레임 추가 (페이지)", () => { if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return; } const f = addFrame(); selFrame = f.id; sel.clear(); commit(); zoomToFrame(f); }, "F", "page frame 페이지"),
-    C("텍스트 추가", () => addText("body"), "T", "text 글"),
-    C("제목 추가", () => addText("title"), "", "title 제목"),
-    C("메모 추가", () => addMemo(), "N", "memo note 메모"),
-    C("이미지 추가", () => $("#bd-file-img").click(), "I", "image 이미지 사진"),
-    C("출력…", () => chrome.openExport(), "", "export pdf png 출력 내보내기"),
-    C("발표", () => present(), "P", "present slide 발표"),
-    C("PDF 가져오기", () => $("#bd-file-img").click(), "", "pdf import 가져오기"),
-    C("채택 카드 → 판넬로 올리기", () => promoteKept(secActive() ? selSection : null), "", "promote keep 채택 판넬"),
-    C("링크 카드 추가", () => setTool("k"), "K", "link 링크"),
-    C("화살표 그리기", () => setTool("l"), "L", "arrow 화살표"),
-    C("버전 묶기", makeStack, "", "stack 버전 묶기"),
-    C("학기 보드로 시작", startSemester, "", "semester 학기 구역 section"),
-    C("주차 묶음 추가", addWeek, "", "week semaine 주차 구역"),
-    C("스냅샷 저장…", saveSnapshot, "", "snapshot 스냅샷 저장"),
-    C("기록 검색", () => { ui.panel = true; ui.panelTab = "record"; renderChrome(); renderPanel(); $("#bd-rec-q").focus(); }, "", "search 검색 기록"),
-    C("코멘트·펜 보기 켜기·끄기", toggleAnno, "⇧C", "comments pen 코멘트 펜"),
-    C("날짜 보기 켜기·끄기", () => { ui.dates = !ui.dates; render(); }, "", "dates 날짜"),
-    C("미리보기 켜기·끄기", togglePreview, "W", "preview 미리보기"),
-    C("가이드 숨기기·보기", () => { ui.guidesHidden = !ui.guidesHidden; render(); applyView(); }, "", "guides hide show 가이드 숨기기 보기"),
-    C("가이드 잠금·풀기", () => { ui.guidesLocked = !ui.guidesLocked; render(); }, "", "guides lock 가이드 잠금"),
-    C("이 페이지 가이드 모두 지우기", clearPageGuides, "", "guides clear 가이드 지우기"),
-    C("작업 ↔ 조판 전환", () => setLayout(ui.layout === "work" ? "print" : "work"), "⇧R", "layout 조판 작업"),
-    C("보드 정보 · 카르투슈", () => chrome.openInfo(), "", "cartouche info meta 카르투슈 정보"),
-    C("글 스타일", () => chrome.openStyles(), "", "styles text 글 스타일"),
-    C("단축키 보기", () => chrome.openShortcuts(), "?", "shortcuts 단축키"),
-    C("왼쪽 패널 접기·펼치기", () => { ui.panel = !ui.panel; render(); }, "", "panel 패널"),
-    C("미니맵 켜기·끄기", () => { ui.minimap = !ui.minimap; render(); scheduleMini(); }, "", "minimap 미니맵"),
-    C("전체 보기", fitAll, "⇧1", "fit zoom 전체"),
-    C("앞으로 가져오기", () => reorder(1, true), "", "front 맨 앞"), C("맨 뒤로 보내기", () => reorder(-1, true), "", "back 맨 뒤"),
-    C("실행 취소", undo, "⌘Z", "undo"), C("다시 실행", redo, "⌘⇧Z", "redo"),
-    C("선택 복제", duplicate, "⌘D", "duplicate 복제"), C("선택 삭제", deleteSelection, "Del", "delete 삭제"),
-    C("묶기", groupSel, "⌘G", "group 묶기"), C("묶음 풀기", ungroupSel, "⌘⇧G", "ungroup 풀기"), C("잠금·풀기", toggleLock, "", "lock 잠금"),
-    C("90° 회전", rotate90, "", "rotate 회전"), C("칸 채우기", () => { const c = selCards()[0]; if (c) fillCells(c); }, "", "fill cell 칸 채우기"),
-    C("새 보드", newBoard, "", "new 새 보드"), C("파일로 저장 (.atelier)", saveFile, "", "save 저장"), C("파일 열기", () => $("#bd-file-proj").click(), "", "open 열기")
+    C(_t('board.097'), () => { if (S.editParent) { status(_t('board.091')); return; } const f = addFrame(); selFrame = f.id; sel.clear(); commit(); zoomToFrame(f); }, "F", _t('board.098')),
+    C(_t('board.099'), () => addText("body"), "T", _t('board.100')),
+    C(_t('board.101'), () => addText("title"), "", _t('board.102')),
+    C(_t('board.103'), () => addMemo(), "N", _t('board.104')),
+    C(_t('board.105'), () => $("#bd-file-img").click(), "I", _t('board.106')),
+    C(_t('board.107'), () => chrome.openExport(), "", _t('board.108')),
+    C(_t('board.109'), () => present(), "P", _t('board.110')),
+    C(_t('board.111'), () => $("#bd-file-img").click(), "", _t('board.112')),
+    C(_t('board.113'), () => promoteKept(secActive() ? selSection : null), "", _t('board.114')),
+    C(_t('board.115'), () => setTool("k"), "K", _t('board.116')),
+    C(_t('board.117'), () => setTool("l"), "L", _t('board.118')),
+    C(_t('board.119'), makeStack, "", _t('board.120')),
+    C(_t('board.121'), startSemester, "", _t('board.122')),
+    C(_t('board.123'), addWeek, "", _t('board.124')),
+    C(_t('board.125'), saveSnapshot, "", _t('board.126')),
+    C(_t('board.127'), () => { ui.panel = true; ui.panelTab = "record"; renderChrome(); renderPanel(); $("#bd-rec-q").focus(); }, "", _t('board.128')),
+    C(_t('board.129'), toggleAnno, "⇧C", _t('board.130')),
+    C(_t('board.131'), () => { ui.dates = !ui.dates; render(); }, "", _t('board.132')),
+    C(_t('board.133'), togglePreview, "W", _t('board.134')),
+    C(_t('board.135'), () => { ui.guidesHidden = !ui.guidesHidden; render(); applyView(); }, "", _t('board.136')),
+    C(_t('board.137'), () => { ui.guidesLocked = !ui.guidesLocked; render(); }, "", _t('board.138')),
+    C(_t('board.139'), clearPageGuides, "", _t('board.140')),
+    C(_t('board.141'), () => setLayout(ui.layout === "work" ? "print" : "work"), "⇧R", _t('board.142')),
+    C(_t('board.143'), () => chrome.openInfo(), "", _t('board.144')),
+    C(_t('board.078'), () => chrome.openStyles(), "", _t('board.145')),
+    C(_t('board.146'), () => chrome.openShortcuts(), "?", _t('board.147')),
+    C(_t('board.148'), () => { ui.panel = !ui.panel; render(); }, "", _t('board.149')),
+    C(_t('board.150'), () => { ui.minimap = !ui.minimap; render(); scheduleMini(); }, "", _t('board.151')),
+    C(_t('board.152'), fitAll, "⇧1", _t('board.153')),
+    C(_t('board.154'), () => reorder(1, true), "", _t('board.155')), C(_t('board.156'), () => reorder(-1, true), "", _t('board.157')),
+    C(_t('board.158'), undo, "⌘Z", "undo"), C(_t('board.159'), redo, "⌘⇧Z", "redo"),
+    C(_t('board.160'), duplicate, "⌘D", _t('board.161')), C(_t('board.162'), deleteSelection, "Del", _t('board.163')),
+    C(_t('board.164'), groupSel, "⌘G", _t('board.165')), C(_t('board.166'), ungroupSel, "⌘⇧G", _t('board.167')), C(_t('board.168'), toggleLock, "", _t('board.169')),
+    C(_t('board.170'), rotate90, "", _t('board.171')), C(_t('board.087'), () => { const c = selCards()[0]; if (c) fillCells(c); }, "", _t('board.172')),
+    C(_t('board.173'), newBoard, "", _t('board.174')), C(_t('board.175'), saveFile, "", _t('board.176')), C(_t('board.177'), () => $("#bd-file-proj").click(), "", _t('board.178'))
   ];
-  for (const [k, l] of [["l", "왼쪽"], ["c", "가운데"], ["r", "오른쪽"], ["t", "위"], ["m", "중간"], ["b", "아래"]]) list.push(C(`정렬 · ${l}`, () => alignSel(k), "", "align 정렬"));
-  list.push(C("간격 같게 · 가로", () => distribute("h"), "", "distribute 간격"), C("간격 같게 · 세로", () => distribute("v"), "", "distribute 간격"));
-  S.frames.forEach(f => list.push(C(`페이지 ${f.page}로 이동 · ${f.size} ${orientLabel(f)}`, () => zoomToFrame(f), "", "page go zoom 페이지 이동")));
+  for (const [k, l] of [["l", _t('board.081')], ["c", _t('board.082')], ["r", _t('board.083')], ["t", _t('board.179')], ["m", _t('board.180')], ["b", _t('board.181')]]) list.push(C(_t('board.182', { 0: l }), () => alignSel(k), "", _t('board.183')));
+  list.push(C(_t('board.184'), () => distribute("h"), "", _t('board.185')), C(_t('board.186'), () => distribute("v"), "", _t('board.185')));
+  S.frames.forEach(f => list.push(C(_t('board.187', { 0: f.page, 1: f.size, 2: orientLabel(f) }), () => zoomToFrame(f), "", _t('board.188'))));
   return list;
 }
 function present() {
@@ -1749,7 +1751,7 @@ const u8ToDataUrl = (a, mime) => { let s = ""; for (let i = 0; i < a.length; i +
 async function saveFile() {
   finishEdit();
   try {
-    status("파일 만드는 중…");
+    status(_t('board.189'));
     const { zipSync, strToU8 } = await import(FFLATE);
     const files = {};
     const diagrams = [], images = [];
@@ -1778,8 +1780,8 @@ async function saveFile() {
     const zip = zipSync(files);
     download(new Blob([zip], { type: "application/zip" }), `${safeName()}.atelier`);
     dirty = false;
-    status(`저장됨 · ${(zip.length / 1048576).toFixed(1)} MB`);
-  } catch (e) { console.error(e); status(`저장 실패: ${e.message}`); }
+    status(_t('board.190', { 0: (zip.length / 1048576).toFixed(1) }));
+  } catch (e) { console.error(e); status(_t('board.191', { 0: e.message })); }
 }
 function resetCanvasState() {
   for (const [, g] of els) g.remove();
@@ -1791,15 +1793,15 @@ function resetCanvasState() {
 }
 async function openFile(file) {
   try {
-    status("파일 여는 중…");
+    status(_t('board.192'));
     const { unzipSync, strFromU8 } = await import(FFLATE);
     const buf = await file.arrayBuffer();
     const z = unzipSync(new Uint8Array(buf));
-    if (!z["project.json"]) throw new Error("project.json이 없습니다.");
+    if (!z["project.json"]) throw new Error(_t('board.193'));
     const pj = JSON.parse(strFromU8(z["project.json"]));
-    if (pj.format !== "atelier-project") throw new Error("Atelier 프로젝트 파일이 아닙니다.");
-    if (!(num(pj.version, 1, 0, 1e6) <= DOC_VERSION)) throw new Error("더 새로운 버전의 파일입니다.");
-    if ((S.cards.length || Object.keys(S.assets).length) && !confirm("지금 보드를 이 파일로 바꿀까요? 저장하지 않은 내용은 사라집니다.")) { status(""); return; }
+    if (pj.format !== "atelier-project") throw new Error(_t('board.194'));
+    if (!(num(pj.version, 1, 0, 1e6) <= DOC_VERSION)) throw new Error(_t('board.195'));
+    if ((S.cards.length || Object.keys(S.assets).length) && !confirm(_t('board.196'))) { status(""); return; }
     const ver = Math.round(num(pj.version, 1, 0, 1e6));
     if (ver < DOC_VERSION) {   // old file: keep the untouched original bytes before migrating
       const base = (file.name || "atelier").replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|]+/g, "-").trim() || "atelier";
@@ -1824,11 +1826,11 @@ async function openFile(file) {
     S = next; ensureFrame(); resetCanvasState();
     scheduleSave(); render(); fitAll();
     dirty = false;
-    status(`열림 · 카드 ${S.cards.length}장${ver < DOC_VERSION ? ` · v${Math.max(1, ver)} → v${DOC_VERSION} 변환 (원본은 .bak.atelier로 내려받음)` : ""}`);
-  } catch (e) { console.error(e); status(`열기 실패: ${e.message}`); }
+    status(_t('board.198', { 0: S.cards.length, 1: ver < DOC_VERSION ? _t('board.197', { 0: Math.max(1, ver), 1: DOC_VERSION }) : "" }));
+  } catch (e) { console.error(e); status(_t('board.199', { 0: e.message })); }
 }
 function newBoard() {
-  if ((S.cards.length || Object.keys(S.assets).length) && !confirm("새 보드를 만들까요? 지금 보드는 파일로 저장하지 않았다면 사라집니다.")) return;
+  if ((S.cards.length || Object.keys(S.assets).length) && !confirm(_t('board.200'))) return;
   S = emptyDoc(); keepSnapPayloads(); ensureFrame(); resetCanvasState();
   dirty = true; scheduleSave(); render(); fitAll();
 }
@@ -1854,175 +1856,175 @@ function closeMenus() {
   for (const b of document.querySelectorAll("#board [aria-haspopup]")) b.setAttribute("aria-expanded", "false");
   return any;
 }
-const TOOLS = [["v", "select", "선택", "V"], ["h", "hand", "손", "H"], ["t", "text", "텍스트", "T"], ["f", "frame", "프레임", "F"], ["n", "note", "메모", "N"], ["i", "image", "이미지", "I"], ["s", "stampbar", "축척·방위", "S"], ["g", "section", "구역", "G"], ["c", "comment", "코멘트", "C"], ["d", "pen", "펜", "D"], ["k", "link", "링크", "K"], ["l", "arrow", "화살표", "L"]];
+const tools = () => [["v", "select", _t('board.201'), "V"], ["h", "hand", _t('board.202'), "H"], ["t", "text", _t('board.070'), "T"], ["f", "frame", _t('board.203'), "F"], ["n", "note", _t('board.015'), "N"], ["i", "image", _t('board.204'), "I"], ["s", "stampbar", _t('board.205'), "S"], ["g", "section", _t('board.206'), "G"], ["c", "comment", _t('board.207'), "C"], ["d", "pen", _t('board.208'), "D"], ["k", "link", _t('board.071'), "K"], ["l", "arrow", _t('board.209'), "L"]];
 
 function build() {
   const sec = document.createElement("section");
   sec.id = "board"; sec.hidden = true;
-  sec.setAttribute("aria-label", "보드");
+  sec.setAttribute("aria-label", _t('board.210'));
   sec.innerHTML = `
     <header class="bd-bar">
       <div class="bd-bl">
-        <button id="bd-panel-toggle" class="bd-ib" type="button" aria-pressed="true" data-tip="왼쪽 패널" aria-label="왼쪽 패널 접기·펼치기">${icon("panel")}</button>
-        <nav class="bd-tabs" aria-label="모드">
-          <button type="button" data-mode="terrain">대지</button>
-          <button type="button" data-mode="diagrams">다이어그램</button>
-          <button type="button" data-mode="board" aria-current="page">보드</button>
+        <button id="bd-panel-toggle" class="bd-ib" type="button" aria-pressed="true" data-tip="${_t("board.211")}" aria-label="${_t("board.148")}" data-i18n-attr="data-tip:board.211;aria-label:board.148">${icon("panel")}</button>
+        <nav class="bd-tabs" aria-label="${_t("board.212")}" data-i18n-attr="aria-label:board.212">
+          <button type="button" data-mode="terrain" data-i18n="board.213">${_t("board.213")}</button>
+          <button type="button" data-mode="diagrams" data-i18n="board.214">${_t("board.214")}</button>
+          <button type="button" data-mode="board" aria-current="page" data-i18n="board.210">${_t("board.210")}</button>
         </nav>
         <div class="bd-namewrap bd-menu-wrap">
-          <input id="bd-name" class="bd-name" type="text" aria-label="보드 이름" maxlength="80">
-          <button id="bd-name-menu" class="bd-ib" type="button" aria-haspopup="true" aria-expanded="false" aria-label="보드 메뉴" data-tip="보드 메뉴">${icon("chevron")}</button>
+          <input id="bd-name" class="bd-name" type="text" aria-label="${_t("board.215")}" maxlength="80" data-i18n-attr="aria-label:board.215">
+          <button id="bd-name-menu" class="bd-ib" type="button" aria-haspopup="true" aria-expanded="false" aria-label="${_t("board.216")}" data-tip="${_t("board.216")}" data-i18n-attr="aria-label:board.216;data-tip:board.216">${icon("chevron")}</button>
           <div id="bd-name-pop" class="bd-menu" hidden>
-            <button type="button" data-m="new">새 보드</button>
-            <button type="button" data-m="open">파일 열기</button>
-            <button type="button" data-m="save">파일로 저장</button>
-            <button type="button" data-m="img">이미지 추가</button>
+            <button type="button" data-m="new" data-i18n="board.173">${_t("board.173")}</button>
+            <button type="button" data-m="open" data-i18n="board.177">${_t("board.177")}</button>
+            <button type="button" data-m="save" data-i18n="board.217">${_t("board.217")}</button>
+            <button type="button" data-m="img" data-i18n="board.105">${_t("board.105")}</button>
           </div>
         </div>
         <span id="bd-save-state" class="bd-savestate" role="status" aria-live="polite"></span>
       </div>
       <div class="bd-bc">
-        <div class="bd-seg bd-hide-m" role="group" aria-label="보기 모드">
-          <button type="button" data-layout="work" aria-pressed="true" data-tip="작업 (Shift+R)">작업</button>
-          <button type="button" data-layout="print" aria-pressed="false" data-tip="조판 (Shift+R)">조판</button>
+        <div class="bd-seg bd-hide-m" role="group" aria-label="${_t("board.218")}" data-i18n-attr="aria-label:board.218">
+          <button type="button" data-layout="work" aria-pressed="true" data-tip="${_t("board.219")}" data-i18n="board.220" data-i18n-attr="data-tip:board.219">${_t("board.220")}</button>
+          <button type="button" data-layout="print" aria-pressed="false" data-tip="${_t("board.221")}" data-i18n="board.222" data-i18n-attr="data-tip:board.221">${_t("board.222")}</button>
         </div>
       </div>
       <div class="bd-br">
         <div class="bd-menu-wrap bd-hide-m" id="bd-pfwrap" hidden>
-          <button id="bd-pf" class="bd-btn bd-pf" type="button" aria-haspopup="true" aria-expanded="false" aria-label="출력 점검"><span class="bd-pf-ic"></span><span id="bd-pf-t">점검 OK</span></button>
+          <button id="bd-pf" class="bd-btn bd-pf" type="button" aria-haspopup="true" aria-expanded="false" aria-label="${_t("board.223")}" data-i18n-attr="aria-label:board.223"><span class="bd-pf-ic"></span><span id="bd-pf-t" data-i18n="board.027">${_t("board.027")}</span></button>
           <div id="bd-pfpop" class="bd-menu bd-menu-r bd-pfpop" hidden></div>
         </div>
-        <button id="bd-undo" class="bd-ib bd-hide-m" type="button" aria-label="실행 취소" data-tip="실행 취소 (⌘Z)">${icon("undo")}</button>
-        <button id="bd-redo" class="bd-ib bd-hide-m" type="button" aria-label="다시 실행" data-tip="다시 실행 (⌘⇧Z)">${icon("redo")}</button>
-        <button id="bd-export" class="bd-primary" type="button">출력</button>
+        <button id="bd-undo" class="bd-ib bd-hide-m" type="button" aria-label="${_t("board.158")}" data-tip="${_t("board.224")}" data-i18n-attr="aria-label:board.158;data-tip:board.224">${icon("undo")}</button>
+        <button id="bd-redo" class="bd-ib bd-hide-m" type="button" aria-label="${_t("board.159")}" data-tip="${_t("board.225")}" data-i18n-attr="aria-label:board.159;data-tip:board.225">${icon("redo")}</button>
+        <button id="bd-export" class="bd-primary" type="button" data-i18n="board.226">${_t("board.226")}</button>
         <div class="bd-menu-wrap">
-          <button id="bd-more" class="bd-ib" type="button" aria-haspopup="true" aria-expanded="false" aria-label="더보기" data-tip="더보기">${icon("more")}</button>
+          <button id="bd-more" class="bd-ib" type="button" aria-haspopup="true" aria-expanded="false" aria-label="${_t("board.088")}" data-tip="${_t("board.088")}" data-i18n-attr="aria-label:board.088;data-tip:board.088">${icon("more")}</button>
           <div id="bd-more-pop" class="bd-menu bd-menu-r" hidden>
-            <button type="button" data-m="present">발표<kbd>P</kbd></button>
-            <button type="button" data-m="minimap">미니맵 보기</button>
-            <button type="button" data-m="shortcuts">단축키<kbd>?</kbd></button>
-            <button type="button" data-m="info">보드 정보</button>
-            <button type="button" data-m="styles">글 스타일</button>
-            <button type="button" data-m="palette">명령 팔레트<kbd>⌘K</kbd></button>
+            <button type="button" data-m="present" data-i18n-html="board.227">${_t("board.227")}</button>
+            <button type="button" data-m="minimap" data-i18n="board.031">${_t("board.031")}</button>
+            <button type="button" data-m="shortcuts" data-i18n-html="board.228">${_t("board.228")}</button>
+            <button type="button" data-m="info" data-i18n="board.229">${_t("board.229")}</button>
+            <button type="button" data-m="styles" data-i18n="board.078">${_t("board.078")}</button>
+            <button type="button" data-m="palette" data-i18n-html="board.230">${_t("board.230")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="lang">Langue / 언어<kbd>FR · KO</kbd></button>
             <span class="bd-msep" role="separator"></span>
-            <button type="button" data-m="dates">날짜 보기</button>
-            <button type="button" data-m="annos">코멘트·펜 보기<kbd>⇧C</kbd></button>
-            <button type="button" data-m="snap">스냅샷 저장…</button>
-            <button type="button" data-m="week">주차 묶음 추가</button>
-            <button type="button" data-m="pdf">PDF 가져오기</button>
-            <button type="button" data-m="promote">채택 카드 → 판넬</button>
+            <button type="button" data-m="dates" data-i18n="board.037">${_t("board.037")}</button>
+            <button type="button" data-m="annos" data-i18n-html="board.231">${_t("board.231")}</button>
+            <button type="button" data-m="snap" data-i18n="board.125">${_t("board.125")}</button>
+            <button type="button" data-m="week" data-i18n="board.123">${_t("board.123")}</button>
+            <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
+            <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
-            <button type="button" data-m="gh">가이드 숨기기</button>
-            <button type="button" data-m="gl">가이드 잠금</button>
-            <button type="button" data-m="gc">이 페이지 가이드 모두 지우기</button>
+            <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
+            <button type="button" data-m="gl" data-i18n="board.035">${_t("board.035")}</button>
+            <button type="button" data-m="gc" data-i18n="board.139">${_t("board.139")}</button>
           </div>
         </div>
       </div>
     </header>
-    <div id="bd-banner" class="bd-banner" role="alert" hidden>자동저장 안 됨 — 파일로 저장하세요</div>
+    <div id="bd-banner" class="bd-banner" role="alert" hidden data-i18n="board.233">${_t("board.233")}</div>
     <div class="bd-main">
-      <nav class="bd-rail" aria-label="도구">
-        ${TOOLS.map(([k, ic, name, key]) => `<button class="bd-ib" type="button" data-tool="${k}" data-tip="${name} (${key})" aria-label="${name} (${key})" aria-pressed="${k === "v"}">${icon(ic)}</button>`).join("")}
+      <nav class="bd-rail" aria-label="${_t("board.234")}" data-i18n-attr="aria-label:board.234">
+        ${tools().map(([k, ic, name, key]) => `<button class="bd-ib" type="button" data-tool="${k}" data-tip="${name} (${key})" aria-label="${name} (${key})" aria-pressed="${k === "v"}">${icon(ic)}</button>`).join("")}
       </nav>
-      <aside id="bd-panel" class="bd-panel" aria-label="페이지·자료·레이어">
-        <div class="bd-ptabs" role="tablist" aria-label="패널">
-          <button id="bd-tab-pages" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-pages">페이지</button>
-          <button id="bd-tab-assets" type="button" role="tab" aria-selected="true" aria-controls="bd-pane-assets">자료</button>
-          <button id="bd-tab-layers" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-layers">레이어</button>
-          <button id="bd-tab-record" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-record">기록</button>
+      <aside id="bd-panel" class="bd-panel" aria-label="${_t("board.235")}" data-i18n-attr="aria-label:board.235">
+        <div class="bd-ptabs" role="tablist" aria-label="${_t("board.236")}" data-i18n-attr="aria-label:board.236">
+          <button id="bd-tab-pages" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-pages" data-i18n="board.237">${_t("board.237")}</button>
+          <button id="bd-tab-assets" type="button" role="tab" aria-selected="true" aria-controls="bd-pane-assets" data-i18n="board.066">${_t("board.066")}</button>
+          <button id="bd-tab-layers" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-layers" data-i18n="board.238">${_t("board.238")}</button>
+          <button id="bd-tab-record" type="button" role="tab" aria-selected="false" aria-controls="bd-pane-record" data-i18n="board.239">${_t("board.239")}</button>
         </div>
         <div id="bd-pane-pages" class="bd-pane" role="tabpanel" aria-labelledby="bd-tab-pages" hidden>
-          <section class="bd-parents"><h3 class="bd-sec-h">부모 페이지</h3><div id="bd-parent-list" class="bd-parent-list"></div>
-            <button id="bd-add-parent" class="bd-btn" type="button">+ 부모 페이지</button></section>
-          <label class="bd-cf bd-spread"><input id="bd-spread-toggle" type="checkbox" aria-pressed="false"><span>맞쪽 보기</span></label>
+          <section class="bd-parents"><h3 class="bd-sec-h" data-i18n="board.240">${_t("board.240")}</h3><div id="bd-parent-list" class="bd-parent-list"></div>
+            <button id="bd-add-parent" class="bd-btn" type="button" data-i18n="board.241">${_t("board.241")}</button></section>
+          <label class="bd-cf bd-spread"><input id="bd-spread-toggle" type="checkbox" aria-pressed="false"><span data-i18n="board.242">${_t("board.242")}</span></label>
           <div id="bd-page-list" class="bd-page-list"></div>
           <div class="bd-addpage">
-            <button id="bd-addpage" class="bd-btn" type="button" aria-expanded="false">+ 페이지</button>
+            <button id="bd-addpage" class="bd-btn" type="button" aria-expanded="false" data-i18n="board.243">${_t("board.243")}</button>
             <div id="bd-addpop" class="bd-addpop" hidden>
-              <select id="bd-new-size" aria-label="용지">${SIZES.map(s => `<option${s === "A3" ? " selected" : ""}>${s}</option>`).join("")}</select>
-              <select id="bd-new-orient" aria-label="방향"><option value="landscape">가로</option><option value="portrait">세로</option></select>
-              <button id="bd-addpage-ok" class="bd-btn bd-strong" type="button">추가</button>
+              <select id="bd-new-size" aria-label="${_t("board.244")}" data-i18n-attr="aria-label:board.244">${SIZES.map(s => `<option${s === "A3" ? " selected" : ""}>${s}</option>`).join("")}</select>
+              <select id="bd-new-orient" aria-label="${_t("board.245")}" data-i18n-attr="aria-label:board.245"><option value="landscape" data-i18n="board.246">${_t("board.246")}</option><option value="portrait" data-i18n="board.247">${_t("board.247")}</option></select>
+              <button id="bd-addpage-ok" class="bd-btn bd-strong" type="button" data-i18n="board.248">${_t("board.248")}</button>
             </div>
           </div>
         </div>
         <div id="bd-pane-assets" class="bd-pane" role="tabpanel" aria-labelledby="bd-tab-assets">
           <div id="bd-asset-tools" class="bd-asset-tools">
-            <div class="bd-search">${icon("search")}<input id="bd-q" type="text" placeholder="자료 검색" aria-label="자료 검색"></div>
-            <div class="bd-chips" role="group" aria-label="종류">
-              <button type="button" class="bd-chip" data-filter="all" aria-pressed="true">전체</button>
-              <button type="button" class="bd-chip" data-filter="diagram" aria-pressed="false">다이어그램</button>
-              <button type="button" class="bd-chip" data-filter="image" aria-pressed="false">이미지</button>
+            <div class="bd-search">${icon("search")}<input id="bd-q" type="text" placeholder="${_t("board.249")}" aria-label="${_t("board.249")}" data-i18n-attr="placeholder:board.249;aria-label:board.249"></div>
+            <div class="bd-chips" role="group" aria-label="${_t("board.250")}" data-i18n-attr="aria-label:board.250">
+              <button type="button" class="bd-chip" data-filter="all" aria-pressed="true" data-i18n="board.251">${_t("board.251")}</button>
+              <button type="button" class="bd-chip" data-filter="diagram" aria-pressed="false" data-i18n="board.214">${_t("board.214")}</button>
+              <button type="button" class="bd-chip" data-filter="image" aria-pressed="false" data-i18n="board.204">${_t("board.204")}</button>
             </div>
           </div>
           <div id="bd-asset-grid" class="bd-asset-grid"></div>
           <div id="bd-dropzone" class="bd-dropzone" hidden>
-            <p>이미지를 여기에 끌어 놓으세요</p>
-            <button type="button" class="bd-btn" data-empty="diagrams">다이어그램 가져오기</button>
-            <button type="button" class="bd-btn" data-empty="image">이미지 추가</button>
+            <p data-i18n="board.252">${_t("board.252")}</p>
+            <button type="button" class="bd-btn" data-empty="diagrams" data-i18n="board.253">${_t("board.253")}</button>
+            <button type="button" class="bd-btn" data-empty="image" data-i18n="board.105">${_t("board.105")}</button>
           </div>
         </div>
         <div id="bd-pane-record" class="bd-pane" role="tabpanel" aria-labelledby="bd-tab-record" hidden>
-          <div class="bd-search">${icon("search")}<input id="bd-rec-q" type="text" placeholder="기록 검색" aria-label="기록 검색"></div>
+          <div class="bd-search">${icon("search")}<input id="bd-rec-q" type="text" placeholder="${_t("board.127")}" aria-label="${_t("board.127")}" data-i18n-attr="placeholder:board.127;aria-label:board.127"></div>
           <div class="bd-rec-filters">
-            <select id="bd-rec-status" aria-label="상태"><option value="">상태 전체</option>${RC.STATUSES.map(k => `<option value="${k}">${RC.STATUS_LABEL[k]}</option>`).join("")}</select>
-            <select id="bd-rec-tag" aria-label="태그"></select>
-            <select id="bd-rec-author" aria-label="작성자"><option value="">작성자 전체</option>${RC.AUTHORS.map(a => `<option>${a}</option>`).join("")}</select>
+            <select id="bd-rec-status" aria-label="${_t("board.254")}" data-i18n-attr="aria-label:board.254"><option value="" data-i18n="board.255">${_t("board.255")}</option>${RC.STATUSES.map(k => `<option value="${k}">${RC.STATUS_LABEL[k]}</option>`).join("")}</select>
+            <select id="bd-rec-tag" aria-label="${_t("board.256")}" data-i18n-attr="aria-label:board.256"></select>
+            <select id="bd-rec-author" aria-label="${_t("board.257")}" data-i18n-attr="aria-label:board.257"><option value="" data-i18n="board.258">${_t("board.258")}</option>${RC.AUTHORS.map(a => `<option value="${a}" data-i18n="${RC.AUTHOR_KEYS[a]}">${RC.authorLabel(a)}</option>`).join("")}</select>
           </div>
-          <label class="bd-cf"><input id="bd-rec-hidedrop" type="checkbox"><span>버림 숨기기</span></label>
-          <button id="bd-snap-save" class="bd-btn" type="button">스냅샷 저장…</button>
+          <label class="bd-cf"><input id="bd-rec-hidedrop" type="checkbox"><span data-i18n="board.259">${_t("board.259")}</span></label>
+          <button id="bd-snap-save" class="bd-btn" type="button" data-i18n="board.125">${_t("board.125")}</button>
           <div id="bd-record-list" class="bd-record-list"></div>
         </div>
         <div id="bd-pane-layers" class="bd-pane" role="tabpanel" aria-labelledby="bd-tab-layers" hidden>
           <div id="bd-layer-list" class="bd-layer-list"></div>
-          <p class="bd-ps-note">숨긴 레이어는 화면과 출력에서 빠지고, 잠근 레이어의 카드는 고르거나 옮길 수 없습니다.</p>
+          <p class="bd-ps-note" data-i18n="board.260">${_t("board.260")}</p>
         </div>
       </aside>
       <div class="bd-stage" id="bd-stage">
         <div class="bd-rc" aria-hidden="true"></div>
         <svg id="bd-ruler-h" class="bd-rh" xmlns="${NS}" aria-hidden="true"></svg>
         <svg id="bd-ruler-v" class="bd-rv" xmlns="${NS}" aria-hidden="true"></svg>
-        <svg id="bd-svg" xmlns="${NS}" aria-label="보드 캔버스" role="application" tabindex="0" data-tool="v">
+        <svg id="bd-svg" xmlns="${NS}" aria-label="${_t("board.261")}" role="application" tabindex="0" data-tool="v" data-i18n-attr="aria-label:board.261">
           <defs><filter id="bd-shadow" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feDropShadow id="bd-shadow-fx" dx="0" dy="1" stdDeviation="3" flood-color="#000" flood-opacity="0.14"/></filter></defs>
           <g id="bd-world"><g id="bd-sections"></g><g id="bd-frames"></g><g id="bd-cards-bg"></g><g id="bd-pitems-layer"></g><g id="bd-cards"></g><g id="bd-ug"></g><g id="bd-arrows"></g><g id="bd-annos"></g><g id="bd-guides"></g><g id="bd-selection"></g><g id="bd-over"></g></g>
         </svg>
-        <div id="bd-cpop" class="bd-cpop" hidden role="dialog" aria-label="코멘트"></div>
-        <div id="bd-penbar" class="bd-penbar" hidden role="group" aria-label="펜 색">${Object.keys(RC.PEN_COLORS).map(k => `<button type="button" class="bd-pencol" data-pen="${k}" style="background:${RC.PEN_COLORS[k]}" aria-label="펜 ${k}" aria-pressed="${k === "ink"}"></button>`).join("")}</div>
-        <div id="bd-gridprompt" class="bd-hint bd-gridprompt" hidden><span id="bd-gridtxt"></span><button type="button" class="bd-btn bd-strong" id="bd-grid-ok">놓기</button><button type="button" class="bd-btn" id="bd-grid-no">그냥 놓기</button></div>
-        <div id="bd-pbanner" class="bd-pbanner" hidden><span id="bd-pbanner-t"></span><button type="button" class="bd-btn bd-strong" id="bd-pbanner-ok">완료</button></div>
-        <div id="bd-ctx" class="bd-ctx" role="toolbar" aria-label="선택 도구" hidden></div>
+        <div id="bd-cpop" class="bd-cpop" hidden role="dialog" aria-label="${_t("board.207")}" data-i18n-attr="aria-label:board.207"></div>
+        <div id="bd-penbar" class="bd-penbar" hidden role="group" aria-label="${_t("board.263")}" data-i18n-attr="aria-label:board.263">${Object.keys(RC.PEN_COLORS).map(k => `<button type="button" class="bd-pencol" data-pen="${k}" style="background:${RC.PEN_COLORS[k]}" aria-label="${_t("board.262", { 0: k })}" aria-pressed="${k === "ink"}"></button>`).join("")}</div>
+        <div id="bd-gridprompt" class="bd-hint bd-gridprompt" hidden><span id="bd-gridtxt"></span><button type="button" class="bd-btn bd-strong" id="bd-grid-ok" data-i18n="board.264">${_t("board.264")}</button><button type="button" class="bd-btn" id="bd-grid-no" data-i18n="board.265">${_t("board.265")}</button></div>
+        <div id="bd-pbanner" class="bd-pbanner" hidden><span id="bd-pbanner-t"></span><button type="button" class="bd-btn bd-strong" id="bd-pbanner-ok" data-i18n="board.266">${_t("board.266")}</button></div>
+        <div id="bd-ctx" class="bd-ctx" role="toolbar" aria-label="${_t("board.267")}" hidden data-i18n-attr="aria-label:board.267"></div>
         <div id="bd-ctxmenu" class="bd-menu bd-ctxmenu" hidden>
-          <button type="button" data-act="front">앞으로<kbd>]</kbd></button>
-          <button type="button" data-act="back">뒤로<kbd>[</kbd></button>
-          <button type="button" data-act="tofront">맨 앞으로</button>
-          <button type="button" data-act="toback">맨 뒤로</button>
+          <button type="button" data-act="front" data-i18n-html="board.268">${_t("board.268")}</button>
+          <button type="button" data-act="back" data-i18n-html="board.269">${_t("board.269")}</button>
+          <button type="button" data-act="tofront" data-i18n="board.270">${_t("board.270")}</button>
+          <button type="button" data-act="toback" data-i18n="board.271">${_t("board.271")}</button>
           <span class="bd-msep" role="separator"></span>
-          <button type="button" data-act="dup">복제<kbd>⌘D</kbd></button>
-          <button type="button" data-act="lock">잠금 · 풀기</button>
-          <button type="button" data-act="del">삭제</button>
+          <button type="button" data-act="dup" data-i18n-html="board.272">${_t("board.272")}</button>
+          <button type="button" data-act="lock" data-i18n="board.273">${_t("board.273")}</button>
+          <button type="button" data-act="del" data-i18n="board.076">${_t("board.076")}</button>
         </div>
-        <div id="bd-stamps" class="bd-stamps" role="dialog" aria-label="축척·방위 템플릿" hidden></div>
+        <div id="bd-stamps" class="bd-stamps" role="dialog" aria-label="${_t("board.274")}" hidden data-i18n-attr="aria-label:board.274"></div>
         <div id="bd-empty" class="bd-emptycard" hidden>
-          <h2>보드를 시작하세요</h2>
-          <p>다이어그램, 사진, 글을 한 판 위에 모으고 최종 판넬로 출력합니다.</p>
-          <button type="button" class="bd-btn" data-empty="diagrams">다이어그램 가져오기</button>
-          <button type="button" class="bd-btn" data-empty="image">이미지 추가<small>끌어 놓거나 ⌘V로 붙여넣기</small></button>
-          <button type="button" class="bd-btn bd-strong" data-empty="semester">학기 보드로 시작<small>구역 5개 · 05에 A1 판넬 (부모 A)</small></button>
-          <button type="button" class="bd-btn" data-empty="final">최종 판넬로 시작<small>A1 세로 · 6단 · 카르투슈</small></button>
+          <h2 data-i18n="board.275">${_t("board.275")}</h2>
+          <p data-i18n="board.276">${_t("board.276")}</p>
+          <button type="button" class="bd-btn" data-empty="diagrams" data-i18n="board.253">${_t("board.253")}</button>
+          <button type="button" class="bd-btn" data-empty="image" data-i18n-html="board.277">${_t("board.277")}</button>
+          <button type="button" class="bd-btn bd-strong" data-empty="semester" data-i18n-html="board.278">${_t("board.278")}</button>
+          <button type="button" class="bd-btn" data-empty="final" data-i18n-html="board.279">${_t("board.279")}</button>
         </div>
-        <div id="bd-minimap" class="bd-minimap" hidden><svg id="bd-mini" viewBox="0 0 176 116" aria-label="미니맵" role="img"></svg></div>
-        <div class="bd-zoombar" role="group" aria-label="확대·축소">
-          <button id="bd-zoom-out" class="bd-ib" type="button" aria-label="축소" data-tip="축소">${icon("minus")}</button>
-          <button id="bd-zoom" class="bd-zoom" type="button" data-tip="100%로" aria-label="확대 비율, 누르면 100%">100%</button>
-          <button id="bd-zoom-in" class="bd-ib" type="button" aria-label="확대" data-tip="확대">${icon("plus")}</button>
+        <div id="bd-minimap" class="bd-minimap" hidden><svg id="bd-mini" viewBox="0 0 176 116" aria-label="${_t("board.280")}" role="img" data-i18n-attr="aria-label:board.280"></svg></div>
+        <div class="bd-zoombar" role="group" aria-label="${_t("board.281")}" data-i18n-attr="aria-label:board.281">
+          <button id="bd-zoom-out" class="bd-ib" type="button" aria-label="${_t("board.282")}" data-tip="${_t("board.282")}" data-i18n-attr="aria-label:board.282;data-tip:board.282">${icon("minus")}</button>
+          <button id="bd-zoom" class="bd-zoom" type="button" data-tip="${_t("board.283")}" aria-label="${_t("board.284")}" data-i18n-attr="data-tip:board.283;aria-label:board.284">100%</button>
+          <button id="bd-zoom-in" class="bd-ib" type="button" aria-label="${_t("board.285")}" data-tip="${_t("board.285")}" data-i18n-attr="aria-label:board.285;data-tip:board.285">${icon("plus")}</button>
         </div>
         <div id="bd-readout" class="bd-readout" hidden></div>
-        <div id="bd-gpop" class="bd-gpop" hidden role="dialog" aria-label="가이드 위치"><label><span id="bd-gpop-l">Y</span><input id="bd-gpop-in" type="text" inputmode="decimal" aria-label="가이드 위치 (mm)" autocomplete="off"><span class="bd-nf-u">mm</span></label></div>
-        <div id="bd-hint" class="bd-hint" role="status" hidden><span>조판 모드: 눈금자·여백·단이 보이고 핀업 카드는 흐려집니다</span><button type="button" class="bd-btn" id="bd-hint-ok">확인</button></div>
+        <div id="bd-gpop" class="bd-gpop" hidden role="dialog" aria-label="${_t("board.286")}" data-i18n-attr="aria-label:board.286"><label><span id="bd-gpop-l">Y</span><input id="bd-gpop-in" type="text" inputmode="decimal" aria-label="${_t("board.287")}" autocomplete="off" data-i18n-attr="aria-label:board.287"><span class="bd-nf-u">mm</span></label></div>
+        <div id="bd-hint" class="bd-hint" role="status" hidden><span data-i18n="board.288">${_t("board.288")}</span><button type="button" class="bd-btn" id="bd-hint-ok" data-i18n="board.289">${_t("board.289")}</button></div>
       </div>
-      <aside id="bd-props" class="bd-props" aria-label="속성" hidden></aside>
-      <div id="bd-list" class="bd-list" aria-label="페이지별 카드 목록"></div>
+      <aside id="bd-props" class="bd-props" aria-label="${_t("board.290")}" hidden data-i18n-attr="aria-label:board.290"></aside>
+      <div id="bd-list" class="bd-list" aria-label="${_t("board.291")}" data-i18n-attr="aria-label:board.291"></div>
     </div>
     <p id="bd-status" class="bd-status" role="status" aria-live="polite"></p>
     <div id="bd-tip" class="bd-tip" role="tooltip" hidden></div>
@@ -2040,6 +2042,14 @@ function build() {
   });
   wire();
   initTips();
+  onLang(() => {   // live language switch: static markup is re-applied by i18n.js; everything built by script is rebuilt here
+    const tl = tools();
+    for (const b of document.querySelectorAll("#board .bd-rail [data-tool]")) { const d = tl.find(x => x[0] === b.dataset.tool); if (d) { b.dataset.tip = `${d[2]} (${d[3]})`; b.setAttribute("aria-label", `${d[2]} (${d[3]})`); } }
+    assetSig = ""; pageSig = ""; parentSig = ""; ctxSig = ""; $("#bd-layer-list").dataset.sig = ""; $("#bd-props").dataset.sig = ""; closePinPop();
+    if (!$("#bd-stamps").hidden) renderStampGallery();
+    if (isOpen) render();
+    for (const e of document.querySelectorAll("#board .bd-tip")) e.hidden = true;
+  });
   document.fonts?.ready?.then(() => schedulePreflight());   // text metrics change once the web font is in
 }
 
@@ -2099,7 +2109,7 @@ function wire() {
   $("#bd-undo").onclick = undo;
   $("#bd-redo").onclick = redo;
   $("#bd-export").onclick = () => chrome.openExport();
-  $("#bd-name").onchange = e => { S.name = e.target.value.trim() || "Atelier 보드"; commit(); };
+  $("#bd-name").onchange = e => { S.name = e.target.value.trim() || _t('board.292'); commit(); };
   $("#bd-name").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
   // menus
   const menu = (btnId, popId, on) => {
@@ -2141,7 +2151,7 @@ function wire() {
   grid.addEventListener("click", e => {
     const p = e.target.closest("[data-place]"), r = e.target.closest("[data-remove-asset]");
     if (p) { ui.emptyDismissed = true; const c = placeAsset(p.dataset.place); if (c) { sel = new Set([c.id]); selFrame = null; } commit(); }
-    else if (r) { if (r.getAttribute("aria-disabled") === "true") { status(r.dataset.tip || r.title || "배치된 카드가 있어 지울 수 없습니다."); return; } delete S.assets[r.dataset.removeAsset]; commit(); }
+    else if (r) { if (r.getAttribute("aria-disabled") === "true") { status(r.dataset.tip || r.title || _t('board.293')); return; } delete S.assets[r.dataset.removeAsset]; commit(); }
   });
   const pl = $("#bd-page-list");
   pl.addEventListener("click", e => {
@@ -2181,7 +2191,7 @@ function wire() {
   });
   $("#bd-addpage").onclick = () => { const pop = $("#bd-addpop"); pop.hidden = !pop.hidden; $("#bd-addpage").setAttribute("aria-expanded", String(!pop.hidden)); };
   $("#bd-addpage-ok").onclick = () => {
-    if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return; }
+    if (S.editParent) { status(_t('board.091')); return; }
     const f = addFrame({ size: $("#bd-new-size").value, orientation: $("#bd-new-orient").value });
     frameDefaults = { size: f.size, orientation: f.orientation };
     $("#bd-addpop").hidden = true; ui.emptyDismissed = true;
@@ -2209,13 +2219,13 @@ function wire() {
     if (!f || !c || c.kind !== "image" || isLocked(c)) return;
     try {
       const { dataUrl, w, h } = await downscale(f), long = 120, mw = w >= h ? long : long * w / h, mh = w >= h ? long * h / w : long;
-      const id = registerAsset("image", (f.name || "이미지").replace(/\.[^.]+$/, ""), r2(mw), r2(mh), { img: dataUrl });
+      const id = registerAsset("image", (f.name || _t('board.204')).replace(/\.[^.]+$/, ""), r2(mw), r2(mh), { img: dataUrl });
       if (!c.content) c.content = { dx: 0, dy: 0, s: 1 };
       const old = c.ref; c.ref = id;
       if (c.content && c.fit === "fill") c.content = { dx: 0, dy: 0, s: coverScale(c, S.assets[id]) };   // other aspect: re-cover the frame
       if (!S.cards.some(k => k.ref === old)) delete S.assets[old];   // no orphan asset (the payload stays for undo)
       commit();
-    } catch (err) { console.error(err); status("이미지를 읽지 못했습니다."); }
+    } catch (err) { console.error(err); status(_t('board.294')); }
   };
   $("#bd-pf").onclick = e => { e.stopPropagation(); const pop = $("#bd-pfpop"), open = pop.hidden; closeMenus(); if (open) { runPreflight(); renderPfPop(); } pop.hidden = !open; $("#bd-pf").setAttribute("aria-expanded", String(open)); };
   $("#bd-pfpop").addEventListener("click", e => { const b = e.target.closest("[data-pf]"); if (b) gotoPf(b.dataset.pf); });
@@ -2326,7 +2336,7 @@ function guideFromPointer(e, d) {
     return;
   }
   if (d.isNew && !S.guides.some(x => x.id === d.newId)) {
-    if (S.guides.length >= MAX_GUIDES) { status(`가이드는 최대 ${MAX_GUIDES}개입니다.`); return; }
+    if (S.guides.length >= MAX_GUIDES) { status(_t('board.295', { 0: MAX_GUIDES })); return; }
     d.g = { id: d.newId, page: null, axis: d.axis, mm: 0 }; S.guides.push(d.g);
   }
   if (!d.g) return;
@@ -2337,7 +2347,7 @@ function guideFromPointer(e, d) {
   mm = e.shiftKey ? Math.round(mm / 5) * 5 : r1(mm);   // Shift = whole 5 mm
   d.g.page = f ? f.id : null; d.g.mm = mm; selGuide = d.g.id;
   renderGuides();
-  showReadout(e, `${d.axis === "x" ? "X" : "Y"} ${fmt(mm)} mm${f ? " · " + pad2(f.page) : " · 대지"}`);
+  showReadout(e, `${d.axis === "x" ? "X" : "Y"} ${fmt(mm)} mm${f ? " · " + pad2(f.page) : _t('board.296')}`);
 }
 function finishGuideDrag(d) {
   hideReadout();
@@ -2353,7 +2363,7 @@ function finishGuideDrag(d) {
 function onRulerDown(e, axis) {
   if (e.button !== 0) return;
   e.preventDefault();
-  if (ui.guidesHidden || ui.guidesLocked) { status(ui.guidesHidden ? "가이드가 숨겨져 있습니다. ⋯ 메뉴에서 ‘가이드 보기’를 누르세요." : "가이드가 잠겨 있습니다. ⋯ 메뉴에서 풀 수 있습니다."); return; }
+  if (ui.guidesHidden || ui.guidesLocked) { status(ui.guidesHidden ? _t('board.297') : _t('board.298')); return; }
   finishEdit();
   try { $("#bd-svg").setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
   drag = { type: "guide", axis, g: null, isNew: true, o: null, moved: false, cancel: true, newId: "gd" + S.seq++ };
@@ -2368,9 +2378,9 @@ function clearPageGuides() {
   const f = selectedFrame() || frameAt(...viewCentre()) || nearestFrame(...viewCentre());
   if (!f) return;
   const n = S.guides.filter(g => g.page === f.id).length;
-  if (!n) { status("이 페이지에는 가이드가 없습니다."); return; }
+  if (!n) { status(_t('board.299')); return; }
   S.guides = S.guides.filter(g => g.page !== f.id);
-  selGuide = null; commit(); status(`${pad2(f.page)} 페이지 가이드 ${n}개를 지웠습니다.`);
+  selGuide = null; commit(); status(_t('board.300', { 0: pad2(f.page), 1: n }));
 }
 let gpopId = null;
 function openGuidePop(id) {
@@ -2451,7 +2461,8 @@ const scheduleProps = () => { if (!propsRaf) propsRaf = requestAnimationFrame(()
 const fmt = v => String(Math.round(v * 10) / 10);
 const parseNum = t => { const v = parseFloat(String(t).replace(",", ".").trim()); return Number.isFinite(v) ? v : null; };
 const REF = [[0, 0], [.5, 0], [1, 0], [0, .5], [.5, .5], [1, .5], [0, 1], [.5, 1], [1, 1]];
-const REF_NAME = ["왼쪽 위", "위 가운데", "오른쪽 위", "왼쪽 가운데", "중앙", "오른쪽 가운데", "왼쪽 아래", "아래 가운데", "오른쪽 아래"];
+const REF_KEYS = ['board.301', 'board.302', 'board.303', 'board.304', 'board.305', 'board.306', 'board.307', 'board.308', 'board.309'];
+const refName = i => _t(REF_KEYS[i]);
 const psec = (title, ...kids) => { const s = mk("section", "bd-ps"); s.append(mk("h3", "", title)); for (const k of kids) if (k) s.append(k); return s; };
 const prow = (...kids) => { const r = mk("div", "bd-pr"); for (const k of kids) if (k) r.append(k); return r; };
 const pnote = t => mk("p", "bd-ps-note", t);
@@ -2516,7 +2527,7 @@ function setCardPos(key, v) {
     if (key === "x") c.x = r2(c.x + ((f ? f.x : 0) + r1(v) - px)); else c.y = r2(c.y + ((f ? f.y : 0) + r1(v) - py));
     moved++;
   }
-  if (!moved) status("잠긴 카드는 옮길 수 없습니다.");
+  if (!moved) status(_t('board.310'));
   commit();
 }
 function setCardSize(key, v) {
@@ -2532,7 +2543,7 @@ function setCardSize(key, v) {
     c.x = r2(c.x + p0[0] - p1[0]); c.y = r2(c.y + p0[1] - p1[1]);
     n++;
   }
-  if (!n) status("잠긴 카드는 크기를 바꿀 수 없습니다.");
+  if (!n) status(_t('board.311'));
   commit();
 }
 const imgPx = new Map();
@@ -2556,17 +2567,17 @@ function buildProps() {
   if (selGuide && S.guides.some(g => g.id === selGuide)) {
     const g = S.guides.find(x => x.id === selGuide), id = g.id, f = g.page ? frameById(g.page) : null;
     sig = `g|${id}|${g.axis}|${g.page || ""}`;
-    nodes.push(psec("가이드", pnote(`${g.axis === "x" ? "세로" : "가로"} 가이드 · ${f ? pad2(f.page) + " 페이지 기준" : "대지 기준"}`),
+    nodes.push(psec(_t('board.312'), pnote(_t('board.315', { 0: g.axis === "x" ? _t('board.247') : _t('board.246'), 1: f ? pad2(f.page) + _t('board.313') : _t('board.314') })),
       prow(numField("g", g.axis === "x" ? "X" : "Y", g.mm, v => { const q = S.guides.find(x => x.id === id); if (q) { q.mm = r1(clamp(v, -100000, 100000)); commit(); } })),
-      prow(pbtn("삭제", "trash", () => deleteGuide(id)))));
+      prow(pbtn(_t('board.076'), "trash", () => deleteGuide(id)))));
     return { sig, nodes };
   }
   if (secActive()) {
     const z = secById(selSection), id = z.id, upd = fn => { const q = secById(id); if (q) { fn(q); commit(); } };
     sig = `sec|${id}|${z.color}|${z.collapsed}`;
     const cols = mk("div", "bd-sw-row");
-    for (const k of RC.SECTION_COLORS) { const b = mk("button", "bd-swatch"); b.type = "button"; b.style.background = RC.SECTION_FILL[k].replace(/[\d.]+\)$/, "0.5)"); b.setAttribute("aria-label", "구역 색 " + k); b.setAttribute("aria-pressed", String(z.color === k)); b.addEventListener("click", () => upd(q => { q.color = k; })); cols.append(b); }
-    nodes.push(psec("구역", txtField("secname", "이름", z.name, 60, v => { if (v) upd(q => { q.name = v.slice(0, 60); }); }), cols, chkField("seccol", "접기 (내용 숨김)", z.collapsed, on => upd(q => { q.collapsed = on; if (on) for (const id of [...sel]) { const k = cardById(id); if (k && cardCollapsed(k)) sel.delete(id); } })), prow(pbtn("채택 카드 → 판넬", null, () => promoteKept(id))), prow(pbtn("삭제", "trash", () => deleteSection(id))), pnote("삭제해도 안의 카드와 페이지는 남습니다.")));
+    for (const k of RC.SECTION_COLORS) { const b = mk("button", "bd-swatch"); b.type = "button"; b.style.background = RC.SECTION_FILL[k].replace(/[\d.]+\)$/, "0.5)"); b.setAttribute("aria-label", _t('board.316') + k); b.setAttribute("aria-pressed", String(z.color === k)); b.addEventListener("click", () => upd(q => { q.color = k; })); cols.append(b); }
+    nodes.push(psec(_t('board.206'), txtField("secname", _t('board.317'), z.name, 60, v => { if (v) upd(q => { q.name = v.slice(0, 60); }); }), cols, chkField("seccol", _t('board.318'), z.collapsed, on => upd(q => { q.collapsed = on; if (on) for (const id of [...sel]) { const k = cardById(id); if (k && cardCollapsed(k)) sel.delete(id); } })), prow(pbtn(_t('board.232'), null, () => promoteKept(id))), prow(pbtn(_t('board.076'), "trash", () => deleteSection(id))), pnote(_t('board.319'))));
     return { sig, nodes };
   }
   const cards = selCards();
@@ -2575,41 +2586,41 @@ function buildProps() {
     const pxs = media && !work ? srcPx(c) : null;
     sig = `c|${ui.layout}|${c.id}|${c.kind}|${c.role || ""}|${c.align || ""}|${c.color || ""}|${c.locked}|${layerOf(c)}|${c.rot || 0}|${c.group || ""}|${f ? f.id : "-"}|${ui.ref}|${pxs ? pxs.join("x") : ""}|${c.scale ? c.scale.den + (c.scale.locked ? "L" : "") : ""}|${media ? cardDen(c, S.assets[c.ref]) : ""}|${c.stamp || ""}|${c.link || ""}|${c.link && cardById(c.link) ? 1 : 0}|${c.fit || ""}|${ppiInfo(c)?.text || ""}|${c.status || ""}|${(c.tags || []).join(",")}|${c.url || ""}|${c.stack || ""}|${c.fstyle || ""}|${PR.hasOverride(c) ? 1 : 0}|${c.cols || 1}|${(PR.overrideOf(c).color) || ""}|${S.swatches.length}`;
     const [rx, ry] = relXY(c), b = visBox(c);
-    const widget = mk("div", "bd-ref"); widget.setAttribute("role", "group"); widget.setAttribute("aria-label", "기준점");
-    REF.forEach((_, i) => { const t = mk("button", "bd-refp"); t.type = "button"; t.setAttribute("aria-pressed", String(ui.ref === i)); t.setAttribute("aria-label", REF_NAME[i]); t.dataset.tip = "기준점: " + REF_NAME[i]; t.addEventListener("click", () => { ui.ref = i; renderProps(); }); widget.append(t); });
-    const rotSel = selField("rot", "회전", [[0, "0°"], [90, "90°"]], quarter(c) ? 90 : 0, v => { const cs = selCards().filter(k => (k.kind === "image" || k.kind === "diagram") && !isLocked(k)); for (const k of cs) k.rot = Number(v); if (cs.length) commit(); });
+    const widget = mk("div", "bd-ref"); widget.setAttribute("role", "group"); widget.setAttribute("aria-label", _t('board.320'));
+    REF.forEach((_, i) => { const t = mk("button", "bd-refp"); t.type = "button"; t.setAttribute("aria-pressed", String(ui.ref === i)); t.setAttribute("aria-label", refName(i)); t.dataset.tip = _t('board.321') + refName(i); t.addEventListener("click", () => { ui.ref = i; renderProps(); }); widget.append(t); });
+    const rotSel = selField("rot", _t('board.322'), [[0, "0°"], [90, "90°"]], quarter(c) ? 90 : 0, v => { const cs = selCards().filter(k => (k.kind === "image" || k.kind === "diagram") && !isLocked(k)); for (const k of cs) k.rot = Number(v); if (cs.length) commit(); });
     rotSel.querySelector("select").disabled = !media || isLocked(c);
-    nodes.push(psec("위치·크기", pnote(f ? `${pad2(f.page)} 페이지 기준` : "대지 기준"),
+    nodes.push(psec(_t('board.323'), pnote(f ? _t('board.324', { 0: pad2(f.page) }) : _t('board.314')),
       prow(widget, mk("div", "bd-xy", "")), null));
     const sec = nodes[0], xy = sec.querySelector(".bd-xy");
     xy.append(numField("x", "X", rx, v => setCardPos("x", v)), numField("y", "Y", ry, v => setCardPos("y", v)));
     const sizeOff = isLocked(c) || !!c.scale?.locked || (c.kind === "stamp" && !isNorthStamp(c.stamp));
     sec.append(prow(numField("w", "W", b.w, v => setCardSize("w", v), { disabled: sizeOff }), numField("h", "H", b.h, v => setCardSize("h", v), { disabled: sizeOff })),
-      prow(rotSel, chkField("lock", "잠금", c.locked, on => { for (const k of selCards()) k.locked = on; commit(); })));
-    if (c.kind === "link") nodes.push(psec("링크", txtField("lkurl", "주소", c.url, 2000, v => { const u = RC.cleanUrl(v); const q = cardById(c.id); if (!u) { status("http(s) 주소만 쓸 수 있습니다."); renderProps(); return; } if (q) { q.url = u; commit(); } }), txtField("lktitle", "제목", c.title, 200, v => { const q = cardById(c.id); if (q) { q.title = v || RC.hostOf(q.url); commit(); } }), prow(pbtn("새 탭에서 열기", null, () => openLink(c)))));
+      prow(rotSel, chkField("lock", _t('board.077'), c.locked, on => { for (const k of selCards()) k.locked = on; commit(); })));
+    if (c.kind === "link") nodes.push(psec(_t('board.071'), txtField("lkurl", _t('board.325'), c.url, 2000, v => { const u = RC.cleanUrl(v); const q = cardById(c.id); if (!u) { status(_t('board.326')); renderProps(); return; } if (q) { q.url = u; commit(); } }), txtField("lktitle", _t('board.327'), c.title, 200, v => { const q = cardById(c.id); if (q) { q.title = v || RC.hostOf(q.url); commit(); } }), prow(pbtn(_t('board.328'), null, () => openLink(c)))));
     if (c.stack) nodes.push(stackSection(c));
-    if (c.kind === "memo") nodes.push(psec("메모 색", (() => { const r = mk("div", "bd-sw-row"); for (const col of MEMO_COLORS) { const t = mk("button", "bd-swatch"); t.type = "button"; t.style.background = col; t.setAttribute("aria-label", "메모 색 " + col); t.setAttribute("aria-pressed", String(c.color === col)); t.addEventListener("click", () => { for (const k of selCards()) if (k.kind === "memo") k.color = col; commit(); }); r.append(t); } return r; })()));
+    if (c.kind === "memo") nodes.push(psec(_t('board.329'), (() => { const r = mk("div", "bd-sw-row"); for (const col of MEMO_COLORS) { const t = mk("button", "bd-swatch"); t.type = "button"; t.style.background = col; t.setAttribute("aria-label", _t('board.330') + col); t.setAttribute("aria-pressed", String(c.color === col)); t.addEventListener("click", () => { for (const k of selCards()) if (k.kind === "memo") k.color = col; commit(); }); r.append(t); } return r; })()));
     nodes.push(statusTagSection(c));
     if (media) nodes.push(scaleSection(c));
     if (c.kind === "stamp") nodes.push(stampSection(c));
     if (!work) {
-      nodes.push(psec("레이어", selField("layer", "레이어", LAYERS.map(L => [L, LAYER_LABEL[L]]), layerOf(c), v => { if (!LAYERS.includes(v)) return; for (const k of selCards()) k.layer = v; for (const id of [...sel]) { const k = cardById(id); if (k && (layerHidden(k) || layerLocked(k))) sel.delete(id); } commit(); })));
-      if (media) { const px = pxs, pi = ppiInfo(c); nodes.push(psec("이미지", pnote(S.assets[c.ref]?.title || ""), px ? pnote(`원본 ${px[0]} × ${px[1]} px`) : null, pi ? pnote(pi.vector ? "벡터 (해상도 무관)" : `유효 ${pi.text}`) : null,
-        prow(pbtn("채우기", null, () => setContentMode("cover")), pbtn("맞추기", null, () => setContentMode("contain")), c.kind === "image" ? pbtn("1:1", null, () => setContentMode("native")) : null),
-        c.kind === "image" ? prow(pbtn("내용 교체…", null, () => $("#bd-file-repl").click())) : null,
-        selField("fstyle", "프레임", FSTYLES.map(k => [k, FSTYLE_LABEL[k]]), c.fstyle || "none", v => { for (const k of selCards()) if (isMedia(k)) { if (v === "none") delete k.fstyle; else k.fstyle = v; } commit(); }))); }
+      nodes.push(psec(_t('board.238'), selField("layer", _t('board.238'), LAYERS.map(L => [L, LAYER_LABEL[L]]), layerOf(c), v => { if (!LAYERS.includes(v)) return; for (const k of selCards()) k.layer = v; for (const id of [...sel]) { const k = cardById(id); if (k && (layerHidden(k) || layerLocked(k))) sel.delete(id); } commit(); })));
+      if (media) { const px = pxs, pi = ppiInfo(c); nodes.push(psec(_t('board.204'), pnote(S.assets[c.ref]?.title || ""), px ? pnote(_t('board.331', { 0: px[0], 1: px[1] })) : null, pi ? pnote(pi.vector ? _t('board.332') : _t('board.333', { 0: pi.text })) : null,
+        prow(pbtn(_t('board.334'), null, () => setContentMode("cover")), pbtn(_t('board.335'), null, () => setContentMode("contain")), c.kind === "image" ? pbtn("1:1", null, () => setContentMode("native")) : null),
+        c.kind === "image" ? prow(pbtn(_t('board.336'), null, () => $("#bd-file-repl").click())) : null,
+        selField("fstyle", _t('board.203'), FSTYLES.map(k => [k, FSTYLE_LABEL[k]]), c.fstyle || "none", v => { for (const k of selCards()) if (isMedia(k)) { if (v === "none") delete k.fstyle; else k.fstyle = v; } commit(); }))); }
       if (c.kind === "text") {
         const al = (a, ic, t) => pbtn(t, ic, () => { for (const k of selCards()) if (k.kind === "text") k.align = a; commit(); }, { icon: true, pressed: (c.align || "left") === a });
         const ov = PR.hasOverride(c);
-        nodes.push(psec("글", selField("role", "스타일", ROLES.map(r => [r, ROLE_LABEL[r] + (ov && r === c.role ? " +" : "")]), c.role, v => { if (!ROLES.includes(v)) return; for (const k of selCards()) if (k.kind === "text") { k.role = v; } commit(); }),
-          ov ? prow(pbtn("스타일 갱신", null, () => { for (const k of selCards()) if (k.kind === "text") PR.updateStyleFromCard(S, k); commit(); }), pbtn("되돌리기", null, () => { for (const k of selCards()) if (k.kind === "text") PR.resetOverride(k); commit(); })) : null,
-          prow(numField("tsize", "크기", PR.effectiveStyle(S, c).size, v => setTextOverride("size", clamp(v, 1, 200))), numField("track", "자간", PR.effectiveStyle(S, c).tracking || 0, v => setTextOverride("tracking", clamp(v, -5, 20)))),
+        nodes.push(psec(_t('board.337'), selField("role", _t('board.338'), ROLES.map(r => [r, ROLE_LABEL[r] + (ov && r === c.role ? " +" : "")]), c.role, v => { if (!ROLES.includes(v)) return; for (const k of selCards()) if (k.kind === "text") { k.role = v; } commit(); }),
+          ov ? prow(pbtn(_t('board.339'), null, () => { for (const k of selCards()) if (k.kind === "text") PR.updateStyleFromCard(S, k); commit(); }), pbtn(_t('board.340'), null, () => { for (const k of selCards()) if (k.kind === "text") PR.resetOverride(k); commit(); })) : null,
+          prow(numField("tsize", _t('board.341'), PR.effectiveStyle(S, c).size, v => setTextOverride("size", clamp(v, 1, 200))), numField("track", _t('board.342'), PR.effectiveStyle(S, c).tracking || 0, v => setTextOverride("tracking", clamp(v, -5, 20)))),
           colorRow(c),
-          prow(al("left", "alignL", "왼쪽 맞춤"), al("center", "alignC", "가운데 맞춤"), al("right", "alignR", "오른쪽 맞춤")),
-          prow(selField("cols", "단", [[1, "1"], [2, "2"], [3, "3"]], c.cols || 1, v => { for (const k of selCards()) if (k.kind === "text") { k.cols = Number(v); if (k.cols === 1) delete k.cols; else k.gutter = k.gutter ?? 4; } commit(); }), numField("inset", "안쪽", c.inset || 0, v => { for (const k of selCards()) if (k.kind === "text") { k.inset = clamp(v, 0, 50); if (!k.inset) delete k.inset; } commit(); })),
-          (c.cols || 1) > 1 ? prow(numField("gutter", "단 간격", c.gutter ?? 4, v => { for (const k of selCards()) if (k.kind === "text") k.gutter = clamp(v, 0, 50); commit(); })) : null));
+          prow(al("left", "alignL", _t('board.343')), al("center", "alignC", _t('board.344')), al("right", "alignR", _t('board.345'))),
+          prow(selField("cols", _t('board.346'), [[1, "1"], [2, "2"], [3, "3"]], c.cols || 1, v => { for (const k of selCards()) if (k.kind === "text") { k.cols = Number(v); if (k.cols === 1) delete k.cols; else k.gutter = k.gutter ?? 4; } commit(); }), numField("inset", _t('board.347'), c.inset || 0, v => { for (const k of selCards()) if (k.kind === "text") { k.inset = clamp(v, 0, 50); if (!k.inset) delete k.inset; } commit(); })),
+          (c.cols || 1) > 1 ? prow(numField("gutter", _t('board.348'), c.gutter ?? 4, v => { for (const k of selCards()) if (k.kind === "text") k.gutter = clamp(v, 0, 50); commit(); })) : null));
       }
-      if (c.group) nodes.push(psec("묶음", prow(pbtn("묶음 풀기", "ungroup", ungroupSel))));
+      if (c.group) nodes.push(psec(_t('board.349'), prow(pbtn(_t('board.166'), "ungroup", ungroupSel))));
     }
     return { sig, nodes };
   }
@@ -2618,12 +2629,12 @@ function buildProps() {
     const same = bs.every(b => Math.abs(b.w - bs[0].w) < 0.05 && Math.abs(b.h - bs[0].h) < 0.05);
     sig = `m|${ui.layout}|${cards.map(c => c.id).join(",")}|${grouped}|${same}`;
     const ab = (act, ic, t, fn) => pbtn(t, ic, fn, { icon: true });
-    nodes.push(psec(`${cards.length}개 선택`,
-      prow(ab("l", "alignL", "왼쪽 정렬", () => alignSel("l")), ab("c", "alignC", "가운데 정렬", () => alignSel("c")), ab("r", "alignR", "오른쪽 정렬", () => alignSel("r")), ab("t", "alignT", "위 정렬", () => alignSel("t")), ab("m", "alignM", "중간 정렬", () => alignSel("m")), ab("b", "alignB", "아래 정렬", () => alignSel("b"))),
-      prow(ab("dh", "distH", "가로 간격 같게", () => distribute("h")), ab("dv", "distV", "세로 간격 같게", () => distribute("v"))),
-      prow(pbtn("묶기", "group", groupSel), grouped ? pbtn("풀기", "ungroup", ungroupSel) : null),
-      cards.filter(isMedia).length >= 2 ? prow(pbtn("버전 묶기", null, makeStack)) : null));
-    if (same) nodes.push(psec("크기", prow(numField("w", "W", bs[0].w, v => setCardSize("w", v)), numField("h", "H", bs[0].h, v => setCardSize("h", v)))));
+    nodes.push(psec(_t('board.350', { 0: cards.length }),
+      prow(ab("l", "alignL", _t('board.351'), () => alignSel("l")), ab("c", "alignC", _t('board.352'), () => alignSel("c")), ab("r", "alignR", _t('board.353'), () => alignSel("r")), ab("t", "alignT", _t('board.354'), () => alignSel("t")), ab("m", "alignM", _t('board.355'), () => alignSel("m")), ab("b", "alignB", _t('board.356'), () => alignSel("b"))),
+      prow(ab("dh", "distH", _t('board.357'), () => distribute("h")), ab("dv", "distV", _t('board.358'), () => distribute("v"))),
+      prow(pbtn(_t('board.164'), "group", groupSel), grouped ? pbtn(_t('board.359'), "ungroup", ungroupSel) : null),
+      cards.filter(isMedia).length >= 2 ? prow(pbtn(_t('board.119'), null, makeStack)) : null));
+    if (same) nodes.push(psec(_t('board.341'), prow(numField("w", "W", bs[0].w, v => setCardSize("w", v)), numField("h", "H", bs[0].h, v => setCardSize("h", v)))));
     return { sig, nodes };
   }
   const f = selFrame ? frameById(selFrame) : null;
@@ -2631,28 +2642,28 @@ function buildProps() {
     const fid = f.id;
     sig = `p|${ui.layout}|${fid}|${f.size}|${f.orientation}|${f.cartouche}|${f.template ? 1 : 0}|${f.page}|${f.parent || ""}|${Object.keys(f.overrides || {}).length}|${S.editParent || ""}|${S.parents.length}`;
     const upd = fn => { const q = frameById(fid); if (q) { fn(q); commit(); } };
-    nodes.push(psec("페이지", pnote(pageTitle(f)),
-      prow(selField("size", "용지", SIZES.map(z => [z, z]), f.size, v => PAPER[v] && upd(q => setFrameSize(q, v))), selField("orient", "방향", [["portrait", "세로"], ["landscape", "가로"]], f.orientation, v => upd(q => { q.orientation = v === "portrait" ? "portrait" : "landscape"; })))));
-    if (S.editParent) nodes.push(psec("부모 페이지", pnote(`부모 ${S.editParent} 편집 중 · 끝나면 완료`), prow(pbtn("완료", null, exitEdit))));
-    else nodes.push(psec("부모 페이지", selField("parent", "적용", [["", "없음"], ...S.parents.map(p => [p.id, `${p.id} ${p.name}`])], f.parent || "", v => applyParentTo(fid, v)),
-      Object.keys(f.overrides || {}).length ? prow(pbtn("재정의 모두 지우기", null, () => { const q = frameById(fid); if (q) { PR.clearOverrides(S, q); commit(); } })) : null));
+    nodes.push(psec(_t('board.237'), pnote(pageTitle(f)),
+      prow(selField("size", _t('board.244'), SIZES.map(z => [z, z]), f.size, v => PAPER[v] && upd(q => setFrameSize(q, v))), selField("orient", _t('board.245'), [["portrait", _t('board.247')], ["landscape", _t('board.246')]], f.orientation, v => upd(q => { q.orientation = v === "portrait" ? "portrait" : "landscape"; })))));
+    if (S.editParent) nodes.push(psec(_t('board.240'), pnote(_t('board.360', { 0: S.editParent })), prow(pbtn(_t('board.266'), null, exitEdit))));
+    else nodes.push(psec(_t('board.240'), selField("parent", _t('board.361'), [["", _t('board.362')], ...S.parents.map(p => [p.id, `${p.id} ${p.name}`])], f.parent || "", v => applyParentTo(fid, v)),
+      Object.keys(f.overrides || {}).length ? prow(pbtn(_t('board.363'), null, () => { const q = frameById(fid); if (q) { PR.clearOverrides(S, q); commit(); } })) : null));
     if (!work) {
       const t = f.template;
-      nodes.push(psec("여백·단",
-        prow(numField("margin", "여백", t ? t.margin : null, v => upd(q => { if (q.template) q.template.margin = clamp(v, 0, 100); }), { disabled: !t, ph: "—" }), numField("cols", "단 수", t ? t.cols : 0, v => upd(q => setPageCols(q, v)), { unit: "단" })),
-        prow(numField("gutter", "간격", t ? t.gutter : null, v => upd(q => { if (q.template) q.template.gutter = clamp(v, 0, 50); }), { disabled: !t, ph: "—" })),
-        prow(chkField("cart", "카르투슈", f.cartouche, on => upd(q => { q.cartouche = on; })))));
+      nodes.push(psec(_t('board.364'),
+        prow(numField("margin", _t('board.365'), t ? t.margin : null, v => upd(q => { if (q.template) q.template.margin = clamp(v, 0, 100); }), { disabled: !t, ph: "—" }), numField("cols", _t('board.366'), t ? t.cols : 0, v => upd(q => setPageCols(q, v)), { unit: _t('board.346') })),
+        prow(numField("gutter", _t('board.367'), t ? t.gutter : null, v => upd(q => { if (q.template) q.template.gutter = clamp(v, 0, 50); }), { disabled: !t, ph: "—" })),
+        prow(chkField("cart", _t('board.368'), f.cartouche, on => upd(q => { q.cartouche = on; })))));
     }
-    if (!S.editParent) nodes.push(psec("페이지 작업", prow(pbtn("이 페이지 출력", "pageout", () => { const q = frameById(fid); if (q) chrome.exportFrames([q], "pdf"); })),
-      prow(pbtn("복제", "copyframe", () => duplicateFrame(fid)), pbtn("삭제", "trash", () => deleteFrame(fid)))));
+    if (!S.editParent) nodes.push(psec(_t('board.369'), prow(pbtn(_t('board.370'), "pageout", () => { const q = frameById(fid); if (q) chrome.exportFrames([q], "pdf"); })),
+      prow(pbtn(_t('board.371'), "copyframe", () => duplicateFrame(fid)), pbtn(_t('board.076'), "trash", () => deleteFrame(fid)))));
     return { sig, nodes };
   }
   sig = `b|${ui.layout}|${S.swatches.map(w => w.id + w.hex + w.name).join(",")}|${swSel || ""}`;
   const m = (k, label, max) => txtField("meta-" + k, label, S.meta[k], max, v => { S.meta = { ...S.meta, [k]: v }; commit(); });
-  nodes.push(psec("보드 정보", m("project", "프로젝트", 120), m("author", "이름", 80), m("atelier", "아틀리에", 80), m("teachers", "교수", 160), m("scale", "축척", 24), m("date", "날짜", 24)));
+  nodes.push(psec(_t('board.229'), m("project", _t('board.372'), 120), m("author", _t('board.317'), 80), m("atelier", _t('board.373'), 80), m("teachers", _t('board.374'), 160), m("scale", _t('board.375'), 24), m("date", _t('board.376'), 24)));
   const st = mk("div", "bd-stylelist");
   for (const r of ROLES) { const b = mk("button", "bd-stylerow"); b.type = "button"; const T = S.styles[r]; b.append(mk("span", "", ROLE_LABEL[r]), mk("span", "bd-muted", `${T.size} mm · ${T.weight}`)); b.addEventListener("click", () => chrome.openStyles()); st.append(b); }
-  nodes.push(psec("글 스타일", st), swatchSection());
+  nodes.push(psec(_t('board.078'), st), swatchSection());
   return { sig, nodes };
 }
 function renderProps() {
@@ -2704,23 +2715,23 @@ function initTips() {
 
 // ---- build 4a-1: scale lock (B17), content mode (B8), stamps (B15) ------------------------------------------------------------
 function ppiInfo(c) {
-  if (c.kind === "diagram") return { vector: true, cls: "vec", text: "벡터" };
+  if (c.kind === "diagram") return { vector: true, cls: "vec", text: _t('board.377') };
   if (c.kind !== "image") return null;
   const px = srcPx(c);
   if (!px) return null;
   const w = contentRect(c, S.assets[c.ref]).w, p = Math.round(ppiOf(px[0], w)), cls = ppiClass(p);   // native px / (shown content width in inches)
-  return { ppi: p, cls, text: cls === "low" ? `저해상도 ${p} ppi` : `${p} ppi` };
+  return { ppi: p, cls, text: cls === "low" ? _t('board.378', { 0: p }) : `${p} ppi` };
 }
 const isMedia = c => c && (c.kind === "image" || c.kind === "diagram");
 function setContentMode(kind) {   // cover / contain / native (1:1 at 300 ppi)
   let n = 0;
   for (const c of selCards()) {
     if (!isMedia(c) || isLocked(c)) continue;
-    if (c.scale?.locked) { status("축척이 고정된 카드는 내용 크기를 바꿀 수 없습니다."); continue; }
+    if (c.scale?.locked) { status(_t('board.379')); continue; }
     const a = S.assets[c.ref], base = contentRect({ ...c, content: null }, a);
     let s = 1;
     if (kind === "cover") s = coverScale(c, a);
-    else if (kind === "native") { const px = srcPx(c); if (!px) { status("원본 크기를 읽는 중입니다."); continue; } s = clamp((px[0] / 300 * 25.4) / base.w, 0.05, 50); }
+    else if (kind === "native") { const px = srcPx(c); if (!px) { status(_t('board.380')); continue; } s = clamp((px[0] / 300 * 25.4) / base.w, 0.05, 50); }
     c.content = { dx: 0, dy: 0, s: r2(s) }; c.fit = kind === "cover" ? "fill" : kind === "contain" ? "fit" : "free"; n++;
   }
   if (n) commit();
@@ -2728,10 +2739,10 @@ function setContentMode(kind) {   // cover / contain / native (1:1 at 300 ppi)
 function enterContent(id) {
   const c = cardById(id);
   if (!isMedia(c) || isLocked(c)) return;
-  if (quarter(c)) { status("90° 회전한 카드는 내용 모드를 쓸 수 없습니다. 회전을 0°로 바꾸세요."); return; }
+  if (quarter(c)) { status(_t('board.381')); return; }
   contentEdit = id; sel = new Set([id]); selFrame = null;
   render();
-  status("내용 모드 · 끌어서 이동, 모서리로 크기, ⌘+휠 확대, Esc로 나가기");
+  status(_t('board.382'));
 }
 function exitContent() { if (!contentEdit) return; contentEdit = null; commit(); }
 function contentPointerDown(e, wx, wy) {
@@ -2740,7 +2751,7 @@ function contentPointerDown(e, wx, wy) {
   const ch = e.target.closest("[data-chandle]"), ce = e.target.closest(".bd-card");
   try { $("#bd-svg").setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
   if (ch) {
-    if (c.scale?.locked) { status("축척이 고정된 카드는 내용 크기를 바꿀 수 없습니다."); return true; }
+    if (c.scale?.locked) { status(_t('board.379')); return true; }
     drag = { type: "cscale", id: c.id, h: ch.dataset.chandle, cr: contentRect(c, S.assets[c.ref]), moved: false };
     return true;
   }
@@ -2766,7 +2777,7 @@ function contentDrag(e) {
 function contentWheel(e, f) {
   const c = cardById(contentEdit);
   if (!c) return;
-  if (c.scale?.locked) { status("축척이 고정된 카드는 내용 크기를 바꿀 수 없습니다."); return; }
+  if (c.scale?.locked) { status(_t('board.379')); return; }
   if (!c.content) c.content = { dx: 0, dy: 0, s: 1 };
   const [wx, wy] = toWorld(e), px = wx - c.x, py = wy - c.y, a = S.assets[c.ref], r = contentRect(c, a);
   const s = clamp(c.content.s * f, 0.05, 50), w = r.containW * s, h = w / r.aspect, rx = (px - r.x) / r.w, ry = (py - r.y) / r.h;   // keep the point under the cursor fixed
@@ -2780,7 +2791,7 @@ function setCardScale(den) {
   let n = 0;
   for (const c of selCards()) {
     if (!isMedia(c)) continue;
-    if (c.scale?.locked) { status("축척 고정을 먼저 푸세요."); continue; }
+    if (c.scale?.locked) { status(_t('board.383')); continue; }
     if (!(den >= 1)) { delete c.scale; n++; continue; }
     const a = S.assets[c.ref], mpm = Number(a?.meta?.mpm);
     if (c.kind === "diagram" && mpm > 0) {
@@ -2805,7 +2816,7 @@ function toggleScaleLock(on) {
   for (const c of selCards()) {
     if (!isMedia(c)) continue;
     const d = cardDen(c, S.assets[c.ref]);
-    if (on && !d) { status("축척을 먼저 고르세요."); continue; }
+    if (on && !d) { status(_t('board.384')); continue; }
     c.scale = { den: d || 100, locked: !!on }; if (!on && !d) delete c.scale; n++;
   }
   commit();
@@ -2813,20 +2824,20 @@ function toggleScaleLock(on) {
 function stdDenOpts(cur) { const l = [...STD_DENS]; if (cur && !l.includes(cur)) l.push(cur); l.sort((a, b) => a - b); return l.map(d => [d, "1:" + d]); }
 function scaleSection(c) {
   const den = cardDen(c, S.assets[c.ref]);
-  const sel_ = selField("scaleden", "축척", [[0, "없음"], ...stdDenOpts(den)], den || 0, v => setCardScale(Number(v)));
-  return psec("축척", pnote(den ? `축척 1:${den}` : "축척 없음"), sel_, chkField("scalelock", "축척 고정", c.scale?.locked, on => toggleScaleLock(on)),
-    den && c.kind === "diagram" ? pnote(`실제 폭 = ${fmt(realWidthM(c.w, den))} m`) : null);
+  const sel_ = selField("scaleden", _t('board.375'), [[0, _t('board.362')], ...stdDenOpts(den)], den || 0, v => setCardScale(Number(v)));
+  return psec(_t('board.375'), pnote(den ? _t('board.385', { 0: den }) : _t('board.386')), sel_, chkField("scalelock", _t('board.387'), c.scale?.locked, on => toggleScaleLock(on)),
+    den && c.kind === "diagram" ? pnote(_t('board.388', { 0: fmt(realWidthM(c.w, den)) })) : null);
 }
 function stampSection(c) {
   const L = c.link ? cardById(c.link) : null, north = isNorthStamp(c.stamp), bar = isBarStamp(c.stamp);
-  const note = !c.link ? "자유 스탬프 · 축척을 직접 고릅니다" : !L ? "연결 끊김 · 마지막 축척 유지" : `연결: ${S.assets[L.ref]?.title || "카드"} (1:${c.den})`;
+  const note = !c.link ? _t('board.389') : !L ? _t('board.390') : _t('board.392', { 0: S.assets[L.ref]?.title || _t('board.391'), 1: c.den });
   const upd = fn => { for (const k of selCards()) if (k.kind === "stamp") fn(k); commit(); };
   const parts = [pnote(STAMP_LABEL[c.stamp]), pnote(note)];
-  if (!north) { const f = selField("stden", "축척", stdDenOpts(c.den), c.den, v => upd(k => { k.den = Math.round(clamp(Number(v), 1, 1e6)); })); f.querySelector("select").disabled = !!L; parts.push(f); }
-  if (bar) parts.push(prow(numField("len", "길이", c.len_m, v => upd(k => { k.len_m = clamp(v, 0.001, 1e7); k.len_auto = false; }), { unit: "m" }), pbtn("자동", null, () => upd(k => { k.len_auto = true; }))));
-  if (north) parts.push(numField("angle", "각도", c.angle, v => upd(k => { k.angle = clamp(v, -360, 360); k.angleAuto = false; }), { unit: "°" }));
-  if (c.link) parts.push(prow(pbtn("연결 해제", null, () => upd(k => { k.link = null; }))));
-  return psec("축척·방위 스탬프", ...parts);
+  if (!north) { const f = selField("stden", _t('board.375'), stdDenOpts(c.den), c.den, v => upd(k => { k.den = Math.round(clamp(Number(v), 1, 1e6)); })); f.querySelector("select").disabled = !!L; parts.push(f); }
+  if (bar) parts.push(prow(numField("len", _t('board.393'), c.len_m, v => upd(k => { k.len_m = clamp(v, 0.001, 1e7); k.len_auto = false; }), { unit: "m" }), pbtn(_t('board.394'), null, () => upd(k => { k.len_auto = true; }))));
+  if (north) parts.push(numField("angle", _t('board.395'), c.angle, v => upd(k => { k.angle = clamp(v, -360, 360); k.angleAuto = false; }), { unit: "°" }));
+  if (c.link) parts.push(prow(pbtn(_t('board.396'), null, () => upd(k => { k.link = null; }))));
+  return psec(_t('board.397'), ...parts);
 }
 // stamp gallery (rail tool S): 6 live vector templates; click then click the canvas, or drag one onto the canvas
 const STAMP_BOX = { north_arrow: [12, 18], north_circle: [18, 18], north_cross: [22, 22] };
@@ -2853,9 +2864,9 @@ function renderStampGallery() {
     }
     box.append(row);
   };
-  group("축척 막대", ["bar_ticks", "bar_alt", "ratio"]);
-  group("방위표", ["north_arrow", "north_circle", "north_cross"]);
-  box.append(mk("p", "bd-stamp-n", stampLinkCandidate() ? "선택한 카드의 축척에 연결됩니다." : "도면 카드를 먼저 고르면 그 축척에 연결됩니다."));
+  group(_t('board.398'), ["bar_ticks", "bar_alt", "ratio"]);
+  group(_t('board.399'), ["north_arrow", "north_circle", "north_cross"]);
+  box.append(mk("p", "bd-stamp-n", stampLinkCandidate() ? _t('board.400') : _t('board.401')));
 }
 function toggleStamps() {
   const box = $("#bd-stamps");
@@ -2866,7 +2877,7 @@ function pickStamp(k) {
   ui.stampPick = { k, link: stampLinkCandidate() };
   $("#bd-stamps").hidden = true;
   setTool("s");
-  status(`${STAMP_LABEL[k]}: 캔버스를 눌러 놓으세요 (Esc 취소)`);
+  status(_t('board.402', { 0: STAMP_LABEL[k] }));
 }
 function placeStamp(at) {
   status("");
@@ -2888,8 +2899,8 @@ const nextParentId = () => { for (const ch of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") if (
 function addParent() {
   if (S.editParent) return;
   const id = nextParentId();
-  if (!id || S.parents.length >= 12) { status("부모 페이지는 최대 12개입니다."); return; }
-  S.parents.push({ id, name: `부모 ${id}`, size: "A3", orientation: "landscape", margin: [10, 10, 10, 10], cols: 6, gutter: 5, items: [] });
+  if (!id || S.parents.length >= 12) { status(_t('board.403')); return; }
+  S.parents.push({ id, name: _t('board.404', { 0: id }), size: "A3", orientation: "landscape", margin: [10, 10, 10, 10], cols: 6, gutter: 5, items: [] });
   commit();
 }
 function applyParentTo(fid, pid) {
@@ -2899,7 +2910,7 @@ function applyParentTo(fid, pid) {
   const p = PR.parentById(S, pid);
   if (!p) return;
   let geom = true;
-  if (f.size !== p.size || f.orientation !== p.orientation) geom = confirm(`이 페이지(${f.size} ${orientLabel(f)})를 부모 ${p.id}(${p.size} ${p.orientation === "portrait" ? "세로" : "가로"})의 용지·방향에 맞출까요?\\n취소하면 용지는 그대로 두고 부모 요소와 단만 적용합니다.`);
+  if (f.size !== p.size || f.orientation !== p.orientation) geom = confirm(_t('board.405', { 0: f.size, 1: orientLabel(f), 2: p.id, 3: p.size, 4: p.orientation === "portrait" ? _t('board.247') : _t('board.246') }));
   if (f.parent && f.parent !== pid) PR.clearOverrides(S, f);
   PR.applyParent(S, f, pid, geom);
   commit();
@@ -2923,7 +2934,7 @@ function makeOverride(f, item) {
   f.overrides = { ...(f.overrides || {}), [item.id]: card.id };
   sel = new Set([card.id]); selFrame = null;
   commit();
-  status("이 페이지만 고칠 수 있는 복사본을 만들었습니다 (점선 테두리).");
+  status(_t('board.406'));
 }
 function toggleSpreads() {
   if (S.editParent) return;
@@ -2950,7 +2961,7 @@ function renderParents() {
   box.replaceChildren();
   for (const p of S.parents) {
     const b = mk("button", "bd-par" + (S.editParent === p.id ? " is-sel" : "")); b.type = "button"; b.draggable = !S.editParent; b.dataset.parent = p.id;
-    b.setAttribute("aria-label", `부모 페이지 ${p.id} ${p.name}. 더블클릭하면 편집`); b.dataset.tip = "끌어서 페이지에 적용 · 더블클릭 = 편집";
+    b.setAttribute("aria-label", _t('board.407', { 0: p.id, 1: p.name })); b.dataset.tip = _t('board.408');
     const th = mk("span", "bd-par-th"); th.append(parentThumb(p));
     b.append(th, mk("span", "bd-par-t", `${p.id} ${p.name}`), mk("small", "", `${p.size}`));
     box.append(b);
@@ -2968,36 +2979,36 @@ function swatchSection() {
   if (w) {
     const tints = mk("div", "bd-sw-row");
     for (const pc of [100, 80, 60, 40, 20]) { const t = mk("span", "bd-tint"); t.style.background = PR.tintHex(w.hex, pc); t.dataset.tip = `${w.name} ${pc}%`; tints.append(t); }
-    parts.push(tints, txtField("swname", "이름", w.name, 40, v => { const q = swFor(swSel); if (q && v) { q.name = v; commit(); } }),
-      prow(pbtn("삭제", "trash", () => { PR.deleteSwatch(S, swSel); swSel = null; commit(); })));
+    parts.push(tints, txtField("swname", _t('board.317'), w.name, 40, v => { const q = swFor(swSel); if (q && v) { q.name = v; commit(); } }),
+      prow(pbtn(_t('board.076'), "trash", () => { PR.deleteSwatch(S, swSel); swSel = null; commit(); })));
   }
   if (S.swatches.length < 24) {
-    const col = mk("input"); col.type = "color"; col.value = "#7fa66a"; col.className = "bd-colorin"; col.setAttribute("aria-label", "새 견본 색");
-    const nm = mk("input"); nm.type = "text"; nm.placeholder = "이름"; nm.maxLength = 40; nm.className = "bd-swname"; nm.setAttribute("aria-label", "새 견본 이름");
-    parts.push(prow(col, nm, pbtn("추가", null, () => { const hex = col.value; if (!/^#[0-9a-f]{6}$/i.test(hex)) return; PR.addSwatch(S, nm.value.trim() || "견본", hex, "s" + S.seq++); commit(); })));
+    const col = mk("input"); col.type = "color"; col.value = "#7fa66a"; col.className = "bd-colorin"; col.setAttribute("aria-label", _t('board.409'));
+    const nm = mk("input"); nm.type = "text"; nm.placeholder = _t('board.317'); nm.maxLength = 40; nm.className = "bd-swname"; nm.setAttribute("aria-label", _t('board.410'));
+    parts.push(prow(col, nm, pbtn(_t('board.248'), null, () => { const hex = col.value; if (!/^#[0-9a-f]{6}$/i.test(hex)) return; PR.addSwatch(S, nm.value.trim() || _t('board.411'), hex, "s" + S.seq++); commit(); })));
   }
-  return psec("견본", ...parts);
+  return psec(_t('board.411'), ...parts);
 }
 const swOptions = () => S.swatches.map(w => [w.id, w.name]);
 function colorRow(c) {   // text colour: swatch + tint (writes a style override)
   const cur = PR.overrideOf(c).color || S.styles[c.role]?.color || "", m = SW_RE_.exec(cur);
   const swId = m ? m[1] : "", tint = m && m[2] ? Number(m[2]) : 100;
   const apply = (id, t) => { for (const k of selCards()) if (k.kind === "text") { k.style_override = { ...(k.style_override || {}), color: id ? (t >= 100 ? `sw:${id}` : `sw:${id}@${t}`) : undefined }; if (!id) delete k.style_override.color; if (!Object.keys(k.style_override).length) delete k.style_override; } commit(); };
-  return prow(selField("sw", "색", [["", cur && !m ? "직접 지정 색" : "스타일 색"], ...swOptions()], swId, v => apply(v, tint)), selField("tint", "농도", [100, 80, 60, 40, 20].map(t => [t, t + "%"]), tint, v => { if (swId) apply(swId, Number(v)); else renderProps(); }));
+  return prow(selField("sw", _t('board.412'), [["", cur && !m ? _t('board.413') : _t('board.414')], ...swOptions()], swId, v => apply(v, tint)), selField("tint", _t('board.415'), [100, 80, 60, 40, 20].map(t => [t, t + "%"]), tint, v => { if (swId) apply(swId, Number(v)); else renderProps(); }));
 }
 const SW_RE_ = PR.SW_RE;
 function statusTagSection(c) {
   const seg = mk("div", "bd-seg2");
   for (const k of RC.STATUSES) seg.append(pbtn(RC.STATUS_LABEL[k], null, () => { for (const q of selCards()) q.status = k; commit(); }, { pressed: (c.status || "review") === k }));
   const chips = mk("div", "bd-tagchips");
-  for (const t of c.tags || []) { const b = mk("button", "bd-tagchip", `${t} ×`); b.type = "button"; b.setAttribute("aria-label", `태그 ${t} 지우기`); b.addEventListener("click", () => { for (const q of selCards()) q.tags = (q.tags || []).filter(x => x !== t); commit(); }); chips.append(b); }
-  const inp = mk("input"); inp.type = "text"; inp.maxLength = 24; inp.placeholder = "태그 추가 (Enter)"; inp.dataset.k = "tagin"; inp.setAttribute("list", "bd-taglist"); inp.autocomplete = "off"; inp.setAttribute("aria-label", "태그 추가");
+  for (const t of c.tags || []) { const b = mk("button", "bd-tagchip", `${t} ×`); b.type = "button"; b.setAttribute("aria-label", _t('board.416', { 0: t })); b.addEventListener("click", () => { for (const q of selCards()) q.tags = (q.tags || []).filter(x => x !== t); commit(); }); chips.append(b); }
+  const inp = mk("input"); inp.type = "text"; inp.maxLength = 24; inp.placeholder = _t('board.417'); inp.dataset.k = "tagin"; inp.setAttribute("list", "bd-taglist"); inp.autocomplete = "off"; inp.setAttribute("aria-label", _t('board.418'));
   const dl = mk("datalist"); dl.id = "bd-taglist"; for (const t of new Set(S.cards.flatMap(q => q.tags || []))) { const o = mk("option"); o.value = t; dl.append(o); }
   inp.addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); const v = inp.value; if (v.trim()) { for (const q of selCards()) q.tags = RC.cleanTags([...(q.tags || []), v]); commit(); } inp.value = ""; }
     else if (e.key === "Escape") { e.stopPropagation(); inp.blur(); }
   });
-  return psec("상태·태그", seg, chips, inp, dl, pnote(`만든 날 ${c.created || ""}`));
+  return psec(_t('board.419'), seg, chips, inp, dl, pnote(_t('board.420', { 0: c.created ? fmtDate(c.created) : "" })));
 }
 function setTextOverride(key, v) {   // a value equal to the style's own value is no override
   for (const k of selCards()) if (k.kind === "text") {
@@ -3011,8 +3022,8 @@ function setTextOverride(key, v) {   // a value equal to the style's own value i
 function insertField(name) {
   const c = selCards()[0];
   if (!c || c.kind !== "text" || !PR.FIELDS.includes(name)) return;
-  if (editingId === c.id) { document.execCommand("insertText", false, `{${name}}`); return; }
-  c.text = (c.text || "") + `{${name}}`; commit();
+  if (editingId === c.id) { document.execCommand("insertText", false, PR.fieldToken(name)); return; }
+  c.text = (c.text || "") + PR.fieldToken(name); commit();
 }
 
 // ---- build 5a: sections, annotations (comments, pen), snapshots, work record ------------------------------------------------------
@@ -3072,12 +3083,12 @@ function renderAnnos() {
     const t = el("text", { "font-size": 11 / z, y: 4 / z, "text-anchor": "middle", class: "bd-pin-t" }, g); t.textContent = String(i + 1);
   });
 }
-function toggleAnno() { ui.annoForce = !annoVisible(); render(); status(annoVisible() ? "코멘트·펜 보기 켬" : "코멘트·펜 보기 끔"); }
+function toggleAnno() { ui.annoForce = !annoVisible(); render(); status(annoVisible() ? _t('board.421') : _t('board.422')); }
 // section tool: drag a rectangle
 function startSectionDrag(wx, wy) { drag = { type: "secnew", start: [wx, wy], rect: el("rect", { class: "bd-marquee", "vector-effect": "non-scaling-stroke" }, layerGuides) }; }
 function addSection(x, y, w, h, name) {
-  if (S.sections.length >= REC.MAX_SECTIONS) { status(`구역은 최대 ${REC.MAX_SECTIONS}개입니다.`); return null; }
-  const sec = { id: "sec" + S.seq++, name: name || `구역 ${S.sections.length + 1}`, x: r2(x), y: r2(y), w: r2(w), h: r2(h), color: REC.SECTION_COLORS[S.sections.length % 5], collapsed: false };
+  if (S.sections.length >= REC.MAX_SECTIONS) { status(_t('board.423', { 0: REC.MAX_SECTIONS })); return null; }
+  const sec = { id: "sec" + S.seq++, name: name || _t('board.424', { 0: S.sections.length + 1 }), x: r2(x), y: r2(y), w: r2(w), h: r2(h), color: REC.SECTION_COLORS[S.sections.length % 5], collapsed: false };
   S.sections.push(sec);
   return sec;
 }
@@ -3085,11 +3096,11 @@ function deleteSection(id) { S.sections = S.sections.filter(z => z.id !== id); i
 function renameSection(id) {
   const z = secById(id);
   if (!z) return;
-  const v = prompt("구역 이름", z.name);
+  const v = prompt(_t('board.425'), z.name);
   if (v != null && v.trim()) { z.name = v.trim().slice(0, 60); commit(); }
 }
 function startSemester() {
-  if (S.sections.length) { status("이미 구역이 있습니다. 주차 묶음 추가를 쓰세요."); return; }
+  if (S.sections.length) { status(_t('board.426')); return; }
   const L = REC.semesterLayout(S.seq); S.seq += 5;
   S.sections = L.sections;
   const f = S.frames[0] || addFrame();
@@ -3107,7 +3118,7 @@ function addWeek() {
 // comments
 const todayS = () => REC.todayStr();
 function addComment(c, wx, wy) {
-  if (S.comments.length >= REC.MAX_COMMENTS) { status("코멘트는 최대 500개입니다."); return; }
+  if (S.comments.length >= REC.MAX_COMMENTS) { status(_t('board.427')); return; }
   const cm = { id: "m" + S.seq++, card: c.id, dx: r2(wx - c.x), dy: r2(wy - c.y), text: "", author: ui.author || "나", date: todayS(), resolved: false };
   S.comments.push(cm);
   commit();
@@ -3121,18 +3132,18 @@ function openPinPop(id) {
   pinPopId = id;
   const pop = $("#bd-cpop");
   pop.replaceChildren();
-  const ta = mk("textarea"); ta.value = cm.text; ta.maxLength = 2000; ta.rows = 3; ta.setAttribute("aria-label", "코멘트"); ta.placeholder = "코멘트";
+  const ta = mk("textarea"); ta.value = cm.text; ta.maxLength = 2000; ta.rows = 3; ta.setAttribute("aria-label", _t('board.207')); ta.placeholder = _t('board.207');
   ta.addEventListener("input", () => { const q = S.comments.find(m => m.id === id); if (q) { q.text = ta.value.slice(0, 2000); dirty = true; scheduleSave(); } });   // saved while typing
   ta.addEventListener("change", () => { const q = S.comments.find(m => m.id === id); if (q) { q.text = ta.value.slice(0, 2000); commit(); } });
-  const au = mk("select"); au.setAttribute("aria-label", "작성자"); for (const a of REC.AUTHORS) { const op = mk("option", "", a); op.value = a; op.selected = a === cm.author; au.append(op); }
+  const au = mk("select"); au.setAttribute("aria-label", _t('board.257')); for (const a of REC.AUTHORS) { const op = mk("option", "", RC.authorLabel(a)); op.value = a; op.selected = a === cm.author; au.append(op); }
   au.addEventListener("change", () => { const q = S.comments.find(m => m.id === id); if (q && REC.AUTHORS.includes(au.value)) { q.author = au.value; ui.author = au.value; commit(); } });
-  const done = mk("label", "bd-cf"), ck = mk("input"); ck.type = "checkbox"; ck.checked = cm.resolved; done.append(ck, mk("span", "", "해결됨"));
+  const done = mk("label", "bd-cf"), ck = mk("input"); ck.type = "checkbox"; ck.checked = cm.resolved; done.append(ck, mk("span", "", _t('board.428')));
   ck.addEventListener("change", () => { const q = S.comments.find(m => m.id === id); if (q) { q.resolved = ck.checked; commit(); } });
-  const del = mk("button", "bd-btn", "삭제"); del.type = "button"; del.addEventListener("click", () => { S.comments = S.comments.filter(m => m.id !== id); closePinPop(); commit(); });
-  const cl = mk("button", "bd-btn", "닫기"); cl.type = "button"; cl.addEventListener("click", closePinPop);
+  const del = mk("button", "bd-btn", _t('board.076')); del.type = "button"; del.addEventListener("click", () => { S.comments = S.comments.filter(m => m.id !== id); closePinPop(); commit(); });
+  const cl = mk("button", "bd-btn", _t('board.429')); cl.type = "button"; cl.addEventListener("click", closePinPop);
   const row = mk("div", "bd-pr"); row.append(au, done);
   const row2 = mk("div", "bd-pr"); row2.append(del, cl);
-  pop.append(mk("p", "bd-ps-note", `${S.comments.indexOf(cm) + 1}번 · ${cm.date}`), ta, row, row2);
+  pop.append(mk("p", "bd-ps-note", _t('board.430', { 0: S.comments.indexOf(cm) + 1, 1: fmtDate(cm.date) })), ta, row, row2);
   const r = $("#bd-svg").getBoundingClientRect(), st = $("#bd-stage").getBoundingClientRect();
   pop.hidden = false;
   pop.style.left = Math.round(clamp(o[0] * view.z + view.x + r.left - st.left + 14, 8, st.width - 250)) + "px";
@@ -3174,16 +3185,16 @@ function gotoSection(id) { const z = secById(id); if (z) { selSection = id; sel.
 // snapshots (IndexedDB store "snapshots")
 const cleanSnap = r => {   // snapshot records come from an untrusted store
   if (!r || typeof r !== "object" || !/^[A-Za-z0-9_-]{1,40}$/.test(String(r.id)) || !r.S || typeof r.S !== "object") return null;
-  return { id: String(r.id), name: String(r.name ?? "스냅샷").slice(0, 60), date: RC.isDate(r.date) ? r.date : RC.todayStr(), S: r.S, assetIds: [...RC.referencedAssetIds([r])] };
+  return { id: String(r.id), name: String(r.name ?? _t('board.431')).slice(0, 60), date: RC.isDate(r.date) ? r.date : RC.todayStr(), S: r.S, assetIds: [...RC.referencedAssetIds([r])] };
 };
 function keepSnapPayloads() { const keep = RC.referencedAssetIds(snaps); for (const id of [...payloads.keys()]) if (!keep.has(id)) payloads.delete(id); }
 async function loadSnaps() { try { snaps = (await idb.allSnaps()).map(cleanSnap).filter(Boolean).sort((a, b) => (a.id < b.id ? 1 : -1)); } catch (e) { console.warn("snapshots unavailable", e); snaps = []; } assetSig = ""; renderRecordSoon(); }
 async function saveSnapshot() {
   finishEdit();
-  const name = prompt("스냅샷 이름", `스냅샷 ${snaps.length + 1}`);
+  const name = prompt(_t('board.432'), _t('board.433', { 0: snaps.length + 1 }));
   if (name == null) return;
-  const FS = PR.flattenEdit(S), rec = { id: "n" + Date.now(), name: name.trim().slice(0, 60) || "스냅샷", date: todayS(), S: JSON.parse(JSON.stringify(FS)), assetIds: Object.keys(FS.assets) };
-  try { await idb.putSnap(rec); snaps.unshift(rec); status(`스냅샷 저장됨: ${rec.name}`); renderRecordSoon(); } catch (e) { console.warn(e); status("스냅샷을 저장하지 못했습니다."); }
+  const FS = PR.flattenEdit(S), rec = { id: "n" + Date.now(), name: name.trim().slice(0, 60) || _t('board.431'), date: todayS(), S: JSON.parse(JSON.stringify(FS)), assetIds: Object.keys(FS.assets) };
+  try { await idb.putSnap(rec); snaps.unshift(rec); status(_t('board.434', { 0: rec.name })); renderRecordSoon(); } catch (e) { console.warn(e); status(_t('board.435')); }
 }
 function restoreSnapshot(id) {
   const sn = snaps.find(x => x.id === id);
@@ -3193,11 +3204,11 @@ function restoreSnapshot(id) {
   commit();   // the current state is the undo target
   S = sanitizeDoc(JSON.parse(JSON.stringify(sn.S)));
   sel.clear(); selFrame = null; selSection = null; selGuide = null; syncGeom(); commit(); fitAll();
-  status(`복원됨: ${sn.name} (⌘Z로 되돌리기)`);
+  status(_t('board.436', { 0: sn.name }));
 }
 async function deleteSnapshot(id) {
   const sn = snaps.find(x => x.id === id);
-  if (!sn || !confirm(`스냅샷 “${sn.name}”을(를) 지울까요?`)) return;
+  if (!sn || !confirm(_t('board.437', { 0: sn.name }))) return;
   try { await idb.delSnap(id); snaps = snaps.filter(x => x.id !== id); renderRecordSoon(); } catch (e) { console.warn(e); }
 }
 // 기록 panel
@@ -3214,28 +3225,28 @@ function renderRecord() {
   if (!box) return;
   const tags = [...new Set(S.cards.flatMap(c => c.tags || []))].sort();
   const ts = $("#bd-rec-tag"), cur = ts.value;
-  ts.replaceChildren(...[["", "태그 전체"], ...tags.map(t => [t, t])].map(([v, t]) => { const o = mk("option", "", t); o.value = v; return o; })); ts.value = tags.includes(cur) ? cur : "";
+  ts.replaceChildren(...[["", _t('board.438')], ...tags.map(t => [t, t])].map(([v, t]) => { const o = mk("option", "", t); o.value = v; return o; })); ts.value = tags.includes(cur) ? cur : "";
   recFilter.tag = ts.value;
   box.replaceChildren();
   const row = (cls, ...kids) => { const r = mk("button", "bd-rec-row " + cls); r.type = "button"; r.append(...kids); box.append(r); return r; };
   if (recFilter.q.trim()) {
     const hits = REC.searchRecord(S, recFilter.q, { hideDrop: ui.hideDrop });
-    box.append(mk("p", "bd-rec-h", `검색 결과 ${hits.length}`));
-    for (const h of hits) { const r = row("", mk("span", "bd-rec-k", h.type === "card" ? "카드" : h.type === "comment" ? "코멘트" : "구역"), mk("span", "bd-rec-t", h.text)); r.dataset.rec = h.type + ":" + h.id + ":" + (h.card || ""); }
-    if (!hits.length) box.append(mk("p", "bd-empty-note", "맞는 항목이 없습니다."));
+    box.append(mk("p", "bd-rec-h", _t('board.439', { 0: hits.length })));
+    for (const h of hits) { const r = row("", mk("span", "bd-rec-k", h.type === "card" ? _t('board.391') : h.type === "comment" ? _t('board.207') : _t('board.206')), mk("span", "bd-rec-t", h.text)); r.dataset.rec = h.type + ":" + h.id + ":" + (h.card || ""); }
+    if (!hits.length) box.append(mk("p", "bd-empty-note", _t('board.440')));
     return;
   }
   const groups = REC.groupByWeek(S, snaps, { ...recFilter, hideDrop: ui.hideDrop });
-  if (!groups.length) box.append(mk("p", "bd-empty-note", "아직 기록이 없습니다."));
+  if (!groups.length) box.append(mk("p", "bd-empty-note", _t('board.441')));
   for (const g of groups) {
     box.append(mk("p", "bd-rec-h", g.key));
     for (const sn of g.snaps) {
-      const r = mk("div", "bd-rec-row bd-rec-snap"); r.append(mk("span", "bd-rec-k", "스냅샷"), mk("span", "bd-rec-t", sn.name));
-      const rb = mk("button", "bd-btn", "복원"); rb.type = "button"; rb.dataset.snapRestore = sn.id; const db = mk("button", "bd-btn", "삭제"); db.type = "button"; db.dataset.snapDelete = sn.id;
+      const r = mk("div", "bd-rec-row bd-rec-snap"); r.append(mk("span", "bd-rec-k", _t('board.431')), mk("span", "bd-rec-t", sn.name));
+      const rb = mk("button", "bd-btn", _t('board.442')); rb.type = "button"; rb.dataset.snapRestore = sn.id; const db = mk("button", "bd-btn", _t('board.076')); db.type = "button"; db.dataset.snapDelete = sn.id;
       r.append(rb, db); box.append(r);
     }
     for (const c of g.cards) { const r = row("", recThumb(c), mk("span", "bd-rec-t", REC.cardTitle(S, c)), mk("span", "bd-rec-st is-" + (c.status || "review"), REC.STATUS_LABEL[c.status || "review"])); r.dataset.rec = "card:" + c.id + ":"; }
-    for (const m of g.comments) { const r = row("", mk("span", "bd-rec-k", m.author), mk("span", "bd-rec-t", (m.text || "(빈 코멘트)").slice(0, 40))); r.dataset.rec = "comment:" + m.id + ":" + m.card; }
+    for (const m of g.comments) { const r = row("", mk("span", "bd-rec-k", RC.authorLabel(m.author)), mk("span", "bd-rec-t", (m.text || _t('board.443')).slice(0, 40))); r.dataset.rec = "comment:" + m.id + ":" + m.card; }
   }
 }
 function recClick(t) {
@@ -3248,9 +3259,9 @@ let selArrow = null;
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs", PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
 // link cards: http(s) only
 function addLink(url, at) {
-  if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return null; }
+  if (S.editParent) { status(_t('board.091')); return null; }
   const u = RC.cleanUrl(url || "");
-  if (!u) { status("http(s) 주소만 링크 카드로 만들 수 있습니다."); return null; }
+  if (!u) { status(_t('board.444')); return null; }
   const sp = at ? { x: r2(at[0] - 35), y: r2(at[1] - 9) } : spotFor(70, 18);
   const c = addCard({ kind: "link", url: u, title: RC.hostOf(u), x: sp.x, y: sp.y, w: 70, h: 18 });
   sel = new Set([c.id]); selFrame = null; selSection = null; commit();
@@ -3258,17 +3269,17 @@ function addLink(url, at) {
 }
 function addLinkAt(wx, wy) {
   setTool("v");
-  const v = prompt("링크 주소 (http 또는 https)", "https://");
+  const v = prompt(_t('board.445'), "https://");
   if (v != null) addLink(v, [wx, wy]);
 }
 function editLink(id) {
   const c = cardById(id);
   if (!c || c.kind !== "link" || isLocked(c)) return;
-  const u = prompt("링크 주소", c.url);
+  const u = prompt(_t('board.446'), c.url);
   if (u == null) return;
   const nu = RC.cleanUrl(u);
-  if (!nu) { status("http(s) 주소만 쓸 수 있습니다."); return; }
-  const t = prompt("제목", c.title);
+  if (!nu) { status(_t('board.326')); return; }
+  const t = prompt(_t('board.327'), c.title);
   c.url = nu; c.title = (t ?? c.title).trim().slice(0, 200) || RC.hostOf(nu); commit();
 }
 function openLink(c) { const u = RC.cleanUrl(c.url); if (u) window.open(u, "_blank", "noopener,noreferrer"); }
@@ -3291,14 +3302,14 @@ function renderArrows() {
 }
 function addArrow(from, to) {
   if (from === to || S.arrows.some(a => a.from === from && a.to === to)) return;
-  if (S.arrows.length >= RC.MAX_ARROWS) { status("화살표는 최대 500개입니다."); return; }
+  if (S.arrows.length >= RC.MAX_ARROWS) { status(_t('board.447')); return; }
   S.arrows.push({ id: "ar" + S.seq++, from, to });
   commit();
 }
 // stacks (version stacks)
 function makeStack() {
   const cs = selCards().filter(c => isMedia(c) && !isLocked(c));
-  if (cs.length < 2) { status("이미지·다이어그램 카드를 2장 이상 고르세요."); return; }
+  if (cs.length < 2) { status(_t('board.448')); return; }
   const id = "st" + S.seq++, top = cs[0];
   for (const c of cs) { c.stack = id; if (c !== top) { c.sg = { w: c.w, h: c.h, rot: c.rot || 0 }; c.x = top.x; c.y = top.y; c.w = top.w; c.h = top.h; c.rot = top.rot || 0; } }
   S.stacks[id] = top.id; sel = new Set([top.id]); commit();
@@ -3307,19 +3318,19 @@ function unstack(id) { for (const c of S.cards) if (c.stack === id) { c.stack = 
 function cycleStackSel(id, dir) { const top = RC.cycleStack(S, id, dir); if (top) { sel = new Set([top]); commit(); } }
 function stackSection(c) {
   const n = S.cards.filter(k => k.stack === c.stack).length, id = c.stack;
-  return psec("버전 묶음", pnote(`${n}개 중 위의 카드`), prow(pbtn("‹ 이전", null, () => cycleStackSel(id, -1)), pbtn("다음 ›", null, () => cycleStackSel(id, 1))), prow(pbtn("풀기", "ungroup", () => unstack(id))));
+  return psec(_t('board.449'), pnote(_t('board.450', { 0: n })), prow(pbtn(_t('board.451'), null, () => cycleStackSel(id, -1)), pbtn(_t('board.452'), null, () => cycleStackSel(id, 1))), prow(pbtn(_t('board.359'), "ungroup", () => unstack(id))));
 }
 // promote kept images / diagrams to a new page of parent A (template cells), caption under each
 function promoteKept(scopeSec) {
   const sec = scopeSec ? secById(scopeSec) : null, inside = c => !sec || (c.x + c.w / 2 >= sec.x && c.x + c.w / 2 <= sec.x + sec.w && c.y + c.h / 2 >= sec.y && c.y + c.h / 2 <= sec.y + sec.h);
   const src = sortedCards().filter(c => isMedia(c) && c.status === "keep" && !c.page && !RC.stackHidden(S, c) && !cardCollapsed(c) && inside(c));
   const pool = src.length ? src : sortedCards().filter(c => isMedia(c) && c.status === "keep" && !RC.stackHidden(S, c) && inside(c));
-  if (!pool.length) { status("‘유지’ 상태의 이미지·다이어그램 카드가 없습니다."); return; }
-  if (S.editParent) { status("부모 페이지 편집을 먼저 완료하세요."); return; }
+  if (!pool.length) { status(_t('board.453')); return; }
+  if (S.editParent) { status(_t('board.091')); return; }
   const f = addFrame({ size: "A1", orientation: "portrait" });
   if (PR.parentById(S, "A")) PR.applyParent(S, f, "A", true); else f.template = makeTemplate("c6", "A1");
   const cells = gridCells(f);
-  if (!cells) { status("부모 페이지의 격자를 만들 수 없습니다."); return; }
+  if (!cells) { status(_t('board.454')); return; }
   const cols = cells.xs.map(([a, b]) => ({ x: a, w: b - a })), plan = RC.shelfPack(pool.map(c => { const b = visBox(c); return { aspect: b.w / b.h }; }), cols, { x0: cells.x0, y0: cells.y0, x1: cells.x1, y1: cells.y1 }, 4, 8);
   for (const p of plan.placed) {
     const o = pool[p.i];
@@ -3328,7 +3339,7 @@ function promoteKept(scopeSec) {
     addCard({ kind: "text", role: "caption", text: S.assets[o.ref]?.title || "", align: "left", x: r2(f.x + p.x), y: r2(f.y + p.capY), w: r2(p.w), h: 8, status: "keep" });
   }
   selFrame = f.id; sel.clear(); selSection = null; commit(); zoomToFrame(f);
-  status(`새 판넬에 ${plan.placed.length}장을 놓았습니다${plan.overflow.length ? ` (자리가 없어 ${plan.overflow.length}장은 빠짐)` : ""}.`);
+  status(_t('board.456', { 0: plan.placed.length, 1: plan.overflow.length ? _t('board.455', { 0: plan.overflow.length }) : "" }));
 }
 // PDF import (pdf.js loaded only when needed)
 let pdfLib = null, pdfClose = null;
@@ -3343,27 +3354,27 @@ async function loadPdfJs() {
   return lib;
 }
 async function importPdf(file) {
-  status("PDF 여는 중…");
+  status(_t('board.457'));
   let doc;
   try { const lib = await loadPdfJs(); doc = await lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false, enableXfa: false }).promise; }
-  catch (e) { console.warn(e); status("PDF를 열지 못했습니다."); return; }
+  catch (e) { console.warn(e); status(_t('board.458')); return; }
   const base = (file.name || "PDF").replace(/\.pdf$/i, "").slice(0, 60), n = doc.numPages, MAXP = 40;
-  const pick = mk("div", "bd-pdfpick"); pick.setAttribute("role", "dialog"); pick.setAttribute("aria-label", "PDF 쪽 고르기");
-  const head = mk("div", "bd-pdfh"), count = mk("span", "", ""), all = mk("button", "bd-btn", "전체 선택"), go = mk("button", "bd-btn bd-strong", "가져오기"), cancel = mk("button", "bd-btn", "취소");
+  const pick = mk("div", "bd-pdfpick"); pick.setAttribute("role", "dialog"); pick.setAttribute("aria-label", _t('board.459'));
+  const head = mk("div", "bd-pdfh"), count = mk("span", "", ""), all = mk("button", "bd-btn", _t('board.460')), go = mk("button", "bd-btn bd-strong", _t('board.461')), cancel = mk("button", "bd-btn", _t('board.462'));
   for (const b of [all, go, cancel]) b.type = "button";
-  head.append(mk("b", "", `${file.name || "PDF"} · ${n}쪽`), count, all, go, cancel);
+  head.append(mk("b", "", _t('board.463', { 0: file.name || "PDF", 1: n })), count, all, go, cancel);
   const grid = mk("div", "bd-pdfgrid"); pick.append(head, grid);
-  if (n > MAXP) pick.append(mk("p", "bd-ps-note", `한 번에 최대 ${MAXP}쪽까지 가져옵니다.`));
+  if (n > MAXP) pick.append(mk("p", "bd-ps-note", _t('board.464', { 0: MAXP })));
   $("#board").append(pick);
   const checks = [];
-  const upd = () => { const k = checks.filter(c => c.checked).length; count.textContent = `${k}쪽 선택`; go.disabled = !k; for (const c of checks) if (!c.checked) c.disabled = k >= MAXP; };
+  const upd = () => { const k = checks.filter(c => c.checked).length; count.textContent = _t('board.465', { 0: k }); go.disabled = !k; for (const c of checks) if (!c.checked) c.disabled = k >= MAXP; };
   let closed = false;
   const close = () => { if (closed) return; closed = true; pdfClose = null; pick.remove(); doc.destroy?.(); };
   pdfClose = close;
   cancel.onclick = close;
   all.onclick = () => { let k = 0; for (const c of checks) { c.checked = k < MAXP; k++; } upd(); };
   const shown = Math.min(n, RC.MAX_PDF_THUMBS);   // never build thousands of canvases
-  if (n > shown) pick.append(mk("p", "bd-ps-note", `처음 ${shown}쪽만 미리 보여 줍니다.`));
+  if (n > shown) pick.append(mk("p", "bd-ps-note", _t('board.466', { 0: shown })));
   const io = typeof IntersectionObserver === "function" ? new IntersectionObserver(es => { for (const en of es) if (en.isIntersecting) { io.unobserve(en.target); en.target._draw?.(); } }, { root: grid }) : null;
   for (let i = 1; i <= shown; i++) {
     const cell = mk("label", "bd-pdfcell"), ck = mk("input"); ck.type = "checkbox"; ck.dataset.page = i; ck.checked = i <= Math.min(n, MAXP) && n <= MAXP; ck.addEventListener("change", upd);
@@ -3374,7 +3385,7 @@ async function importPdf(file) {
   upd();
   go.onclick = async () => {
     const pages = checks.filter(c => c.checked).map(c => Number(c.dataset.page)).slice(0, MAXP);
-    go.disabled = true; status("PDF 쪽을 그리는 중…");
+    go.disabled = true; status(_t('board.467'));
     let done = 0;
     for (const p of pages) {
       try {
@@ -3390,7 +3401,7 @@ async function importPdf(file) {
         done++;
       } catch (e) { console.warn(e); }
     }
-    close(); ui.emptyDismissed = true; commit(); status(`PDF ${done}쪽을 가져왔습니다.`);
+    close(); ui.emptyDismissed = true; commit(); status(_t('board.468', { 0: done }));
   };
 }
 
@@ -3457,24 +3468,24 @@ const cleanAssetMeta = m => {
 };
 async function add(item) {
   await loaded;
-  if (!item || !item.kind) throw new Error("보드에 넣을 항목이 올바르지 않습니다.");
+  if (!item || !item.kind) throw new Error(_t('board.469'));
   if (item.kind === "diagram") {
     const svgClean = cleanSvgString(item.svg), prev = safeImg(item.preview);
-    if (!svgClean || !prev) throw new Error("다이어그램 데이터가 없습니다.");
+    if (!svgClean || !prev) throw new Error(_t('board.470'));
     if (item.meta?.address || item.meta?.radius) S.site = { address: item.meta.address || "", radius: item.meta.radius || "" };
-    const id = registerAsset("diagram", item.title || "다이어그램", item.w || 420, item.h || 297, { svg: svgClean, preview: prev }, cleanAssetMeta(item.meta));
+    const id = registerAsset("diagram", item.title || _t('board.214'), item.w || 420, item.h || 297, { svg: svgClean, preview: prev }, cleanAssetMeta(item.meta));
     ui.emptyDismissed = true;
     commit();
     return id;
   }
   if (item.kind === "image") {
-    if (!safeImg(item.img)) throw new Error("이미지 데이터가 없습니다.");
-    const id = registerAsset("image", item.title || "이미지", item.w || 100, item.h || 70, { img: item.img }, item.meta || null);
+    if (!safeImg(item.img)) throw new Error(_t('board.471'));
+    const id = registerAsset("image", item.title || _t('board.204'), item.w || 100, item.h || 70, { img: item.img }, item.meta || null);
     ui.emptyDismissed = true;
     commit();
     return id;
   }
-  throw new Error("지원하지 않는 항목 종류입니다: " + item.kind);
+  throw new Error(_t('board.472') + item.kind);
 }
 const count = () => Object.keys(S.assets).length;
 

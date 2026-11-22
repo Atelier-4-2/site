@@ -5,7 +5,8 @@
 export const LANGS = ["fr", "ko"];
 const KEY = "a42.lang";
 const SRC = "ko";   // the source language: its strings are the fallback for any missing key
-let lang = detect(), cats = { ko: {}, fr: {} }, loaded = false;
+const IS_NODE = typeof window === "undefined";   // node tests: catalogs from disk, Korean unless A42_LANG says otherwise
+let lang = IS_NODE ? (globalThis.process?.env?.A42_LANG === "fr" ? "fr" : "ko") : detect(), cats = { ko: {}, fr: {} }, loaded = false;
 const warned = new Set();
 function detect() {
   try { const s = localStorage.getItem(KEY); if (LANGS.includes(s)) return s; } catch { /* private mode */ }
@@ -40,6 +41,7 @@ export function fmtDate(d, opts) {
 export const fmtNumber = (n, opts) => new Intl.NumberFormat(lang === "fr" ? "fr-FR" : "ko-KR", opts).format(n);
 export function apply(root = document) {
   for (const e of root.querySelectorAll("[data-i18n]")) e.textContent = t(e.dataset.i18n);
+  for (const e of root.querySelectorAll("[data-i18n-html]")) e.innerHTML = t(e.dataset.i18nHtml);   // catalogs are first-party markup (br, a, strong, kbd)
   for (const e of root.querySelectorAll("[data-i18n-attr]")) for (const pair of e.dataset.i18nAttr.split(";")) { const [a, k] = pair.split(":").map(x => x.trim()); if (a && k) e.setAttribute(a, t(k)); }
   for (const b of root.querySelectorAll("[data-lang]")) { const on = b.dataset.lang === lang; b.setAttribute("aria-pressed", String(on)); }
 }
@@ -54,7 +56,11 @@ export function setLang(l) {
 export const onLang = fn => { document.addEventListener("a42:lang", e => fn(e.detail.lang)); };
 const load = async l => { try { const r = await fetch(`./i18n/${l}.json?v=20261122i`); if (r.ok) cats[l] = await r.json(); } catch (e) { console.warn(`[i18n] cannot load ${l}.json`, e); } };
 function ready() { document.documentElement.setAttribute("data-i18n-ready", ""); }
-export const loadedPromise = (async () => {
+export const loadedPromise = IS_NODE ? (async () => {
+  const fs = await import("node:fs");
+  for (const l of LANGS) cats[l] = JSON.parse(fs.readFileSync(new URL(`./i18n/${l}.json`, import.meta.url), "utf8"));
+  loaded = true;
+})() : (async () => {
   setTimeout(ready, 1500);   // safety: never leave the page hidden
   await Promise.all([load("ko"), load("fr")]);
   loaded = true;
@@ -66,4 +72,5 @@ export const loadedPromise = (async () => {
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire, { once: true }); else wire();
 })();
+if (IS_NODE) await loadedPromise;
 globalThis.a42i18n = { t, setLang, getLang, fmtDate, fmtNumber, apply, onLang, LANGS, get loaded() { return loaded; } };

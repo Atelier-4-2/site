@@ -1,3 +1,4 @@
+import { t as _t } from "./i18n.js?v=20261122i";
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.
@@ -5,7 +6,7 @@ import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES,
 import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261122i";
 export const DOC_VERSION = 5;
 export const LAYERS = ["bg", "art", "text"];   // stacking order, bottom to top
-export const LAYER_LABEL = { bg: "배경 도면", art: "도판", text: "글·주석" };
+export const LAYER_LABEL = { get bg() { return _t('board.doc.001'); }, get art() { return _t('board.doc.002'); }, get text() { return _t('board.doc.003'); } };
 export const defaultLayer = kind => (kind === "text" || kind === "memo" || kind === "stamp") ? "text" : "art";
 export const defaultLayers = () => ({ bg: { hidden: false, locked: false }, art: { hidden: false, locked: false }, text: { hidden: false, locked: false } });
 export const MAX_GUIDES = 200;
@@ -14,7 +15,7 @@ export const MAX_GUIDES = 200;
 export const SHEET_W = 420;   // native width (mm) of a diagram sheet; diagram meta.mpm = metres per sheet mm
 export const STD_DENS = [20, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
 export const STAMPS = ["bar_ticks", "bar_alt", "ratio", "north_arrow", "north_circle", "north_cross"];
-export const STAMP_LABEL = { bar_ticks: "눈금 막대", bar_alt: "흑백 교대 막대", ratio: "숫자 1:n", north_arrow: "화살표 N", north_circle: "원형 N", north_cross: "십자 NESW" };
+export const STAMP_LABEL = { get bar_ticks() { return _t('board.doc.004'); }, get bar_alt() { return _t('board.doc.005'); }, get ratio() { return _t('board.doc.006'); }, get north_arrow() { return _t('board.doc.007'); }, get north_circle() { return _t('board.doc.008'); }, get north_cross() { return _t('board.doc.009'); } };
 export const isNorthStamp = k => k === "north_arrow" || k === "north_circle" || k === "north_cross";
 export const isBarStamp = k => k === "bar_ticks" || k === "bar_alt";
 // printed scale denominator of a card: diagrams follow their width (or the locked value), images carry a manual label
@@ -81,7 +82,7 @@ export function stampSvg(st, den = st.den, opt = {}) {
 export const PAPER = { A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297] };   // portrait w x h (mm)
 export const SIZES = Object.keys(PAPER);
 export const ROLES = ["title", "h1", "h2", "subtitle", "body", "caption", "scale", "number"];
-export const ROLE_LABEL = { title: "제목", h1: "H1", h2: "H2", subtitle: "부제", body: "본문", caption: "캡션", scale: "축척 표기", number: "번호" };
+export const ROLE_LABEL = { get title() { return _t('board.doc.010'); }, h1: "H1", h2: "H2", get subtitle() { return _t('board.doc.011'); }, get body() { return _t('board.doc.012'); }, get caption() { return _t('board.doc.013'); }, get scale() { return _t('board.doc.014'); }, get number() { return _t('board.doc.015'); } };
 export const PALETTE = ["#1d1d1f", "#6e6e73", "#a1a1a6", "#3b6ea5", "#c0392b"];
 export const DEFAULT_STYLES = {
   title: { size: 9, weight: 700, color: "#1d1d1f", tracking: 0 },
@@ -94,7 +95,7 @@ export const DEFAULT_STYLES = {
   number: { size: 12, weight: 700, color: "#1d1d1f", tracking: 0 }
 };
 export const FSTYLES = ["none", "thin", "box"];
-export const FSTYLE_LABEL = { none: "없음", thin: "가는 테두리 0.25 mm", box: "캡션 박스" };
+export const FSTYLE_LABEL = { get none() { return _t('board.doc.016'); }, get thin() { return _t('board.doc.017'); }, get box() { return _t('board.doc.018'); } };
 export const defaultFstyles = () => ({ thin: { w: 0.25, color: "#1d1d1f" }, box: { w: 0.25, color: "#1d1d1f" } });
 export const ROLE_BOX = {   // default card size when a text card is created (mm)
   title: { w: 220, h: 14 }, subtitle: { w: 180, h: 10 }, body: { w: 140, h: 40 }, caption: { w: 160, h: 8 }, number: { w: 30, h: 16 }, h1: { w: 200, h: 12 }, h2: { w: 160, h: 10 }, scale: { w: 40, h: 6 }
@@ -103,7 +104,7 @@ export const MEMO_COLORS = ["#fff3a8", "#ffd6d6", "#d6ecff", "#dff5d8"];
 export const WEIGHTS = [300, 400, 500, 600, 700];
 export const GRID_DEFAULT = 5;
 export const TEMPLATE_KEYS = ["none", "c3", "c4", "c6", "c12"];
-export const TEMPLATE_LABEL = { none: "없음", c3: "3단", c4: "4단", c6: "6단", c12: "12단" };
+export const TEMPLATE_LABEL = { get none() { return _t('board.doc.016'); }, get c3() { return _t('board.doc.019'); }, get c4() { return _t('board.doc.020'); }, get c6() { return _t('board.doc.021'); }, get c12() { return _t('board.doc.022'); } };
 const TPL_BASE = { c3: { margin: 15, cols: 3, rows: 4, gutter: 5 }, c4: { margin: 15, cols: 4, rows: 6, gutter: 5 }, c6: { margin: 15, cols: 6, rows: 8, gutter: 5 }, c12: { margin: 15, cols: 12, rows: 8, gutter: 5 } };
 export const bigPaper = size => size === "A0" || size === "A1";
 export function makeTemplate(key, size) {
@@ -138,7 +139,7 @@ export function pageAt(frames, px, py) {
 export function assignPages(doc) {
   for (const c of doc.cards) { const f = pageAt(doc.frames, c.x + c.w / 2, c.y + c.h / 2); c.page = f ? f.id : null; }
 }
-export const orientLabel = f => (f.orientation === "portrait" ? "세로" : "가로");
+export const orientLabel = f => (f.orientation === "portrait" ? _t('board.doc.023') : _t('board.doc.024'));
 export const pageLabel = f => `${pad2(f.page)} · ${f.size} ${orientLabel(f)}`;
 export const pageKind = size => (size === "A3" || size === "A4") ? "Carnet" : "Planche";
 export const pageTitle = f => { const [w, h] = frameSize(f); return `${pad2(f.page)} · ${pageKind(f.size)} — ${f.size} ${w}×${h}`; };
@@ -223,7 +224,7 @@ export function cleanPayload(p) {
 export const defaultMeta = () => ({ project: "", author: "", atelier: "", teachers: "", date: "", scale: "" });
 export const defaultStyles = () => JSON.parse(JSON.stringify(DEFAULT_STYLES));
 export const EXPORT_PRESETS = ["print", "web", "custom"];
-export const emptyDoc = () => ({ version: DOC_VERSION, sections: [], comments: [], marks: [], arrows: [], stacks: {}, parents: makeParents(), swatches: DEFAULT_SWATCHES(), fstyles: defaultFstyles(), spreadView: false, export: { preset: "print" }, layers: defaultLayers(), guides: [], name: "Atelier 보드", seq: 1, meta: defaultMeta(), styles: defaultStyles(), frames: [], cards: [], assets: {}, site: null });
+export const emptyDoc = () => ({ version: DOC_VERSION, sections: [], comments: [], marks: [], arrows: [], stacks: {}, parents: makeParents(), swatches: DEFAULT_SWATCHES(), fstyles: defaultFstyles(), spreadView: false, export: { preset: "print" }, layers: defaultLayers(), guides: [], name: _t('board.doc.025'), seq: 1, meta: defaultMeta(), styles: defaultStyles(), frames: [], cards: [], assets: {}, site: null });
 
 function cleanMeta(m) {
   const o = defaultMeta();
@@ -311,7 +312,7 @@ export function sanitizeDoc(raw, info = {}) {
   out.spreadView = raw?.spreadView === true;
   if (raw?.export && EXPORT_PRESETS.includes(raw.export.preset)) out.export = { preset: raw.export.preset };
   if (isBoolObj(raw?.layers)) for (const k of LAYERS) { const v = raw.layers[k]; if (isBoolObj(v)) out.layers[k] = { hidden: v.hidden === true, locked: v.locked === true }; }
-  out.name = String(raw?.name || "Atelier 보드").slice(0, 80);
+  out.name = String(raw?.name || _t('board.doc.025')).slice(0, 80);
   out.meta = cleanMeta(raw?.meta);
   out.styles = cleanStyles(raw?.styles);
   if (raw?.site && typeof raw.site === "object") out.site = { address: str(raw.site.address, 200), radius: str(raw.site.radius, 40) };
@@ -406,7 +407,7 @@ export function sanitizeDoc(raw, info = {}) {
       let q = out.parents.find(z => z.size === f.size && z.orientation === f.orientation && z.items.some(i => i.kind === "cartouche"));
       if (!q) {
         if (B.size === f.size && B.orientation === f.orientation) { B.items.unshift({ id: "pB_cart", kind: "cartouche", x: 0, y: 0, w: 1, h: 1 }); q = B; }
-        else { const id = "P" + (++extra); q = { ...JSON.parse(JSON.stringify(A)), id, name: "부모 " + id, size: f.size, orientation: f.orientation }; q.items = [{ id: "p" + id + "_cart", kind: "cartouche", x: 0, y: 0, w: 1, h: 1 }]; out.parents.push(q); }
+        else { const id = "P" + (++extra); q = { ...JSON.parse(JSON.stringify(A)), id, name: _t('board.doc.026') + id, size: f.size, orientation: f.orientation }; q.items = [{ id: "p" + id + "_cart", kind: "cartouche", x: 0, y: 0, w: 1, h: 1 }]; out.parents.push(q); }
       }
       f.parent = q.id; f.cartouche = false;
     }

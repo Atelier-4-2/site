@@ -1,11 +1,14 @@
+import { t as _t } from "./i18n.js?v=20261122i";
 // Build 5a: semester work record (sections, dates, status, tags, comments, marks, snapshots, search). Pure (no DOM, no imports).
 const r2 = n => Math.round(n * 100) / 100;
 const num = (v, d, lo, hi) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
 const idOk = v => /^[A-Za-z0-9_-]{1,40}$/.test(String(v));
 const strCap = (v, max, d = "") => (typeof v === "string" || typeof v === "number") ? String(v).slice(0, max) : d;
 export const STATUSES = ["keep", "review", "drop"];
-export const STATUS_LABEL = { keep: "유지", review: "검토", drop: "버림" };
-export const AUTHORS = ["나", "교수", "동료"];
+export const STATUS_LABEL = { get keep() { return _t('board.record.001'); }, get review() { return _t('board.record.002'); }, get drop() { return _t('board.record.003'); } };
+export const AUTHORS = ["나", "교수", "동료"];   // stored values (kept in .atelier files); shown through authorLabel()
+export const AUTHOR_KEYS = { 나: "board.record.004", 교수: "board.record.005", 동료: "board.record.006" };
+export const authorLabel = a => _t(AUTHOR_KEYS[a] || AUTHOR_KEYS["나"]);
 export const AUTHOR_COLOR = { 나: "#1d1d1f", 교수: "#d63af9", 동료: "#00a3bf" };   // red is reserved for errors
 export const PEN_COLORS = { ink: "#1d1d1f", cyan: "#00a3bf", magenta: "#d63af9" };
 export const SECTION_COLORS = ["s1", "s2", "s3", "s4", "s5"];
@@ -35,7 +38,7 @@ export function cleanSections(list) {
   for (const s of (Array.isArray(list) ? list : []).slice(0, MAX_SECTIONS)) {
     if (!s || !idOk(s.id) || seen.has(String(s.id))) continue;
     seen.add(String(s.id));
-    out.push({ id: String(s.id), name: strCap(s.name, 60, "구역"), x: num(s.x, 0, -1e6, 1e6), y: num(s.y, 0, -1e6, 1e6), w: num(s.w, 400, 20, 1e5), h: num(s.h, 300, 20, 1e5), color: SECTION_COLORS.includes(s.color) ? s.color : "s1", collapsed: s.collapsed === true });
+    out.push({ id: String(s.id), name: strCap(s.name, 60, _t('board.record.007')), x: num(s.x, 0, -1e6, 1e6), y: num(s.y, 0, -1e6, 1e6), w: num(s.w, 400, 20, 1e5), h: num(s.h, 300, 20, 1e5), color: SECTION_COLORS.includes(s.color) ? s.color : "s1", collapsed: s.collapsed === true });
   }
   return out;
 }
@@ -109,10 +112,10 @@ export function moveCaptured(S, cap, dx, dy) {
   return n;
 }
 export function moveSection(S, id, dx, dy) { const cap = captureSection(S, id); return cap ? moveCaptured(S, cap, dx, dy) : 0; }
-export const SEMESTER_NAMES = ["01 리서치", "02 대지", "03 콘셉트", "04 진행", "05 최종 판넬"];
+export const semesterNames = () => [_t('board.record.008'), _t('board.record.009'), _t('board.record.010'), _t('board.record.011'), _t('board.record.012')];
 // semester board: 5 sections in a row; the A1 page goes into section 05
 export function semesterLayout(seq0) {
-  const W = 800, H = 1000, G = 40, sections = SEMESTER_NAMES.map((name, i) => ({ id: "sec" + (seq0 + i), name, x: i * (W + G), y: 0, w: W, h: H, color: SECTION_COLORS[i % 5], collapsed: false }));
+  const W = 800, H = 1000, G = 40, sections = semesterNames().map((name, i) => ({ id: "sec" + (seq0 + i), name, x: i * (W + G), y: 0, w: W, h: H, color: SECTION_COLORS[i % 5], collapsed: false }));
   return { sections, pageAt: { x: sections[4].x + (W - 594) / 2, y: 80 } };
 }
 export function nextSemaineName(S, today = todayStr()) {
@@ -120,7 +123,7 @@ export function nextSemaineName(S, today = todayStr()) {
   for (const s of S.sections || []) { const m = /^Semaine (\d+)$/.exec(s.name); if (m) max = Math.max(max, Number(m[1])); }
   return `Semaine ${String(max ? max + 1 : isoWeek(today).week).padStart(2, "0")}`;
 }
-export const cardTitle = (S, c) => c.kind === "link" ? String(c.title || c.url || "링크").slice(0, 30) : c.kind === "image" || c.kind === "diagram" ? (S.assets?.[c.ref]?.title || c.kind) : c.kind === "stamp" ? "스탬프" : (String(c.text || "").split("\n")[0].slice(0, 30) || "글");
+export const cardTitle = (S, c) => c.kind === "link" ? String(c.title || c.url || _t('board.record.013')).slice(0, 30) : c.kind === "image" || c.kind === "diagram" ? (S.assets?.[c.ref]?.title || c.kind) : c.kind === "stamp" ? _t('board.record.014') : (String(c.text || "").split("\n")[0].slice(0, 30) || _t('board.record.015'));
 // work record grouped by ISO week: cards by creation date, comments by date, snapshots by date
 export function groupByWeek(S, snaps = [], f = {}) {
   const dropIds = new Set(f.hideDrop ? S.cards.filter(c => c.status === "drop").map(c => c.id) : []);

@@ -1,3 +1,4 @@
+import { t as _t, getLang as _lang } from "./i18n.js?v=20261122i";
 // Build 4b: parent pages, spreads, style overrides, swatches, fields. Pure (no DOM, no imports) so node can test it.
 const PAPER = { A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297] };
 export const psize = (size, orient) => { const [a, b] = PAPER[size] || PAPER.A3; return orient === "portrait" ? [a, b] : [b, a]; };
@@ -10,8 +11,8 @@ export const SW_RE = /^sw:([A-Za-z0-9_-]{1,40})(?:@(\d{1,3}))?$/;
 export const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
 export const isColorRef = v => typeof v === "string" && (HEX_RE.test(v) || SW_RE.test(v));
 export const DEFAULT_SWATCHES = () => [
-  ["ink", "먹", "#1d1d1f"], ["white", "흰색", "#ffffff"], ["muted", "회색", "#6e6e73"], ["grey2", "연회색", "#a1a1a6"], ["accent", "강조", "#e6b89c"],
-  ["green", "녹지", "#7fa66a"], ["blue", "수공간", "#3b6ea5"], ["red", "붉은색", "#c0392b"]
+  ["ink", _t('board.parent.001'), "#1d1d1f"], ["white", _t('board.parent.002'), "#ffffff"], ["muted", _t('board.parent.003'), "#6e6e73"], ["grey2", _t('board.parent.004'), "#a1a1a6"], ["accent", _t('board.parent.005'), "#e6b89c"],
+  ["green", _t('board.parent.006'), "#7fa66a"], ["blue", _t('board.parent.007'), "#3b6ea5"], ["red", _t('board.parent.008'), "#c0392b"]
 ].map(([id, name, hex]) => ({ id, name, hex }));
 export function tintHex(hex, pct) {   // pct % of the colour on white
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -30,7 +31,7 @@ export function resolveColor(S, v, fb = "#1d1d1f") {
 }
 export function addSwatch(S, name, hex, id) {
   if ((S.swatches || []).length >= MAX_SWATCHES || !HEX_RE.test(hex)) return null;
-  const sw = { id, name: String(name || "견본").slice(0, 40), hex };
+  const sw = { id, name: String(name || _t('board.parent.009')).slice(0, 40), hex };
   (S.swatches ||= []).push(sw);
   return sw;
 }
@@ -49,11 +50,11 @@ export function deleteSwatch(S, id) {
 
 // ---- parents ----------------------------------------------------------------------------------------------------------
 export function makeParents() {
-  const A = { id: "A", name: "판넬", size: "A1", orientation: "portrait", margin: [15, 15, 15, 15], cols: 6, gutter: 5, items: [] };
-  const B = { id: "B", name: "카르네", size: "A3", orientation: "landscape", margin: [10, 10, 10, 10], cols: 12, gutter: 4, items: [] };
+  const A = { id: "A", name: _t('board.parent.010'), size: "A1", orientation: "portrait", margin: [15, 15, 15, 15], cols: 6, gutter: 5, items: [] };
+  const B = { id: "B", name: _t('board.parent.011'), size: "A3", orientation: "landscape", margin: [10, 10, 10, 10], cols: 12, gutter: 4, items: [] };
   const [aw] = psize(A.size, A.orientation), [bw, bh] = psize(B.size, B.orientation);
-  A.items = [{ id: "pA_cart", kind: "cartouche", x: 0, y: 0, w: 1, h: 1 }, { id: "pA_no", kind: "text", role: "caption", text: "{쪽}", align: "right", x: aw - 15 - 20, y: 6, w: 20, h: 6 }];
-  B.items = [{ id: "pB_foot", kind: "text", role: "caption", text: "{프로젝트} · {쪽}", align: "left", x: 10, y: bh - 10 + 2, w: bw - 20, h: 6 }];
+  A.items = [{ id: "pA_cart", kind: "cartouche", x: 0, y: 0, w: 1, h: 1 }, { id: "pA_no", kind: "text", role: "caption", text: _t('board.parent.012'), align: "right", x: aw - 15 - 20, y: 6, w: 20, h: 6 }];
+  B.items = [{ id: "pB_foot", kind: "text", role: "caption", text: _t('board.parent.013'), align: "left", x: 10, y: bh - 10 + 2, w: bw - 20, h: 6 }];
   return [A, B];
 }
 export const parentById = (S, id) => (S.parents || []).find(p => p.id === id) || null;
@@ -145,12 +146,16 @@ export function layoutSpreads(S) {   // returns the ids of the cards it moved
 export const partnerOf = (S, f) => { const i = S.frames.indexOf(f); return f.spread === "L" ? S.frames[i + 1] : f.spread === "R" ? S.frames[i - 1] : null; };
 
 // ---- fields ---------------------------------------------------------------------------------------------------------------
+// Field tokens are stored in the text of boards: the Korean tokens work forever; French aliases are accepted too.
 export const FIELDS = ["쪽", "전체", "축척", "날짜", "프로젝트", "이름", "아틀리에", "교수"];
+export const FIELD_ALIASES = { page: "쪽", total: "전체", echelle: "축척", date: "날짜", projet: "프로젝트", nom: "이름", atelier: "아틀리에", enseignants: "교수" };
+const ALIAS_OF = Object.fromEntries(Object.entries(FIELD_ALIASES).map(([a, k]) => [k, a]));
+export const fieldToken = (name, lang = _lang()) => `{${lang === "fr" ? ALIAS_OF[name] || name : name}}`;   // the token of the current language
 // den: the page's scale denominator (caller computes it from the first scaled card) or null
 export function expandFields(text, { S, pageNo, total, den }) {
   const meta = S.meta || {};
   const map = { 쪽: pageNo, 전체: total, 축척: den ? `1:${den}` : "", 날짜: meta.date || "", 프로젝트: meta.project || S.name || "", 이름: meta.author || "", 아틀리에: meta.atelier || "", 교수: meta.teachers || "" };
-  return String(text ?? "").replace(/\{(쪽|전체|축척|날짜|프로젝트|이름|아틀리에|교수)\}/g, (_, k) => String(map[k] ?? ""));
+  return String(text ?? "").replace(/\{(쪽|전체|축척|날짜|프로젝트|이름|아틀리에|교수|page|total|echelle|date|projet|nom|atelier|enseignants)\}/g, (_, k) => String(map[FIELD_ALIASES[k] || k] ?? ""));
 }
 export function pageDen(S, f, denOf) {
   const cs = S.cards.filter(c => c.page === f.id && (c.kind === "diagram" || c.kind === "image")).sort((a, b) => a.z - b.z);

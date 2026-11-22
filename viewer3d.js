@@ -1,6 +1,8 @@
+import { t as _t, loadedPromise } from "./i18n.js?v=20261122i";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { STLExporter } from "three/addons/exporters/STLExporter.js";
+await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 function openRing(ring) {
   const points = ring.map(point => [point[0], point[1]]);
@@ -9,7 +11,7 @@ function openRing(ring) {
     const last = points[points.length - 1];
     if (first[0] === last[0] && first[1] === last[1]) points.pop();
   }
-  if (points.length < 3) throw new Error("지형판 폐곡선의 점이 부족합니다.");
+  if (points.length < 3) throw new Error(_t('terrain.v3d.001'));
   return points;
 }
 
@@ -343,7 +345,7 @@ export class Viewer3D {
   }
 
   export3DM(rhino) {
-    if (!this.project) throw new Error("생성된 프로젝트가 없습니다.");
+    if (!this.project) throw new Error(_t('terrain.v3d.002'));
     const file = new rhino.File3dm();
     const scale = 1000 / this.project.settings.scale;
     file.settings().modelUnitSystem = rhino.UnitSystem.Millimeters;
@@ -372,7 +374,7 @@ export class Viewer3D {
             const outer = profile(shapes);
             try {
               if (!extrusion.setOuterProfile(outer, true)) {
-                throw new Error(`Rhino 외곽선 생성 실패: ${source.name}`);
+                throw new Error(_t('terrain.v3d.003', { 0: source.name }));
               }
             } finally {
               outer.delete();
@@ -381,7 +383,7 @@ export class Viewer3D {
               const inner = profile(hole);
               try {
                 if (!extrusion.addInnerProfile(inner)) {
-                  throw new Error(`Rhino 내부 구멍 생성 실패: ${source.name}`);
+                  throw new Error(_t('terrain.v3d.004', { 0: source.name }));
                 }
               } finally {
                 inner.delete();
@@ -390,7 +392,7 @@ export class Viewer3D {
             const brep = extrusion.toBrep(true);
             try {
               if (!brep?.isValid || !brep.isSolid) {
-                throw new Error(`닫힌 Rhino 폴리서피스 생성 실패: ${source.name}`);
+                throw new Error(_t('terrain.v3d.005', { 0: source.name }));
               }
               if (source.position.z !== 0) brep.translate([0, 0, source.position.z * scale]);
               file.objects().add(brep, attributes);

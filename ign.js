@@ -1,8 +1,10 @@
+import { t as _t, loadedPromise } from "./i18n.js?v=20261122i";
+await loadedPromise;   // the catalogs are ready before any module-level t() call
 const L = globalThis.L;
 const proj4 = globalThis.proj4;
 
 if (!L || !proj4) {
-  throw new Error("Leaflet 또는 좌표 변환 라이브러리를 불러오지 못했습니다.");
+  throw new Error(_t('ign.001'));
 }
 
 proj4.defs(
@@ -22,7 +24,7 @@ export const toL93 = (lon, lat) =>
 export const toWGS84 = (x, y) =>
   proj4("EPSG:2154", "EPSG:4326", [x, y]);
 
-const abortError = () => new DOMException("취소되었습니다.", "AbortError");
+const abortError = () => new DOMException(_t('ign.002'), "AbortError");
 
 function checkAbort(signal) {
   if (signal?.aborted) throw abortError();
@@ -73,7 +75,7 @@ function requestJSON(endpoint, params, signal) {
         });
 
         if (!response.ok) {
-          const error = new Error(`IGN 요청 실패: HTTP ${response.status}`);
+          const error = new Error(_t('ign.003', { 0: response.status }));
           error.retryable = response.status === 429 || response.status >= 500;
           throw error;
         }
@@ -87,7 +89,7 @@ function requestJSON(endpoint, params, signal) {
         if (!retryable || attempt === 2) {
           throw new Error(
             error.name === "AbortError"
-              ? "IGN 응답 시간이 초과되었습니다."
+              ? _t('ign.004')
               : error.message
           );
         }
@@ -117,7 +119,7 @@ export async function searchPlaces(query, signal) {
     GEOCODE, { q, index: "address,poi", limit: 8 }, signal
   );
   if (!Array.isArray(data.features)) {
-    throw new Error("주소 검색 응답 형식이 올바르지 않습니다.");
+    throw new Error(_t('ign.005'));
   }
   return data.features.flatMap(feature => {
     const coordinates = feature.geometry?.coordinates;
@@ -127,7 +129,7 @@ export async function searchPlaces(query, signal) {
     const p = feature.properties || {};
     const city = [p.postcode, p.city].flat().filter(Boolean)[0];
     const label = p._type === "poi"
-      ? `${[p.toponym, p.name].flat().filter(Boolean)[0] || p.label} · 장소${city ? " · " + city : ""}`
+      ? _t('ign.006', { 0: [p.toponym, p.name].flat().filter(Boolean)[0] || p.label, 1: city ? " · " + city : "" })
       : (p.label || `${lat}, ${lon}`);
     return [{
       label,
@@ -146,12 +148,12 @@ function numeric(value) {
 
 function ring2D(ring) {
   if (!Array.isArray(ring) || ring.length < 4) {
-    throw new Error("IGN 건물 외곽선이 올바르지 않습니다.");
+    throw new Error(_t('ign.007'));
   }
   return ring.map(point => {
     if (!Array.isArray(point) ||
         !Number.isFinite(point[0]) || !Number.isFinite(point[1])) {
-      throw new Error("IGN 건물 좌표가 올바르지 않습니다.");
+      throw new Error(_t('ign.008'));
     }
     return [point[0], point[1]];
   });
@@ -176,14 +178,14 @@ export async function fetchBuildings(bounds, signal, progress = () => {}) {
     }, signal);
 
     if (!Array.isArray(data.features)) {
-      throw new Error("IGN 건물 응답 형식이 올바르지 않습니다.");
+      throw new Error(_t('ign.009'));
     }
 
     const signature = JSON.stringify(
       data.features.map(feature => feature.id || feature.geometry)
     );
     if (data.features.length && signature === previousPage) {
-      throw new Error("IGN 건물 페이지가 반복됩니다. 범위를 줄여 다시 조회하세요.");
+      throw new Error(_t('ign.010'));
     }
     previousPage = signature;
 
@@ -191,7 +193,7 @@ export async function fetchBuildings(bounds, signal, progress = () => {}) {
       const geometry = feature.geometry;
       if (!geometry) continue;
       if (!["Polygon", "MultiPolygon"].includes(geometry.type)) {
-        throw new Error(`지원하지 않는 IGN 건물 형식: ${geometry.type}`);
+        throw new Error(_t('ign.011', { 0: geometry.type }));
       }
 
       const properties = feature.properties || {};
@@ -228,14 +230,14 @@ export async function fetchBuildings(bounds, signal, progress = () => {}) {
       }
     }
 
-    progress(`건물 ${result.length}개를 조회했습니다.`);
+    progress(_t('ign.012', { 0: result.length }));
     const matched = numeric(data.numberMatched);
     if (data.features.length < 1000 ||
         (matched !== null && start + data.features.length >= matched)) {
       return result;
     }
   }
-  throw new Error("건물 조회 한도를 넘었습니다. 범위를 줄여주세요.");
+  throw new Error(_t('ign.013'));
 }
 
 async function sampleElevations(points, signal, progress = () => {}) {
@@ -247,7 +249,7 @@ async function sampleElevations(points, signal, progress = () => {}) {
     const coordinates = chunk.map(([x, y]) => toWGS84(x, y));
 
     if (coordinates.some(([lon, lat]) => !mainland(lon, lat))) {
-      throw new Error("표고 조회 범위가 프랑스 본토 지원 범위를 벗어났습니다.");
+      throw new Error(_t('ign.014'));
     }
 
     const data = await requestJSON(ELEVATION, {
@@ -259,17 +261,17 @@ async function sampleElevations(points, signal, progress = () => {}) {
 
     if (!Array.isArray(data.elevations) ||
         data.elevations.length !== chunk.length) {
-      throw new Error("표고 응답 개수가 요청한 샘플 수와 다릅니다.");
+      throw new Error(_t('ign.015'));
     }
 
     for (const item of data.elevations) {
       const z = numeric(typeof item === "object" && item !== null ? item.z : item);
       if (z === null || z <= -999) {
-        throw new Error("표고가 없는 지점이 있습니다. 범위를 조정하세요.");
+        throw new Error(_t('ign.016'));
       }
       result.push(z);
     }
-    progress(`표고 ${result.length} / ${points.length}점을 조회했습니다.`);
+    progress(_t('ign.017', { 0: result.length, 1: points.length }));
   }
   return result;
 }
@@ -280,22 +282,22 @@ export async function fetchTerrain(
   const [xmin, ymin, xmax, ymax] = bounds;
   const width = xmax - xmin;
   if (!(width > 0) || Math.abs(width - (ymax - ymin)) > 0.001) {
-    throw new Error("정사각형 범위가 필요합니다.");
+    throw new Error(_t('ign.018'));
   }
   if (!(requestedStep >= 1 && requestedStep <= 100)) {
-    throw new Error("표고 샘플 간격은 1~100 m로 입력하세요.");
+    throw new Error(_t('ign.019'));
   }
   const n = Math.ceil(width / requestedStep) + 1;
   if (n * n > 10000) {
     throw new Error(
-      `표고 샘플이 ${n * n}개입니다. 10,000개 이하가 되도록 간격을 늘리세요.`
+      _t('ign.020', { 0: n * n })
     );
   }
   // IGN BD TOPO often lacks a height for small structures: skip them, don't block.
   const skippedNoHeight = buildings.filter(building => !(building.h > 0)).length;
   buildings = buildings.filter(building => building.h > 0);
   if (skippedNoHeight) {
-    progress(`높이 정보가 없는 건물 ${skippedNoHeight}개는 제외했습니다.`);
+    progress(_t('ign.021', { 0: skippedNoHeight }));
   }
 
   const dx = width / (n - 1);
@@ -322,7 +324,7 @@ export async function fetchTerrain(
     .filter(index => index >= 0);
 
   if (missing.length) {
-    progress(`지면 표고가 없는 건물 ${missing.length}개의 기준 표고를 조회합니다.`);
+    progress(_t('ign.022', { 0: missing.length }));
     const bases = await sampleElevations(
       missing.map(index => outputBuildings[index].polygon[0]),
       signal,
@@ -391,7 +393,7 @@ export class IGNMap {
       layer.on("tileerror", () => { failed += 1; });
       layer.on("load", () => {
         this.onNotice(failed > 0 && loaded === 0
-          ? "지도 타일을 불러오지 못했습니다. 연결 상태를 확인하세요." : "");
+          ? _t('ign.023') : "");
       });
     }
 
@@ -441,7 +443,7 @@ export class IGNMap {
       const side = bounds[2] - bounds[0];
       if (side < 40 || side > 5000) {
         this.renderRange();
-        this.onNotice("범위 한 변은 40~5,000 m로 그려주세요.");
+        this.onNotice(_t('ign.024'));
         return;
       }
       this.setBounds(bounds);
@@ -499,7 +501,7 @@ export class IGNMap {
 
   setRadius(radius) {
     if (!(radius >= 20 && radius <= 2500)) {
-      throw new Error("반경은 20~2,500 m로 입력하세요.");
+      throw new Error(_t('ign.025'));
     }
     this.radius = radius;
     if (this.bounds) {
@@ -514,7 +516,7 @@ export class IGNMap {
   setCenter(x, y) {
     const [lon, lat] = toWGS84(x, y);
     if (!mainland(lon, lat)) {
-      this.onNotice("프랑스 본토의 위치를 선택하세요.");
+      this.onNotice(_t('ign.026'));
       return;
     }
     if (this.marker) this.map.removeLayer(this.marker);
@@ -529,7 +531,7 @@ export class IGNMap {
   setBounds(bounds) {
     if (squareRing(bounds).some(point => !mainland(...toWGS84(...point)))) {
       this.renderRange();
-      this.onNotice("프랑스 본토 지원 범위 안에서 선택하세요.");
+      this.onNotice(_t('ign.027'));
       return;
     }
     this.bounds = bounds;
@@ -660,11 +662,11 @@ export async function fetchWfsFeatures(
     }
     const data = await requestJSON(WFS, params, signal);
     if (!Array.isArray(data.features)) {
-      throw new Error(`IGN ${label} 응답 형식이 올바르지 않습니다.`);
+      throw new Error(_t('ign.028', { 0: label }));
     }
     const signature = JSON.stringify(data.features.map(f => f.id || f.geometry));
     if (data.features.length && signature === previousPage) {
-      throw new Error(`IGN ${label} 페이지 요청이 반복됩니다. 대지 범위를 줄여 다시 시도해 주세요.`);
+      throw new Error(_t('ign.029', { 0: label }));
     }
     previousPage = signature;
 
@@ -701,21 +703,21 @@ export async function fetchWfsFeatures(
       }
       result.push(item);
     }
-    progress(`${label} ${result.length}개를 조회했습니다.`);
+    progress(_t('ign.030', { 0: label, 1: result.length }));
     const matched = numeric(data.numberMatched);
     if (data.features.length < 1000 ||
         (matched !== null && start + data.features.length >= matched)) {
       return result;
     }
   }
-  throw new Error(`${label} 데이터가 조회 한도를 초과했습니다. 대지 범위를 줄여주세요.`);
+  throw new Error(_t('ign.031', { 0: label }));
 }
 
 // Buildings with every attribute the diagrams need. Missing values stay null
 // (shown as "미상" by the diagrams, never silently dropped).
 export async function fetchBuildingsDetailed(bounds, signal, progress = () => {}) {
   const features = await fetchWfsFeatures(
-    "BDTOPO_V3:batiment", bounds, signal, progress, "건물"
+    "BDTOPO_V3:batiment", bounds, signal, progress, _t('ign.032')
   );
   const out = [];
   for (const f of features) {
@@ -739,20 +741,20 @@ export async function fetchBuildingsDetailed(bounds, signal, progress = () => {}
 }
 
 export const fetchVegetation = (bounds, signal, progress) =>
-  fetchWfsFeatures("BDTOPO_V3:zone_de_vegetation", bounds, signal, progress, "녹지");
+  fetchWfsFeatures("BDTOPO_V3:zone_de_vegetation", bounds, signal, progress, _t('ign.033'));
 
 export const fetchWaterSurfaces = (bounds, signal, progress) =>
-  fetchWfsFeatures("BDTOPO_V3:surface_hydrographique", bounds, signal, progress, "수면");
+  fetchWfsFeatures("BDTOPO_V3:surface_hydrographique", bounds, signal, progress, _t('ign.034'));
 
 export const fetchWaterLines = (bounds, signal, progress) =>
-  fetchWfsFeatures("BDTOPO_V3:troncon_hydrographique", bounds, signal, progress, "하천선");
+  fetchWfsFeatures("BDTOPO_V3:troncon_hydrographique", bounds, signal, progress, _t('ign.035'));
 
 export const fetchRoads = (bounds, signal, progress) =>
-  fetchWfsFeatures("BDTOPO_V3:troncon_de_route", bounds, signal, progress, "도로");
+  fetchWfsFeatures("BDTOPO_V3:troncon_de_route", bounds, signal, progress, _t('ign.036'));
 
 export const fetchParcels = (bounds, signal, progress) =>
   fetchWfsFeatures(
-    "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle", bounds, signal, progress, "필지"
+    "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle", bounds, signal, progress, _t('ign.037')
   );
 
 // Fetching CORS-approved blobs keeps every bitmap origin-clean for canvas export.
@@ -764,12 +766,12 @@ async function photoTile(url, signal) {
   try {
     checkAbort(signal);
     const r = await fetch(url, { mode: "cors", signal: controller.signal });
-    if (!r.ok) throw new Error(`IGN 항공사진 요청 실패: HTTP ${r.status}`);
+    if (!r.ok) throw new Error(_t('ign.038', { 0: r.status }));
     const image = await createImageBitmap(await r.blob());
     if (signal.aborted || image.width !== 256 || image.height !== 256) {
       image.close();
       checkAbort(signal);
-      throw new Error("IGN 항공사진 응답이 이미지가 아닙니다.");
+      throw new Error(_t('ign.039'));
     }
     return image;
   } finally {
@@ -832,7 +834,7 @@ async function wmtsOrthophoto(bounds, width, height, signal) {
     }
     target.putImageData(pixels, 0, 0);
     const blob = await new Promise((resolve, reject) => output.toBlob(
-      b => b ? resolve(b) : reject(new Error("IGN 항공사진 요청 실패")), "image/jpeg", .92));
+      b => b ? resolve(b) : reject(new Error(_t('ign.040'))), "image/jpeg", .92));
     checkAbort(signal);
     return blob;
   } finally {
@@ -846,7 +848,7 @@ async function wmtsOrthophoto(bounds, width, height, signal) {
 export function fetchOrthophoto(bounds, pixels, signal) {
   const dx = bounds[2] - bounds[0], dy = bounds[3] - bounds[1];
   if (!bounds.every(Number.isFinite) || !(dx > 0 && dy > 0 && pixels > 0 && Number.isFinite(pixels))) {
-    return Promise.reject(new Error("IGN 항공사진 요청 실패"));
+    return Promise.reject(new Error(_t('ign.040')));
   }
   const scale = Math.min(pixels / dx, 4096 / dx, 4096 / dy);
   const width = Math.max(1, Math.round(dx * scale)), height = Math.max(1, Math.round(dy * scale));
@@ -869,18 +871,18 @@ export function fetchOrthophoto(bounds, pixels, signal) {
         }).toString();
         const response = await fetch(url, { mode: "cors", signal: controller.signal });
         if (!response.ok) {
-          const error = new Error(`IGN 항공사진 요청 실패: HTTP ${response.status}`);
+          const error = new Error(_t('ign.038', { 0: response.status }));
           error.retryable = response.status === 429 || response.status >= 500;
           throw error;
         }
         const blob = await response.blob();
         if (!/^image\//.test(blob.type)) {
-          throw new Error("IGN 항공사진 응답이 이미지가 아닙니다.");
+          throw new Error(_t('ign.039'));
         }
         const image = await createImageBitmap(blob);
         const valid = image.width === width && image.height === height;
         image.close();
-        if (!valid) throw new Error("IGN 항공사진 응답이 이미지가 아닙니다.");
+        if (!valid) throw new Error(_t('ign.039'));
         checkAbort(signal);
         return blob;
       } catch (error) {
@@ -889,7 +891,7 @@ export function fetchOrthophoto(bounds, pixels, signal) {
           error instanceof TypeError;
         if (!retryable || attempt === 2) {
           throw new Error(error.name === "AbortError"
-            ? "IGN 항공사진 응답 시간이 초과되었습니다." : error.message);
+            ? _t('ign.041') : error.message);
         }
       } finally {
         clearTimeout(timeout);
@@ -918,12 +920,12 @@ export function fetchOrthophoto(bounds, pixels, signal) {
 // Géoportail de l'Urbanisme (Géoplateforme WFS): wfs_du:zone_urba
 // props: libelle (zone code, e.g. "UV"), libelong, typezone (U/AU/A/N), idurba.
 export const fetchPluZones = (bounds, signal, progress) =>
-  fetchWfsFeatures("wfs_du:zone_urba", bounds, signal, progress, "PLU 구역");
+  fetchWfsFeatures("wfs_du:zone_urba", bounds, signal, progress, _t('ign.042'));
 
 // Servitudes d'utilité publique, polygon assiettes: wfs_sup:assiette_sup_s
 // props: suptype (ac1, ac2, ac4, i4, pm1, t1, el3 ...), typeass, nomsuplitt.
 export const fetchSup = (bounds, signal, progress) =>
-  fetchWfsFeatures("wfs_sup:assiette_sup_s", bounds, signal, progress, "SUP 보호구역");
+  fetchWfsFeatures("wfs_sup:assiette_sup_s", bounds, signal, progress, _t('ign.043'));
 
 // Emplacements réservés = GPU prescriptions with typepsc = '05' (surface, line
 // and point tables). Same feature shape as fetchWfsFeatures, plus `kind`.
@@ -933,7 +935,7 @@ export async function fetchReservedSites(bounds, signal, progress) {
     let fs = [];
     try {
       fs = await fetchWfsFeatures(
-        `wfs_du:prescription_${t}`, bounds, signal, progress, "예정부지", "typepsc='05'");
+        `wfs_du:prescription_${t}`, bounds, signal, progress, _t('ign.044'), "typepsc='05'");
     } catch (error) {
       if (t === "surf") throw error; // line/point tables are optional extras
       if (error.name === "AbortError") throw error;
@@ -950,7 +952,7 @@ export async function fetchIsochrones(center, signal, progress = () => {}, minut
   const [lon, lat] = toWGS84(center[0], center[1]);
   const out = [];
   for (const m of minutes) {
-    progress(`도보 ${m}분권 조회 중`);
+    progress(_t('ign.045', { 0: m }));
     const data = await requestJSON("https://data.geopf.fr/navigation/isochrone", {
       point: `${lon.toFixed(6)},${lat.toFixed(6)}`,
       resource: "bdtopo-valhalla", profile: "pedestrian", costType: "time",
@@ -958,7 +960,7 @@ export async function fetchIsochrones(center, signal, progress = () => {}, minut
       geometryFormat: "geojson", crs: "EPSG:4326"
     }, signal);
     const g = data.geometry;
-    if (!g || !g.coordinates) throw new Error("IGN 등시간권 응답 형식이 올바르지 않습니다.");
+    if (!g || !g.coordinates) throw new Error(_t('ign.046'));
     const polys = g.type === "MultiPolygon" ? g.coordinates : [g.coordinates];
     out.push({ min: m, polygons: polys.map(p => p.map(r => r.map(([x, y]) => toL93(x, y)))) });
   }
@@ -997,20 +999,20 @@ async function overpassTry(query, signal, label) {
         const url = new URL(endpoint);
         url.search = new URLSearchParams({ data: query }).toString();
         const response = await fetch(url, { mode: "cors", signal: controller.signal });
-        if (!response.ok) throw new Error(`OSM(Overpass) 요청 실패: HTTP ${response.status}`);
+        if (!response.ok) throw new Error(_t('ign.047', { 0: response.status }));
         const json = await response.json();
-        if (!Array.isArray(json.elements)) throw new Error(`OSM ${label} 응답 형식이 올바르지 않습니다.`);
+        if (!Array.isArray(json.elements)) throw new Error(_t('ign.048', { 0: label }));
         return json.elements;
       } catch (error) {
         checkAbort(signal);
-        lastError = error.name === "AbortError" ? new Error("OSM(Overpass) 응답 시간이 초과되었습니다.") : error;
+        lastError = error.name === "AbortError" ? new Error(_t('ign.049')) : error;
       } finally {
         clearTimeout(timeout);
         signal?.removeEventListener("abort", cancel);
       }
     }
   }
-  throw lastError || new Error("OSM(Overpass) 요청 실패");
+  throw lastError || new Error(_t('ign.050'));
 }
 
 // WGS84 bbox "south,west,north,east" enclosing an EPSG:2154 extent.
@@ -1035,11 +1037,11 @@ function splitNull(geometry) {
 
 // OSM natural=tree nodes (+ tree_row ways). Returns { points:[[x,y]], rows:[[pt,...]] }.
 export async function fetchOsmTrees(bounds, signal, progress = () => {}) {
-  progress("OSM 수목 조회 중");
+  progress(_t('ign.051'));
   const bb = wgsBox(bounds);
   const els = await overpass(
     `[out:json][timeout:25];(node["natural"="tree"](${bb});way["natural"="tree_row"](${bb}););out geom(${bb});`,
-    signal, "수목");
+    signal, _t('ign.052'));
   const points = [], rows = [];
   for (const e of els) {
     if (e.type === "node") points.push(toL93(e.lon, e.lat));
@@ -1053,14 +1055,14 @@ export async function fetchOsmTrees(bounds, signal, progress = () => {}) {
 // OSM public transport: stops and route relations (member geometry clipped to bbox).
 // Returns { stops:[{p, kind, name}], routes:[{ref, mode, colour, name, lines:[[pt,..]]}] }.
 export async function fetchOsmTransit(bounds, signal, progress = () => {}) {
-  progress("OSM 대중교통 조회 중");
+  progress(_t('ign.053'));
   const bb = wgsBox(bounds);
   const els = await overpass(
     `[out:json][timeout:25];(` +
     `node["highway"="bus_stop"](${bb});` +
     `node["railway"~"^(station|halt|tram_stop|subway_entrance)$"](${bb});` +
     `rel["route"~"^(bus|trolleybus|tram|subway|light_rail|train|monorail)$"](${bb});` +
-    `);out geom(${bb});`, signal, "대중교통");
+    `);out geom(${bb});`, signal, _t('ign.054'));
   const stops = [], routes = [];
   for (const e of els) {
     const t = e.tags || {};

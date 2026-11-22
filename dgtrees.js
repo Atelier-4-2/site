@@ -7,7 +7,7 @@
 //       genre, hauteur (m), circonference (cm), geo_point_2d
 //   opendata.paris.fr           les-arbres  (ODbL)
 //       genre, libellefrancais, circonferenceencm, hauteurenm, domanialite, geo_point_2d
-import { toL93, toWGS84, fetchOsmTrees } from "./ign.js?v=20261113p";
+import { toL93, toWGS84, fetchOsmTrees } from "./ign.js?v=20261122i";
 
 const H92 = "https://opendata.hauts-de-seine.fr/api/explore/v2.1/catalog/datasets/";
 const PARIS = "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/";

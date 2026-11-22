@@ -1,3 +1,4 @@
+import { t as _t } from "./i18n.js?v=20261122i";
 // Board v2 rendering for output: one page = frame content in frame-local mm (cards + cartouche), wrapped per output mode.
 // Used by PDF / PNG export, presentation mode and (cartoucheSvg) the on-screen frame.
 import { sanitizeSvgTree, safeImg, safeId, num, r2, frameSize, frameMargin, cartHeight, tilePlan, needsTiles, TILE_SLUG, TILE_OVERLAP, ROLES, DEFAULT_STYLES, LAYERS, defaultLayer, contentRect, stampSvg, cardDen } from "./board_v06_doc.js?v=20261122i";
@@ -42,7 +43,7 @@ function fitText(text, size, weight, maxW) {
 export function prefixSvg(svgText, pre, x, y, w, h) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
   const root = doc.documentElement;
-  if (root.localName !== "svg" || doc.querySelector("parsererror")) throw new Error("카드 SVG를 읽지 못했습니다.");
+  if (root.localName !== "svg" || doc.querySelector("parsererror")) throw new Error(_t('board.export.001'));
   sanitizeSvgTree(root);
   const cs = getComputedStyle(document.documentElement);
   const cssVars = s => s.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*((?:[^()]+|\([^()]*\))+))?\)/g, (_, n, fb) => cs.getPropertyValue(n).trim() || (fb || "").trim() || "#000");
