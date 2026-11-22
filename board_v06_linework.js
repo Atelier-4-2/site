@@ -163,9 +163,19 @@ export function segsToGeom(segs, m) {
 
 // ---- elements / pens ----------------------------------------------------------------------------------------------------------
 /** element: { id, d, w_mm, stroke, fill, dash, closed, len_mm, bbox, sub, text? } (mm, y down) */
-function mkEl(id, g, w_mm, stroke, fill, dash) {
-  return { id, d: g.d, w_mm: stroke ? r3(w_mm) : 0, stroke, fill, dash: !!dash, closed: g.closed, len_mm: r3(g.len), bbox: g.bbox.map(r3), sub: g.sub };
+function mkEl(id, g, w_mm, stroke, fill, dash, origFill) {
+  const e = { id, d: g.d, w_mm: stroke ? r3(w_mm) : 0, stroke, fill, dash: !!dash, closed: g.closed, len_mm: r3(g.len), bbox: g.bbox.map(r3), sub: g.sub, nv: vertCount(g) };
+  if (origFill) e.origFill = origFill;   // dark fill of a stroked+filled shape: not emitted as its own element (no double outline), only shown in the original view
+  return e;
 }
+/** number of polygon vertices of a single-subpath shape (closing point not counted); 99 for several subpaths */
+function vertCount(g) {
+  if (g.sub.length !== 1) return 99;
+  const s = g.sub[0]; let n = s.length / 2;
+  if (n > 1 && (g.closed || (s[0] === s[s.length - 2] && s[1] === s[s.length - 1]))) n--;
+  return n;
+}
+const isDarkFill = c => !!c && lightness(c) < 0.35;
 const dashOn = a => Array.isArray(a) && a.length > 0 && a.some(v => v > 0);
 export const penKeyOf = e => e.text ? "TEXT" : `${(Math.round(e.w_mm / 0.01) * 0.01).toFixed(2)}|${e.stroke || ""}|${e.dash ? 1 : 0}|${!e.stroke && e.fill ? "F:" + e.fill : ""}`;
 /** group elements into pens (sets el.pen = key and el.pi = pen index). paper = {w, h} mm. Sorted by element count, TEXT pen included. */
@@ -174,11 +184,12 @@ export function buildPens(elements, paper) {
   for (const e of elements) {
     const k = penKeyOf(e);
     let p = map.get(k);
-    if (!p) { p = { key: k, text: !!e.text, w_mm: e.text ? 0 : e.w_mm, stroke: e.stroke, fill: e.fill, dash: e.dash, fillOnly: !e.text && !e.stroke && !!e.fill, count: 0, sumSize: 0, longHoriz: 0, len_mm: 0 }; map.set(k, p); }
+    if (!p) { p = { key: k, text: !!e.text, w_mm: e.text ? 0 : e.w_mm, stroke: e.stroke, fill: e.fill, dash: e.dash, fillOnly: !e.text && !e.stroke && !!e.fill, count: 0, sumSize: 0, longHoriz: 0, len_mm: 0, small: 0 }; map.set(k, p); }
     p.count++; e.pen = k;
     if (e.text) continue;
     const bw = e.bbox[2] - e.bbox[0], bh = e.bbox[3] - e.bbox[1];
     p.sumSize += Math.max(bw, bh); p.len_mm += e.len_mm;
+    if (e.nv >= 3 && e.nv <= 4) p.small++;
     if (pw && !p.fillOnly && bw > 0.4 * pw && bh <= 0.05 * bw) p.longHoriz++;
   }
   const pens = [...map.values()].sort((a, b) => b.count - a.count);
@@ -196,7 +207,10 @@ export function classifyPens(pens, opts = {}) {
     if (p.text) { set(p, "text", "lw.r.text"); continue; }                                       // 1
     if (p.fillOnly) {                                                                              // 2
       if (p.count > 500 && p.avgSize < 2) set(p, "hide", "lw.r.hatch");
-      else if (lightness(p.fill) < 0.35) set(p, "cut", "lw.r.darkfill");
+      else if (lightness(p.fill) < 0.35) {
+        if (p.count > 30 && (p.small || 0) > 0.5 * p.count) set(p, "hide", "lw.r.splitfill");   // poche split into triangles (Rhino / AutoCAD PDF): a hatch-like mesh, not an outline
+        else set(p, "cut", "lw.r.darkfill");
+      }
       else set(p, "hide", "lw.r.lightfill");
       continue;
     }
@@ -215,12 +229,13 @@ export function classifyPens(pens, opts = {}) {
     const top = tiers[0], cnt = top.pens.reduce((a, p) => a + p.count, 0);
     if (cnt <= 5 && top.pens.every(p => p.longHoriz === p.count)) { for (const p of top.pens) set(p, "ground", "lw.r.ground", { w: r2(p.w_mm) }); tiers.shift(); }
   }
-  const n = tiers.length;
+  const n = tiers.length, groundTaken = total > n;
   tiers.forEach((t, r) => {
     const cls = n >= 4 ? ["cut", "part", "vis"][r] || "thin" : n === 3 ? ["cut", "vis", "thin"][r] : n === 2 ? ["cut", "thin"][r] : "vis";
     for (const p of t.pens) {
       const w = r2(p.w_mm);
-      if (n === 1) set(p, cls, "lw.r.only", { w });
+      if (n === 1 && groundTaken) set(p, "cut", "lw.r.top", { w });   // the ground line took the heaviest step: what is left is the cut
+      else if (n === 1) set(p, cls, "lw.r.only", { w });
       else if (r === 0) set(p, cls, "lw.r.top", { w });
       else if (cls === "thin" && r > 1 && n >= 4) set(p, cls, "lw.r.rest", { w });
       else set(p, cls, "lw.r.rank", { n: r + 1, w });
@@ -268,6 +283,8 @@ const UNIT_MM = { mm: 1, cm: 10, in: 25.4, pt: 25.4 / 72, pc: 25.4 / 6, px: 25.4
 const parseLen = v => { const m = /^\s*([-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?)\s*([a-z%]*)\s*$/i.exec(String(v ?? "")); if (!m) return null; const u = m[2].toLowerCase(); if (u === "%" || (u && !(u in UNIT_MM))) return null; return { v: parseFloat(m[1]), mm: parseFloat(m[1]) * (UNIT_MM[u || "px"]), unit: u }; };
 const SKIP = new Set(["defs", "clippath", "mask", "pattern", "symbol", "marker", "style", "title", "desc", "metadata", "lineargradient", "radialgradient", "filter", "script", "foreignobject", "image", "use"]);
 class LimitError extends Error { constructor(code) { super(code); this.code = code; } }
+/** a style length (number = user units, or "0.25mm" / "1pt" ...) -> user units (CSS px); NaN when not a length */
+const userPx = v => { if (typeof v === "number") return v; const p = parseLen(v); return p ? p.mm / UNIT_MM.px : NaN; };
 const attrNum = (el, n, d = 0) => { const v = parseFloat(el.getAttribute(n)); return Number.isFinite(v) ? v : d; };
 function shapeSegs(el, tag) {
   if (tag === "path") return parsePathData(el.getAttribute("d"));
@@ -328,13 +345,29 @@ export function svgDomToElements(root, getStyle, opts = {}) {
       return;
     }
     if (tag === "text") {
-      const str = String(el.textContent || "").replace(/\s+/g, " ").trim();
-      if (!str) return;
-      const first = String(el.getAttribute("x") || "").trim().split(/[\s,]+/)[0], fy = String(el.getAttribute("y") || "").trim().split(/[\s,]+/)[0];
-      const x = parseFloat(first) || 0, y = parseFloat(fy) || 0, p = apply(mm, x, y), sc = scaleOf(mm), fs = (Number.isFinite(st.fontSize) ? st.fontSize : 12) * sc;
-      const rot = Math.atan2(mm[1], mm[0]) * 180 / Math.PI, wEst = str.length * fs * 0.55, anchor = st.textAnchor === "middle" || st.textAnchor === "end" ? st.textAnchor : "start";
-      const x0 = anchor === "middle" ? p[0] - wEst / 2 : anchor === "end" ? p[0] - wEst : p[0];
-      push({ text: { str, x: r3(p[0]), y: r3(p[1]), size: r3(fs), rot: r2(rot), anchor }, d: "", w_mm: 0, stroke: null, fill: parseColor(st.fill) || "#000000", dash: false, closed: false, len_mm: 0, bbox: [x0, p[1] - fs, x0 + wEst, p[1] + fs * 0.25].map(r3), sub: [] });
+      const lead = v => parseFloat(String(v || "").trim().split(/[\s,]+/)[0]), anchorOf = z => z.textAnchor === "middle" || z.textAnchor === "end" ? z.textAnchor : "start";
+      const emit = (str, x, y, z) => {
+        str = String(str || "").replace(/\s+/g, " ").trim();
+        if (!str) return;
+        const p = apply(mm, x, y), sc = scaleOf(mm), fs = (Number.isFinite(z.fontSize) ? z.fontSize : 12) * sc;
+        const rot = Math.atan2(mm[1], mm[0]) * 180 / Math.PI, wEst = str.length * fs * 0.55, anchor = anchorOf(z);
+        const x0 = anchor === "middle" ? p[0] - wEst / 2 : anchor === "end" ? p[0] - wEst : p[0];
+        push({ text: { str, x: r3(p[0]), y: r3(p[1]), size: r3(fs), rot: r2(rot), anchor }, d: "", w_mm: 0, stroke: null, fill: parseColor(z.fill) || "#000000", dash: false, closed: false, len_mm: 0, bbox: [x0, p[1] - fs, x0 + wEst, p[1] + fs * 0.25].map(r3), sub: [] });
+      };
+      const ox = lead(el.getAttribute("x")) || 0, oy = lead(el.getAttribute("y")) || 0;
+      const kids = [...(el.children || [])].filter(c => /^tspan$/i.test(c.localName || c.tagName || ""));
+      if (!kids.some(c => c.getAttribute("x") != null || c.getAttribute("y") != null)) { emit(el.textContent, ox, oy, st); return; }
+      // tspans with their own coordinates are separate labels (Illustrator / Inkscape lines, columns)
+      let rest = String(el.textContent || ""), cx = ox, cy = oy;
+      for (const c of kids) rest = rest.replace(String(c.textContent || ""), "");
+      emit(rest, ox, oy, st);
+      for (const c of kids) {
+        const z = getStyle(c) || st;
+        if (z.display === "none") continue;
+        const kx = lead(c.getAttribute("x")), ky = lead(c.getAttribute("y"));
+        if (Number.isFinite(kx)) cx = kx; if (Number.isFinite(ky)) cy = ky;
+        emit(c.textContent, cx, cy, z);
+      }
       return;
     }
     if (!["path", "line", "polyline", "polygon", "rect", "circle", "ellipse"].includes(tag)) return;
@@ -342,7 +375,7 @@ export function svgDomToElements(root, getStyle, opts = {}) {
     if (!segs.length) return;
     const g = segsToGeom(segs, mm);
     if (!g) return;
-    const sw = Number.isFinite(st.strokeWidth) ? st.strokeWidth : 1;
+    const swv = userPx(st.strokeWidth), sw = Number.isFinite(swv) ? swv : 1;   // CSS units are user units (3.78 per mm); the matrix scales them once, nothing else
     let stroke = parseColor(st.stroke), fill = parseColor(st.fill);
     if (stroke && Number(st.strokeOpacity) === 0) stroke = null;
     if (fill && Number(st.fillOpacity) < 0.05) fill = null;
@@ -350,14 +383,27 @@ export function svgDomToElements(root, getStyle, opts = {}) {
     if (stroke && !(sw > 0)) stroke = null;
     const dash = dashOn(dashArr(st.dash));
     if (fill && g.len < 1e-6 && !stroke) return;
-    if (stroke) push(mkEl(0, g, Math.max(sw * scaleOf(mm), 0.01), stroke, null, dash));
-    if (fill) push(mkEl(0, g, 0, null, fill, false));
+    const dup = !!stroke && isDarkFill(fill);   // dark fill of a stroked shape would only become a second outline
+    if (stroke) push(mkEl(0, g, Math.max(sw * scaleOf(mm), 0.01), stroke, null, dash, dup ? fill : null));
+    if (fill && !dup) push(mkEl(0, g, 0, null, fill, false));
   };
   visit(root, sp.m, true);
   return { elements, paper: sp.paper, warnings: [...warnings] };
 }
 
 // ---- PDF input -------------------------------------------------------------------------------------------------------------
+/** a transformed path that is an axis-aligned rectangle (all four bbox corners present, every point on the bbox outline) */
+function isRectGeom(g) {
+  if (g.sub.length !== 1) return false;
+  const s = g.sub[0], [x0, y0, x1, y1] = g.bbox, e = 1e-3 + 1e-6 * Math.max(x1 - x0, y1 - y0), hit = new Set();
+  if (s.length < 8 || x1 - x0 < e || y1 - y0 < e) return false;
+  for (let i = 0; i < s.length; i += 2) {
+    const ex = Math.abs(s[i] - x0) < e ? 0 : Math.abs(s[i] - x1) < e ? 1 : -1, ey = Math.abs(s[i + 1] - y0) < e ? 0 : Math.abs(s[i + 1] - y1) < e ? 1 : -1;
+    if (ex < 0 || ey < 0) return false;
+    hit.add(ex * 2 + ey);
+  }
+  return hit.size === 4;
+}
 const colorFromArgs = (args, names) => {
   if (!args) return null;
   if (typeof args[0] === "string") return parseColor(args[0]);
@@ -374,16 +420,28 @@ export function pdfOpsToElements(opList, OPS, vpTransform, opts = {}) {
   const { fnArray, argsArray } = opList, max = opts.max || MAX_ELEMENTS, elements = [];
   const base = mul([MM_PER_PT, 0, 0, MM_PER_PT, 0, 0], vpTransform || [1, 0, 0, -1, 0, 0]);
   let ctm = IDENT, lw = 1, dash = [], stroke = "#000000", fill = "#000000", stack = [], segs = [], imageCount = 0, cx = 0, cy = 0;
+  let clip = null, clipped = 0, complexClip = 0, badOps = 0;   // clip: rectangular clip in mm { b: [x0,y0,x1,y1], empty } (graphics state); complex clips are ignored and reported
+  const snap = () => ({ ctm, lw, dash, stroke, fill, clip }), restoreTo = s => { ({ ctm, lw, dash, stroke, fill, clip } = s); };
   const op = name => OPS[name];
+  const outsideClip = (b, pad) => !!clip && (clip.empty || b[2] < clip.b[0] - pad - 0.01 || b[0] > clip.b[2] + pad + 0.01 || b[3] < clip.b[1] - pad - 0.01 || b[1] > clip.b[3] + pad + 0.01);
+  const setClip = () => {
+    if (!segs.length) return;
+    const g = segsToGeom(segs, mul(base, ctm));
+    if (!g || !isRectGeom(g)) { complexClip++; return; }
+    if (!clip) { clip = { b: g.bbox, empty: false }; return; }
+    const b = [Math.max(clip.b[0], g.bbox[0]), Math.max(clip.b[1], g.bbox[1]), Math.min(clip.b[2], g.bbox[2]), Math.min(clip.b[3], g.bbox[3])];
+    clip = { b, empty: clip.empty || b[0] > b[2] || b[1] > b[3] };
+  };
   const paint = (doFill, doStroke, close) => {
     if (close && segs.length) segs.push({ c: "Z", a: [] });
     if (segs.length) {
       const m = mul(base, ctm), g = segsToGeom(segs, m);
-      if (g) {
+      if (g && outsideClip(g.bbox, doStroke ? lw * scaleOf(m) / 2 : 0)) clipped++;
+      else if (g) {
         if (elements.length + 2 > max) throw new LimitError("too_many");
-        const sc = scaleOf(m);
-        if (doStroke && stroke) elements.push(mkEl(elements.length, g, Math.max(lw * sc, 0.02), stroke, null, dashOn(dash)));
-        if (doFill && fill) elements.push(mkEl(elements.length, g, 0, null, fill, false));
+        const sc = scaleOf(m), dup = doStroke && !!stroke && doFill && isDarkFill(fill);
+        if (doStroke && stroke) elements.push(mkEl(elements.length, g, Math.max(lw * sc, 0.02), stroke, null, dashOn(dash), dup ? fill : null));
+        if (doFill && fill && !dup) elements.push(mkEl(elements.length, g, 0, null, fill, false));
       }
     }
     segs = [];
@@ -393,7 +451,8 @@ export function pdfOpsToElements(opList, OPS, vpTransform, opts = {}) {
   for (let i = 0; i < fnArray.length; i++) {
     const fn = fnArray[i], a = argsArray[i];
     if (fn === op("constructPath")) {
-      const ops = a[0], co = a[1];
+      const ops = a?.[0], co = a?.[1];
+      if (!ops || !co || typeof ops.length !== "number" || typeof co.length !== "number") { badOps++; continue; }   // unexpected argument layout (another pdf.js build): skipped, never guessed
       let k = 0;
       for (const o of ops) {
         if (o === op("moveTo")) { cx = co[k]; cy = co[k + 1]; segs.push({ c: "M", a: [cx, cy] }); k += 2; }
@@ -407,8 +466,9 @@ export function pdfOpsToElements(opList, OPS, vpTransform, opts = {}) {
     }
     else if (tbl[fn]) paint(...tbl[fn].map(Boolean));
     else if (fn === op("endPath")) segs = [];
-    else if (fn === op("save")) stack.push({ ctm, lw, dash, stroke, fill });
-    else if (fn === op("restore")) { const s = stack.pop(); if (s) ({ ctm, lw, dash, stroke, fill } = s); }
+    else if ((fn === op("clip") || fn === op("eoClip")) && fn != null) setClip();
+    else if (fn === op("save")) stack.push(snap());
+    else if (fn === op("restore")) { const s = stack.pop(); if (s) restoreTo(s); }
     else if (fn === op("transform")) ctm = mul(ctm, a);
     else if (fn === op("setLineWidth")) lw = a[0];
     else if (fn === op("setDash")) dash = a[0] || [];
@@ -419,11 +479,12 @@ export function pdfOpsToElements(opList, OPS, vpTransform, opts = {}) {
     else if (fn === op("setStrokeCMYKColor")) stroke = colorFromArgs(a, "cmyk") || stroke;
     else if (fn === op("setFillCMYKColor")) fill = colorFromArgs(a, "cmyk") || fill;
     else if (fn === op("setGState")) { for (const [key, v] of a[0] || []) { if (key === "LW") lw = v; else if (key === "D") dash = v?.[0] || []; } }
-    else if (fn === op("paintFormXObjectBegin")) { stack.push({ ctm, lw, dash, stroke, fill }); if (a?.[0]) ctm = mul(ctm, a[0]); }
-    else if (fn === op("paintFormXObjectEnd")) { const s = stack.pop(); if (s) ({ ctm, lw, dash, stroke, fill } = s); }
+    else if (fn === op("paintFormXObjectBegin")) { stack.push(snap()); if (a?.[0]) ctm = mul(ctm, a[0]); }
+    else if (fn === op("paintFormXObjectEnd")) { const s = stack.pop(); if (s) restoreTo(s); }
     else if (fn === op("paintImageXObject") || fn === op("paintInlineImageXObject") || fn === op("paintImageMaskXObject") || fn === op("paintJpegXObject")) imageCount++;
   }
-  return { elements, imageCount };
+  if (badOps) console.warn(`[linework] ${badOps} constructPath operators with an unexpected argument layout were skipped`);
+  return { elements, imageCount, clipped, complexClip, badOps };
 }
 /** pdf.js text items -> text elements (mm). items from page.getTextContent(). */
 export function pdfTextToElements(items, vpTransform) {
@@ -466,7 +527,7 @@ export function renderOriginalSvg(elements, paper) {
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">`;
   for (const e of elements) {
     if (e.text) { s += `<g fill="${e.fill || "#000000"}" font-family="${FONT}">${textMarkup(e)}</g>`; continue; }
-    s += `<path d="${e.d}" fill="${e.stroke ? "none" : (e.fill || "none")}"${e.stroke ? ` stroke="${e.stroke}" stroke-width="${r3(e.w_mm)}"${e.dash ? ` stroke-dasharray="${DASH_MM[0]} ${DASH_MM[1]}"` : ""}` : ""}/>`;
+    s += `<path d="${e.d}" fill="${e.stroke ? (e.origFill || "none") : (e.fill || "none")}"${e.stroke ? ` stroke="${e.stroke}" stroke-width="${r3(e.w_mm)}"${e.dash ? ` stroke-dasharray="${DASH_MM[0]} ${DASH_MM[1]}"` : ""}` : ""}/>`;
   }
   return s + "</svg>";
 }
@@ -501,10 +562,10 @@ export async function parseSvgElements(svgText, opts = {}) {
 }
 async function pdfPageToModel(pg, lib, opts = {}) {
   const vp = pg.getViewport({ scale: 1 }), [ol, tc] = await Promise.all([pg.getOperatorList(), pg.getTextContent()]);
-  const { elements, imageCount } = pdfOpsToElements(ol, lib.OPS, vp.transform, opts), texts = pdfTextToElements(tc.items, vp.transform);
+  const { elements, imageCount, clipped, complexClip } = pdfOpsToElements(ol, lib.OPS, vp.transform, opts), texts = pdfTextToElements(tc.items, vp.transform);
   if (elements.length + texts.length > (opts.max || MAX_ELEMENTS)) throw new LimitError("too_many");
   const all = elements.concat(texts); all.forEach((e, i) => { e.id = i; });
-  return { elements: all, paper: { w: r2(vp.width * MM_PER_PT), h: r2(vp.height * MM_PER_PT) }, imageCount, vectorCount: elements.length };
+  return { elements: all, paper: { w: r2(vp.width * MM_PER_PT), h: r2(vp.height * MM_PER_PT) }, imageCount, vectorCount: elements.length, clipped: clipped || 0, complexClip: complexClip || 0 };
 }
 
 function svgToPng(svg, w, h, long = 1600) {
@@ -597,6 +658,11 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
 
   msg.remove();
   if (auto.notice === "single") { notice.textContent = _t("lw.notice.single"); notice.dataset.i18n = "lw.notice.single"; notice.hidden = false; }
+  if (model.clipped || model.complexClip) {   // PDF clipping: shapes outside a rectangular clip were dropped, other clip shapes were not applied
+    const line = mk("div", "", _t("lw.notice.clip", { n: model.clipped || 0, c: model.complexClip || 0 }));
+    if (notice.hidden) { notice.textContent = ""; delete notice.dataset.i18n; }
+    notice.append(line); notice.hidden = false;
+  }
   const hint = tr(mk("div", "lw-hint", _t("lw.hint")), "lw.hint"); view.append(hint);
 
   // ---- preview svg ---------------------------------------------------------------------------------------------------------

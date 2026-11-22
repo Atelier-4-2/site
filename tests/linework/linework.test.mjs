@@ -127,12 +127,12 @@ ok("pdfOpsToElements: ctm, line width scale, dash, colour, fill, rectangle, rest
   op("setLineWidth", [0.5]); op("setStrokeRGBColor", [255, 0, 0]); op("constructPath", [[OPS.moveTo, OPS.curveTo, OPS.closePath], [0, 0, 1, 1, 2, 2, 3, 0]]); op("fillStroke"); op("paintImageXObject", ["x"]);
   // page 200x100 pt, viewport flips y: [1 0 0 -1 0 100]
   const r = L.pdfOpsToElements({ fnArray: fn, argsArray: ar }, OPS, [1, 0, 0, -1, 0, 100]);
-  assert.equal(r.imageCount, 1); const e = r.elements; assert.equal(e.length, 5);
+  assert.equal(r.imageCount, 1); const e = r.elements; assert.equal(e.length, 4);   // fillStroke with a dark fill: one stroked element, the fill kept as origFill (no double outline)
   near(e[0].w_mm, 2 * L.MM_PER_PT, 0.001); assert.equal(e[0].stroke, "#1E2124"); near(e[0].len_mm, 200 * L.MM_PER_PT, 0.001);
   near(e[0].bbox[0], 10 * L.MM_PER_PT, 0.001); near(e[0].bbox[1], 100 * L.MM_PER_PT, 0.001);   // y flipped
   assert.equal(e[1].dash, true); assert.equal(e[1].closed, true); assert.equal(e[2].stroke, null); assert.equal(e[2].fill, "#000000");
   assert.equal(e[3].stroke, "#FF0000"); assert.equal(e[3].dash, false); near(e[3].w_mm, 0.5 * L.MM_PER_PT, 0.001);   // restore dropped the dash
-  assert.equal(e[4].fill, "#000000");   // fill colour set inside the saved block was restored to the default black
+  assert.equal(e[3].origFill, "#000000");   // fill colour set inside the saved block was restored to the default black
 });
 ok("pdfTextToElements", () => {
   const t = L.pdfTextToElements([{ str: "Hello", transform: [10, 0, 0, 10, 50, 40], width: 30 }, { str: "  ", transform: [1, 0, 0, 1, 0, 0] }], [1, 0, 0, -1, 0, 100]);

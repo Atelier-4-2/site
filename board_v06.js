@@ -3498,7 +3498,7 @@ async function importPdf(file) {
 async function openLineworkTool(src) {
   status(_t("lw.loading"));
   try {
-    const mod = await import("./board_v06_linework.js?v=20261122M");
+    const mod = await import("./board_v06_linework.js?v=20261122N");
     status("");
     await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
   } catch (e) { console.warn(e); status(_t("lw.err.read")); }
