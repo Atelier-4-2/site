@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="./fonts.css?v=20261118f1">
   <link rel="stylesheet" href="./diagrams_v02.css?v=20261116a">
   <link rel="stylesheet" href="./diagrams_v06.css?v=20261116f">
+  <link rel="stylesheet" href="./board_v06.css?v=20261122f">
 
   <script type="importmap">
   {
@@ -47,7 +48,8 @@
       function fit() {
         var z = 1;
         var dg = document.body && document.body.dataset.mode === "diagrams";
-        if (dg) z = window.matchMedia("(max-width: 799px)").matches ? 1 : Math.min(1, window.innerWidth / 1680);   /* phones: real layout, no zoom */
+        if (document.body && document.body.dataset.mode === "board") z = 1;   /* board: never scale the page */
+        else if (dg) z = window.matchMedia("(max-width: 799px)").matches ? 1 : Math.min(1, window.innerWidth / 1680);   /* phones: real layout, no zoom */
         else if (window.innerWidth >= 1024 && window.innerHeight < REF) z = Math.max(MIN, window.innerHeight / REF);
         root.style.zoom = z < 1 ? String(z) : "";
         root.classList.toggle("is-scaled", z < 1);
@@ -148,6 +150,13 @@
           <p class="tool-card-description">지형 등고선과 건물 모형의 레이저 도면을 만듭니다.</p>
           <p class="tool-card-formats">SVG · DXF · STL · 3DM</p>
           <button id="start" type="button" class="tool-card-button">모형 만들기 ›</button>
+        </li>
+        <li class="tool-card">
+          <p class="tool-card-number">03</p>
+          <h2 class="tool-card-title">보드</h2>
+          <p class="tool-card-description">다이어그램·사진·글을 A3/A1 프레임에 배치해 패널로 출력합니다.</p>
+          <p class="tool-card-formats">PDF · PNG · .atelier</p>
+          <button id="start-board" type="button" class="tool-card-button">보드 열기 ›</button>
         </li>
       </ul>
       <p class="note">설치가 필요 없으며, 올린 파일은 기기 밖으로 나가지 않습니다.<br>
@@ -344,6 +353,7 @@
         <div class="toolbar dg-toolbar">
           <button id="dg-zip" type="button" class="primary" disabled>전체 ZIP 다운로드</button>
           <button id="dg-pdf-all" type="button" disabled>전체 PDF</button>
+          <button id="dg-board-all" type="button" disabled>모두 보드로</button>
           <button id="dg-3dm-all" type="button" disabled>전체 3dm</button>
           <label class="dg-radius-note" for="dg-card-radius">카드 반경 (m)</label>
           <input id="dg-card-radius" type="number" min="20" max="2500" step="1" value="400" aria-describedby="dg-radius-help">
@@ -743,7 +753,7 @@
   <noscript>Terrain을 사용하려면 JavaScript를 활성화하세요.</noscript>
 
   <script type="module">
-    import("./diagrams_v05.js?v=20261118h"); import("./app.js?v=20261118h").catch(error => {
+    import("./diagrams_v07.js?v=20261121g"); import("./board_v06.js?v=20261122f"); import("./app.js?v=20261118h").catch(error => {
       const status = document.querySelector("#status");
       status.textContent = "화면을 시작하지 못했습니다: " + error.message;
       status.dataset.error = "true";
