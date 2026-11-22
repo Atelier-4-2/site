@@ -1333,6 +1333,42 @@ function snapMove(box, movingIds, tol, grid, gf, gl) {
   }
   return { dx, dy, guides };
 }
+// Snap a moving page to the other pages: left / centre / right and top / middle / bottom lines,
+// plus an equal gap to the nearest page on each side (like slide tools). Alt disables it.
+function snapFrame(f, x, y, mate, tol) {
+  const [w, h] = frameSize(f), others = [];
+  for (const o of S.frames) if (o !== f && o !== mate) { const [ow, oh] = frameSize(o); others.push({ x: o.x, y: o.y, w: ow, h: oh }); }
+  let bx = null, by = null;
+  const pick = (cur, d, at, o) => (Math.abs(d) <= tol && (!cur || Math.abs(d) < Math.abs(cur.d))) ? { d, at, o } : cur;
+  const ov = (a0, a1, b0, b1) => Math.min(a1, b1) - Math.max(a0, b0) > 0;
+  for (const o of others) {
+    for (const m of [x, x + w / 2, x + w]) for (const t of [o.x, o.x + o.w / 2, o.x + o.w]) bx = pick(bx, t - m, t, o);
+    for (const m of [y, y + h / 2, y + h]) for (const t of [o.y, o.y + o.h / 2, o.y + o.h]) by = pick(by, t - m, t, o);
+  }
+  // equal gap: reuse the gap between two neighbouring pages in the same row / column
+  const gapsX = [], gapsY = [];
+  for (const a of others) for (const b of others) {
+    if (a !== b && a.x + a.w <= b.x && ov(a.y, a.y + a.h, b.y, b.y + b.h)) gapsX.push(b.x - a.x - a.w);
+    if (a !== b && a.y + a.h <= b.y && ov(a.x, a.x + a.w, b.x, b.x + b.w)) gapsY.push(b.y - a.y - a.h);
+  }
+  let gx = null, gy = null;
+  for (const o of others) {
+    if (ov(o.y, o.y + o.h, y, y + h)) for (const g of gapsX) {
+      for (const want of [o.x + o.w + g, o.x - g - w]) { const d = want - x; if (Math.abs(d) <= tol && (!gx || Math.abs(d) < Math.abs(gx.d))) gx = { d, o, g, want }; }
+    }
+    if (ov(o.x, o.x + o.w, x, x + w)) for (const g of gapsY) {
+      for (const want of [o.y + o.h + g, o.y - g - h]) { const d = want - y; if (Math.abs(d) <= tol && (!gy || Math.abs(d) < Math.abs(gy.d))) gy = { d, o, g, want }; }
+    }
+  }
+  const guides = [];
+  const dx = bx ? bx.d : gx ? gx.d : 0, dy = by ? by.d : gy ? gy.d : 0;
+  const nx = x + dx, ny = y + dy;
+  if (bx) guides.push({ x1: bx.at, x2: bx.at, y1: Math.min(ny, bx.o.y), y2: Math.max(ny + h, bx.o.y + bx.o.h) });
+  else if (gx) { const o = gx.o, left = gx.want > o.x, a0 = left ? o.x + o.w : nx + w, a1 = left ? nx : o.x, mid = (Math.max(ny, o.y) + Math.min(ny + h, o.y + o.h)) / 2; guides.push({ x1: a0, x2: a1, y1: mid, y2: mid, label: `${Math.round(gx.g * 10) / 10}`, gap: true }); }
+  if (by) guides.push({ y1: by.at, y2: by.at, x1: Math.min(nx, by.o.x), x2: Math.max(nx + w, by.o.x + by.o.w) });
+  else if (gy) { const o = gy.o, below = gy.want > o.y, a0 = below ? o.y + o.h : ny + h, a1 = below ? ny : o.y, mid = (Math.max(nx, o.x) + Math.min(nx + w, o.x + o.w)) / 2; guides.push({ y1: a0, y2: a1, x1: mid, x2: mid, label: `${Math.round(gy.g * 10) / 10}`, gap: true }); }
+  return { dx, dy, guides };
+}
 // resize: snap the dragged corner to column / row edges, else to the grid
 // handles are drawn in the card's rotated frame: map a handle to the side of the VISUAL box it sits on (rot 90 = clockwise)
 function visHandle(h, c) {
@@ -1539,8 +1575,11 @@ function onPointerMove(e) {
     else { c.w = r2(nw); c.h = r2(nh); c.x = r2(vx); c.y = r2(vy); }
     renderCards(); renderSel(); scheduleMini(); scheduleProps();
   } else if (drag.type === "frame") {
-    const dx = wx - drag.start[0], dy = wy - drag.start[1];
+    let dx = wx - drag.start[0], dy = wy - drag.start[1];
     drag.moved = true;
+    let fg = [];
+    if (!noSnap) { const s = snapFrame(drag.f, drag.o.x + dx, drag.o.y + dy, drag.mate?.f, tol); dx += s.dx; dy += s.dy; fg = s.guides; }
+    drawGuides(fg);
     drag.f.x = r2(drag.o.x + dx); drag.f.y = r2(drag.o.y + dy);
     for (const k of drag.cards) { k.c.x = r2(k.x + dx); k.c.y = r2(k.y + dy); }
     if (drag.mate) { drag.mate.f.x = r2(drag.mate.o.x + dx); drag.mate.f.y = r2(drag.mate.o.y + dy); for (const k of drag.mate.cards) { k.c.x = r2(k.x + dx); k.c.y = r2(k.y + dy); } }
@@ -3443,6 +3482,7 @@ async function open() {
   }
   document.body.dataset.mode = "board";
   document.documentElement.classList.add("bd-open");
+  syncRoute(true);
   $("#board").hidden = false;
   render();
   if (!fitted) requestAnimationFrame(() => { if (fitAll()) fitted = true; }); else applyView();
@@ -3458,6 +3498,20 @@ function close() {
   document.documentElement.classList.remove("bd-open");
   if (prevMode) document.body.dataset.mode = prevMode; else delete document.body.dataset.mode;
   prevMode = null;
+  syncRoute(false);
+}
+// Board has its own address (/site/#board, linked from the hub as /board/): keep the hash,
+// the tab title and the top-right site switch in step with the open state.
+const TITLE_TERRAIN = document.title;
+function syncRoute(on) {
+  const want = on ? "#board" : "";
+  if (location.hash !== want && (on || location.hash === "#board")) {
+    try { history.replaceState(history.state, "", location.pathname + location.search + want); } catch { /* file:// or sandbox */ }
+  }
+  document.title = on ? "Board — 4·2" : TITLE_TERRAIN;
+  for (const a of document.querySelectorAll(".site-switch a[data-site]")) {
+    if (a.dataset.site === (on ? "board" : "terrain")) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }
 }
 const cleanAssetMeta = m => {
   if (!m || typeof m !== "object") return null;
@@ -3492,3 +3546,5 @@ const count = () => Object.keys(S.assets).length;
 globalThis.atelierBoard = { add, open, close, count };
 dispatchEvent(new CustomEvent("atelierBoard:ready"));
 document.addEventListener("click", e => { if (e.target.closest("#start-board")) open(); });
+addEventListener("hashchange", () => { if (location.hash === "#board") open(); else close(); });
+if (location.hash === "#board") open();
