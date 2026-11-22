@@ -1,8 +1,8 @@
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.
-import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261122f";
-import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261122f";
+import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261122i";
+import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261122i";
 export const DOC_VERSION = 5;
 export const LAYERS = ["bg", "art", "text"];   // stacking order, bottom to top
 export const LAYER_LABEL = { bg: "배경 도면", art: "도판", text: "글·주석" };

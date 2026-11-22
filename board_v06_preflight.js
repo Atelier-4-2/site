@@ -1,5 +1,5 @@
 // Build 4a-2: output preflight (B11) and PDF presets (B12). Pure (no DOM) so node can test it.
-import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261122f";
+import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261122i";
 
 export const PRESETS = {
   print: { label: "인쇄", fmt: "pdf", bleed: true, booklet: false, tiles: false, maxPpi: 300 },

@@ -10,13 +10,14 @@ import {
   FSTYLES, FSTYLE_LABEL,
   cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, STD_DENS, isNorthStamp, isBarStamp,
   cleanSvgString, cleanPayload, sanitizeDoc, emptyDoc
-} from "./board_v06_doc.js?v=20261122f";
-import * as X from "./board_v06_export.js?v=20261122f";
-import { icon } from "./board_v06_icons.js?v=20261122f";
-import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122f";
-import * as RC from "./board_v06_record.js?v=20261122f";
-import * as PR from "./board_v06_parent.js?v=20261122f";
-import { createChrome } from "./board_v06_chrome.js?v=20261122f";
+} from "./board_v06_doc.js?v=20261122i";
+import * as X from "./board_v06_export.js?v=20261122i";
+import { icon } from "./board_v06_icons.js?v=20261122i";
+import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122i";
+import { getLang, setLang } from "./i18n.js?v=20261122i";
+import * as RC from "./board_v06_record.js?v=20261122i";
+import * as PR from "./board_v06_parent.js?v=20261122i";
+import { createChrome } from "./board_v06_chrome.js?v=20261122i";
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 const NS = "http://www.w3.org/2000/svg";
@@ -1904,6 +1905,8 @@ function build() {
             <button type="button" data-m="styles">글 스타일</button>
             <button type="button" data-m="palette">명령 팔레트<kbd>⌘K</kbd></button>
             <span class="bd-msep" role="separator"></span>
+            <button type="button" data-m="lang">Langue / 언어<kbd>FR · KO</kbd></button>
+            <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="dates">날짜 보기</button>
             <button type="button" data-m="annos">코멘트·펜 보기<kbd>⇧C</kbd></button>
             <button type="button" data-m="snap">스냅샷 저장…</button>
@@ -2115,6 +2118,7 @@ function wire() {
     else if (m === "gh") { ui.guidesHidden = !ui.guidesHidden; render(); }
     else if (m === "gl") { ui.guidesLocked = !ui.guidesLocked; render(); }
     else if (m === "gc") clearPageGuides();
+    else if (m === "lang") setLang(getLang() === "fr" ? "ko" : "fr");
     else if (m === "dates") { ui.dates = !ui.dates; render(); }
     else if (m === "annos") toggleAnno();
     else if (m === "snap") saveSnapshot();
