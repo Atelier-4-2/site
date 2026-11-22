@@ -2,6 +2,8 @@
 // Pure module (no DOM, no imports) so the board, the export and the node tests share one source.
 // Every figure is drawn in its own unit box: height = 100 units = the real height `hm`, y down, feet / trunk base on y = 100.
 // parts: { d, k: "f" } solid fill (evenodd) | { d, k: "s", w } stroke, w in units (proportional) or { abs } mm (print-safe line)
+// Default look is OUTLINE (drawing style v02: line only): `outline` parts when a figure has its own, else every filled part stroked at OUT_MM.
+// Solid silhouettes (`parts`) stay available as the optional "fill" (st.fill).
 export const FIG_INK = "#1E2124", FIG_SOFT = "#7D848D", FIG_ACCENT = "#E6B89C";
 export const FIG_TONES = ["ink", "soft"];
 
@@ -37,7 +39,7 @@ const CAR = [
 
 // ---- trees (elevation) -------------------------------------------------------------------------------------------------
 const ell = (cx, cy, rx, ry) => `M${cx - rx} ${cy}a${rx} ${ry} 0 1 1 ${2 * rx} 0a${rx} ${ry} 0 1 1 ${-2 * rx} 0Z`;
-const TREE_BIG = ell(45, 35, 45, 35) + "M42.2 66H47.8V100H42.2Z";
+const TREE_BIG = ell(45, 35, 45, 35) + "M42.2 66H47.8V100H42.2Z";   // solid (fill option)
 const TREE_SMALL = ell(35, 36, 33, 36) + "M32.6 68H37.4V100H32.6Z";
 const TREE_CONIFER = "M20 0L33 40H29L40 78H23.2V100H16.8V78H0L11 40H7Z";
 const TREE_STREET = ell(25, 34, 22, 34) + "M22.6 66H27.4V100H22.6Z";
@@ -58,6 +60,34 @@ const PLAN_BRANCH = [
 ];
 
 const P = (d) => [{ k: "f", d }];
+
+// ---- outline versions ----------------------------------------------------------------------------------------------------
+export const OUT_MM = 0.13;   // paper line weight of figure outlines, constant at every scale (like the plan trees)
+const rd = v => Math.round(v * 10) / 10;
+/** closed, slightly irregular crown outline (smooth Catmull-Rom through lobed radii); deterministic per seed */
+function crown(cx, cy, rx, ry, seed, n = 14) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * 2 * Math.PI, m = 1 + 0.07 * Math.sin(3 * a + seed) + 0.05 * Math.sin(5 * a + 2 * seed);
+    pts.push([cx + rx * m * Math.cos(a), cy + ry * m * Math.sin(a)]);
+  }
+  let d = `M${rd(pts[0][0])} ${rd(pts[0][1])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i + n - 1) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    d += `C${rd(p1[0] + (p2[0] - p0[0]) / 6)} ${rd(p1[1] + (p2[1] - p0[1]) / 6)} ${rd(p2[0] - (p3[0] - p1[0]) / 6)} ${rd(p2[1] - (p3[1] - p1[1]) / 6)} ${rd(p2[0])} ${rd(p2[1])}`;
+  }
+  return d + "Z";
+}
+const trunk = (x0, x1, y0) => `M${x0} 100V${y0}M${x1} 100V${y0 - 0.5}`;   // two lines from the ground up into the crown
+const OS = d => ({ k: "s", abs: OUT_MM, d });
+const O_TREE_BIG = [OS(crown(45, 35, 43, 33, 0.6)), OS(trunk(42.2, 47.8, 66.5))];
+const O_TREE_SMALL = [OS(crown(35, 36, 31, 34, 2.1)), OS(trunk(32.6, 37.4, 67))];
+const O_TREE_STREET = [OS(crown(25, 34, 21, 32, 4.0)), OS(trunk(22.6, 27.4, 65))];
+const O_CAR = [
+  OS("M41 88H3V70Q3 62 12 60L56 54Q70 30 84 10Q88 2 98 2H176Q188 2 196 12L222 50L274 58Q290 62 290 72V88H249M207 88H83"),   // wheel arches left open
+  OS("M92 14Q94 10 99 10H128V46H72ZM134 10H174Q180 10 184 16L204 46H134Z"),
+  OS(circ(62, 79, 20) + circ(228, 79, 20) + circ(62, 79, 7) + circ(228, 79, 7))
+];
 // key -> { cat, hm default (m), W unit width at height 100, parts, plan?, tip: short description for the sheet }
 export const FIGS = {
   fig_stand_1: { cat: "person", hm: 1.75, W: 30, parts: P(STAND_1) },
@@ -68,11 +98,11 @@ export const FIGS = {
   fig_child: { cat: "person", hm: 1.20, W: 26, parts: P(CHILD) },
   fig_bike: { cat: "person", hm: 1.10, W: 160, parts: BIKE },
   fig_wheelchair: { cat: "person", hm: 1.25, W: 82, parts: WHEELCHAIR },
-  fig_car: { cat: "car", hm: 1.50, W: 293.33, parts: CAR },
-  fig_tree_big: { cat: "tree", hm: 14, W: 90, parts: P(TREE_BIG) },
-  fig_tree_small: { cat: "tree", hm: 6, W: 66, parts: P(TREE_SMALL) },
+  fig_car: { cat: "car", hm: 1.50, W: 293.33, parts: CAR, outline: O_CAR },
+  fig_tree_big: { cat: "tree", hm: 14, W: 90, parts: P(TREE_BIG), outline: O_TREE_BIG },
+  fig_tree_small: { cat: "tree", hm: 6, W: 66, parts: P(TREE_SMALL), outline: O_TREE_SMALL },
   fig_tree_conifer: { cat: "tree", hm: 10, W: 40, parts: P(TREE_CONIFER) },
-  fig_tree_street: { cat: "tree", hm: 10, W: 44, parts: P(TREE_STREET) },
+  fig_tree_street: { cat: "tree", hm: 10, W: 44, parts: P(TREE_STREET), outline: O_TREE_STREET },
   fig_plan_circle: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_CIRCLE },
   fig_plan_dash: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_DASH },
   fig_plan_branch: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_BRANCH }
@@ -97,9 +127,10 @@ export const figH = (hm, den) => clampHm(hm) * 1000 / Math.max(1, den);   // mm
 export function figSvg(st, opt = {}) {
   const g = FIGS[st.stamp]; if (!g) return "";
   const col = st.tone === "soft" ? FIG_SOFT : FIG_INK, h = st.h, s = h / 100, w = st.w, x0 = (w - g.W * s) / 2;
-  const hair = opt.hair || 0;
+  const hair = opt.hair || 0, solid = st.fill === true || g.plan;   // outline unless the "fill" option is on
+  const parts = solid ? g.parts : (g.outline || g.parts.map(p => ({ k: "s", abs: OUT_MM, d: p.d })));
   let o = "";
-  for (const p of g.parts) {
+  for (const p of parts) {
     if (p.k === "f") o += `<path d="${p.d}" fill="${col}" fill-rule="${p.eo ? "evenodd" : "nonzero"}"/>`;
     else {
       const wmm = p.abs != null ? Math.max(p.abs, hair) : Math.max(p.w * s, hair || 0.12);

@@ -22,10 +22,14 @@
 <h1>점경 실루엣 확인 시트</h1>
 <p class="n">전부 같은 축척(1 m = 40 px, 1:100 의 0.18 mm 선 기준)으로 나란히 놓았습니다. 아래 눈금은 1 m 단위입니다. 선택 색은 #E6B89C, 기본 색은 #1E2124 / #7D848D.</p>
 
-<h2>입면 · 인물, 자전거, 휠체어, 자동차</h2>
+<h2>입면 · 인물, 자전거, 휠체어, 자동차 — 외곽선 (기본값, 선 0.13 mm 고정)</h2>
 <div class="row" id="r1"></div>
-<h2>입면 · 나무 (높이 6 / 10 / 14 m 프리셋, 1 m = 20 px · 사람은 비교용)</h2>
+<h2>입면 · 나무 — 외곽선 (기본값) (높이 6 / 10 / 14 m 프리셋, 1 m = 20 px · 사람은 비교용)</h2>
 <div class="row" id="r2"></div>
+<h2>비교 · 같은 인물, 자동차 — 채움 옵션 (패널의 “채움”)</h2>
+<div class="row" id="r1f"></div>
+<h2>비교 · 나무 — 채움 옵션</h2>
+<div class="row" id="r2f"></div>
 <h2>평면 · 나무 (지름 6 m 기준, 1 m = 30 px, 선 굵기 0.18 mm 고정)</h2>
 <div class="row" id="r3"></div>
 <h2>같은 인물, 1:100 카드에서의 실제 크기 (mm)</h2>
@@ -58,7 +62,7 @@ function row(host, keys, opt = {}) {
   let x = 12, html = "";
   for (const i of items) {
     const w = i.b.w * PX, h = i.b.h * PX;
-    const body = figSvg({ stamp: i.k, w: i.b.w, h: i.b.h, tone: i.tone, flip: i.flip }, {});
+    const body = figSvg({ stamp: i.k, w: i.b.w, h: i.b.h, tone: i.tone, flip: i.flip, fill: !!opt.fill }, {});
     html += `<g transform="translate(${x + (slot(i) - w) / 2} ${top - h}) scale(${PX})">${body}</g>`;
     html += `<text class="lab" x="${x + slot(i) / 2}" y="${top + 14}" text-anchor="middle">${NAME[i.k]}</text>`;
     html += `<text class="lab2" x="${x + slot(i) / 2}" y="${top + 26}" text-anchor="middle">${FIGS[i.k].plan ? "지름 " : ""}${i.hm} m</text>`;
@@ -72,6 +76,8 @@ function row(host, keys, opt = {}) {
 const $ = id => document.getElementById(id);
 row($("r1"), FIG_GROUPS.people.concat(["fig_car"]));
 row($("r2"), ["fig_stand_1", "fig_tree_small", "fig_tree_conifer", "fig_tree_street", "fig_tree_big"], { px: 2 });
+row($("r1f"), FIG_GROUPS.people.concat(["fig_car"]), { fill: true });
+row($("r2f"), ["fig_stand_1", "fig_tree_small", "fig_tree_conifer", "fig_tree_street", "fig_tree_big"], { px: 2, fill: true });
 { // plan trees: sit on a common baseline
   const keys = FIG_GROUPS.plan; row($("r3"), keys, { px: 3 });
 }

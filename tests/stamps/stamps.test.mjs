@@ -47,6 +47,22 @@ ok("stampSvg draws colours #1E2124 / #7D848D, mirror flips", () => {
   assert.ok(D.stampSvg({ ...st, flip: true }, 100).includes("scale(-1 1)"));
   for (const k of F.FIG_KEYS) { const bb = D.stampBox({ stamp: k, den: 100 }); assert.ok(D.stampSvg({ stamp: k, w: bb.w, h: bb.h }, 100).startsWith("<g"), k); }
 });
+ok("outline is the default look: no solid fill, constant 0.13 mm lines; fill option brings the silhouette back", () => {
+  for (const k of F.FIG_KEYS) {
+    const b = F.figBox(k, F.FIGS[k].hm, 100), svg = F.figSvg({ stamp: k, w: b.w, h: b.h }), s = b.h / 100;
+    assert.ok(!/fill="#1E2124"/.test(svg), k + " has a solid fill"); assert.ok(svg.includes('stroke="#1E2124"'), k);
+    for (const m of svg.matchAll(/stroke-width="([\d.]+)"/g)) assert.ok(Number(m[1]) * s >= 0.12 && Number(m[1]) * s <= 0.19, k + " line " + Number(m[1]) * s);
+  }
+  const b = F.figBox("fig_tree_big", 14, 100), st = { stamp: "fig_tree_big", w: b.w, h: b.h };
+  assert.ok(F.figSvg({ ...st, fill: true }).includes('fill="#1E2124"')); assert.ok(F.figSvg({ ...st, tone: "soft" }).includes("#7D848D"));
+  for (const den of [50, 100, 500]) { const bb = F.figBox("fig_stand_1", 1.75, den), sv = F.figSvg({ stamp: "fig_stand_1", w: bb.w, h: bb.h }); near(Number(/stroke-width="([\d.]+)"/.exec(sv)[1]) * bb.h / 100, 0.13, 0.005); }
+});
+ok("broadleaf crown is one closed irregular outline + two trunk lines; conifer outline; car wheels are circles", () => {
+  const o = F.FIGS.fig_tree_big.outline; assert.equal(o.length, 2); assert.ok(/Z$/.test(o[0].d) && o[0].d.split("C").length > 10); assert.equal((o[1].d.match(/M/g) || []).length, 2);
+  assert.ok(!F.FIGS.fig_tree_conifer.outline);   // auto outline of the triangle-tier silhouette
+  assert.ok(F.figSvg({ stamp: "fig_car", w: 10, h: 5 }).split("<path").length > 3);
+  assert.equal(D.cleanFig({ stamp: "fig_car", fill: true }).fill, true); assert.equal(D.cleanFig({ stamp: "fig_car", fill: "yes" }).fill, false);
+});
 ok("plan tree lines stay 0.18 mm whatever the scale", () => {
   for (const den of [20, 100, 500]) {
     const b = F.figBox("fig_plan_circle", 6, den), svg = F.figSvg({ stamp: "fig_plan_circle", w: b.w, h: b.h }), s = b.h / 100;
@@ -63,7 +79,7 @@ ok("sanitizeDoc keeps/cleans figure fields", () => {
   assert.equal(c2.flip, true); assert.equal(c2.tone, "soft"); assert.equal(c2.hm, 1.1);
 });
 ok("i18n: every figure + panel key exists in ko and fr", () => {
-  const keys = ["st.sec", "st.g.people", "st.g.trees", "st.g.plan", "st.height", "st.dia", "st.flip", "st.tone", "st.tone.ink", "st.tone.soft", "st.refit", "st.refit.none", "st.den100", ...F.FIG_KEYS.map(k => "st.fig." + k.slice(4))];
+  const keys = ["st.sec", "st.g.people", "st.g.trees", "st.g.plan", "st.height", "st.dia", "st.flip", "st.tone", "st.tone.ink", "st.tone.soft", "st.fill", "st.refit", "st.refit.none", "st.den100", ...F.FIG_KEYS.map(k => "st.fig." + k.slice(4))];
   for (const l of ["ko", "fr"]) { const j = JSON.parse(fs.readFileSync(new URL(`../../i18n/${l}.json`, import.meta.url), "utf8")); for (const k of keys) assert.ok(j[k], `${l}:${k}`); }
 });
 console.log(`\n${n} tests passed`);
