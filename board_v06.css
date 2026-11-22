@@ -355,6 +355,9 @@ html.bd-open, html.bd-open body { overflow: hidden; }
 #board .bd-stamp-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 #board .bd-stamp-it { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 6px; font-size: 11px; background: #fff; color: #1d1d1f; min-height: 72px; }
 #board .bd-stamp-it:hover:not(:disabled) { background: #f5f5f7; border-color: var(--ink); }
+#board .bd-stamps { max-height: calc(100% - 16px); overflow-y: auto; }
+#board .bd-stamp-fig { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#board .bd-stamp-fig .bd-stamp-it { min-height: 64px; padding: 6px 2px; font-size: 10px; text-align: center; line-height: 1.25; word-break: keep-all; }
 #board .bd-stamp-prev { width: 100%; max-height: 40px; display: block; }
 
 /* build 4a-2: preflight badge, overset mark, gap labels */

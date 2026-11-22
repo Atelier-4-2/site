@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>점경 실루엣 확인 시트</title>
+<style>
+  :root { --ink: #1E2124; --soft: #7D848D; --line: #d9dbde; --bg: #fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--ink); font: 14px/1.5 "Noto Sans KR", "Noto Sans", system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 28px 0 6px; color: var(--soft); font-weight: 600; }
+  p.n { margin: 0 0 8px; color: var(--soft); font-size: 12px; }
+  .row { overflow-x: auto; border-bottom: 1px solid var(--ink); padding-bottom: 0; }
+  .row svg { display: block; }
+  .lab { font-size: 11px; fill: var(--ink); }
+  .lab2 { font-size: 10px; fill: var(--soft); }
+  .grid { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+</style>
+</head>
+<body>
+<h1>점경 실루엣 확인 시트</h1>
+<p class="n">전부 같은 축척(1 m = 40 px, 1:100 의 0.18 mm 선 기준)으로 나란히 놓았습니다. 아래 눈금은 1 m 단위입니다. 선택 색은 #E6B89C, 기본 색은 #1E2124 / #7D848D.</p>
+
+<h2>입면 · 인물, 자전거, 휠체어, 자동차</h2>
+<div class="row" id="r1"></div>
+<h2>입면 · 나무 (높이 6 / 10 / 14 m 프리셋, 1 m = 20 px · 사람은 비교용)</h2>
+<div class="row" id="r2"></div>
+<h2>평면 · 나무 (지름 6 m 기준, 1 m = 30 px, 선 굵기 0.18 mm 고정)</h2>
+<div class="row" id="r3"></div>
+<h2>같은 인물, 1:100 카드에서의 실제 크기 (mm)</h2>
+<div class="row" id="r4"></div>
+<h2>연한 색 (#7D848D) 과 반전</h2>
+<div class="row" id="r5"></div>
+
+<script type="module">
+import { FIGS, FIG_GROUPS, figSvg, figBox } from "../../board_v06_figs.js";
+const NAME = {
+  fig_stand_1: "서 있는 사람 1", fig_stand_2: "서 있는 사람 2", fig_walk_1: "걷는 사람 1", fig_walk_2: "걷는 사람 2",
+  fig_sit_1: "앉은 사람", fig_child: "아이", fig_bike: "자전거", fig_wheelchair: "휠체어", fig_car: "자동차 (측면)",
+  fig_tree_big: "활엽수 큰", fig_tree_small: "활엽수 작은", fig_tree_conifer: "침엽수", fig_tree_street: "가로수",
+  fig_plan_circle: "평면 원", fig_plan_dash: "평면 파선 원", fig_plan_branch: "평면 가지 원"
+};
+const PX = 4, NS = "http://www.w3.org/2000/svg";
+// st = card size in mm; here 1 mm == 1 user unit and the figure is placed at (x, base) with its true height in "mm" = m * 1000 / den.
+// den chosen so that 1 m == 1 mm: den 100 (1 m = 10 mm), 4 px per mm, so 1 m = 40 px and printed hairlines stay hairlines.
+function row(host, keys, opt = {}) {
+  const PX = opt.px || 4;
+  const gap = 16, items = keys.map(k => {
+    const g = FIGS[k], hm = opt.hm?.[k] ?? g.hm, b = figBox(k, hm, 100);
+    return { k, hm, b, tone: opt.tone || "ink", flip: !!opt.flip };
+  });
+  const slot = i => Math.max(i.b.w * PX, 64), widthPx = items.reduce((a, i) => a + slot(i) + gap, 24) + 8;
+  const maxH = Math.max(...items.map(i => i.b.h * PX)) + 44, top = maxH - 30;
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", Math.max(widthPx, 700)); svg.setAttribute("height", maxH);
+  svg.setAttribute("viewBox", `0 0 ${Math.max(widthPx, 700)} ${maxH}`);
+  let x = 12, html = "";
+  for (const i of items) {
+    const w = i.b.w * PX, h = i.b.h * PX;
+    const body = figSvg({ stamp: i.k, w: i.b.w, h: i.b.h, tone: i.tone, flip: i.flip }, {});
+    html += `<g transform="translate(${x + (slot(i) - w) / 2} ${top - h}) scale(${PX})">${body}</g>`;
+    html += `<text class="lab" x="${x + slot(i) / 2}" y="${top + 14}" text-anchor="middle">${NAME[i.k]}</text>`;
+    html += `<text class="lab2" x="${x + slot(i) / 2}" y="${top + 26}" text-anchor="middle">${FIGS[i.k].plan ? "지름 " : ""}${i.hm} m</text>`;
+    x += slot(i) + gap;
+  }
+  // metre ticks along the ground
+  let ticks = `<line x1="0" x2="${Math.max(widthPx, 700)}" y1="${top}" y2="${top}" stroke="#1E2124" stroke-width="1"/>`;
+  svg.innerHTML = ticks + html;
+  host.append(svg);
+}
+const $ = id => document.getElementById(id);
+row($("r1"), FIG_GROUPS.people.concat(["fig_car"]));
+row($("r2"), ["fig_stand_1", "fig_tree_small", "fig_tree_conifer", "fig_tree_street", "fig_tree_big"], { px: 2 });
+{ // plan trees: sit on a common baseline
+  const keys = FIG_GROUPS.plan; row($("r3"), keys, { px: 3 });
+}
+{ // 1:100 mm sizes
+  const host = $("r4"), keys = ["fig_stand_1", "fig_walk_1", "fig_sit_1", "fig_child", "fig_bike", "fig_wheelchair", "fig_car"];
+  const M = 8; // px per mm on screen
+  const items = keys.map(k => ({ k, b: figBox(k, FIGS[k].hm, 100) }));
+  const slot = i => Math.max(i.b.w * M, 84), W = items.reduce((a, i) => a + slot(i) + 16, 16), H = Math.max(...items.map(i => i.b.h * M)) + 44, base = H - 30;
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  let x = 8, html = `<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="#1E2124"/>`;
+  for (const i of items) {
+    html += `<g transform="translate(${x + (slot(i) - i.b.w * M) / 2} ${base - i.b.h * M}) scale(${M})">${figSvg({ stamp: i.k, w: i.b.w, h: i.b.h })}</g>`;
+    html += `<text class="lab" x="${x + slot(i) / 2}" y="${base + 14}" text-anchor="middle">${NAME[i.k]}</text>`;
+    html += `<text class="lab2" x="${x + slot(i) / 2}" y="${base + 26}" text-anchor="middle">${i.b.h.toFixed(1)} × ${i.b.w.toFixed(1)} mm</text>`;
+    x += slot(i) + 16;
+  }
+  svg.innerHTML = html; host.append(svg);
+}
+row($("r5"), ["fig_stand_1", "fig_walk_1", "fig_child", "fig_bike"], { tone: "soft" });
+row($("r5"), ["fig_walk_1", "fig_walk_2"], { flip: true });
+</script>
+</body>
+</html>
