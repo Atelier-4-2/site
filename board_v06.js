@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261122i";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261122L";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -15,7 +15,7 @@ import {
 import * as X from "./board_v06_export.js?v=20261122i";
 import { icon } from "./board_v06_icons.js?v=20261122i";
 import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122i";
-import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122i";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122L";
 import * as RC from "./board_v06_record.js?v=20261122i";
 import * as PR from "./board_v06_parent.js?v=20261122i";
 import { createChrome } from "./board_v06_chrome.js?v=20261122i";
@@ -1205,7 +1205,8 @@ function placeCtx() {
 }
 function ctxAction(act) {
   switch (act) {
-    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; placeCtx(); break; }
+    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; const lb = m.querySelector('[data-act="lw"]'); if (lb) { const c = selCards()[0]; lb.hidden = !(selCards().length === 1 && c?.kind === "diagram" && payloads.get(c.ref)?.svg); } placeCtx(); break; }
+    case "lw": { $("#bd-ctxmenu").hidden = true; const c = selCards()[0], sv = c && payloads.get(c.ref)?.svg; if (sv) openLineworkTool({ svgText: sv, name: S.assets[c.ref]?.title || "diagram" }); else status(_t("lw.err.nosvg")); break; }
     case "front": $("#bd-ctxmenu").hidden = true; reorder(1); break;
     case "back": $("#bd-ctxmenu").hidden = true; reorder(-1); break;
     case "tofront": $("#bd-ctxmenu").hidden = true; reorder(1, true); break;
@@ -1953,6 +1954,7 @@ function build() {
             <button type="button" data-m="snap" data-i18n="board.125">${_t("board.125")}</button>
             <button type="button" data-m="week" data-i18n="board.123">${_t("board.123")}</button>
             <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
+            <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
             <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
@@ -1985,6 +1987,7 @@ function build() {
               <select id="bd-new-size" aria-label="${_t("board.244")}" data-i18n-attr="aria-label:board.244">${SIZES.map(s => `<option${s === "A3" ? " selected" : ""}>${s}</option>`).join("")}</select>
               <select id="bd-new-orient" aria-label="${_t("board.245")}" data-i18n-attr="aria-label:board.245"><option value="landscape" data-i18n="board.246">${_t("board.246")}</option><option value="portrait" data-i18n="board.247">${_t("board.247")}</option></select>
               <button id="bd-addpage-ok" class="bd-btn bd-strong" type="button" data-i18n="board.248">${_t("board.248")}</button>
+              <button id="bd-lw-add" class="bd-btn" type="button" data-i18n="lw.menu">${_t("lw.menu")}</button>
             </div>
           </div>
         </div>
@@ -2039,6 +2042,7 @@ function build() {
           <button type="button" data-act="tofront" data-i18n="board.270">${_t("board.270")}</button>
           <button type="button" data-act="toback" data-i18n="board.271">${_t("board.271")}</button>
           <span class="bd-msep" role="separator"></span>
+          <button type="button" data-act="lw" data-i18n="lw.menu.card" hidden>${_t("lw.menu.card")}</button>
           <button type="button" data-act="dup" data-i18n-html="board.272">${_t("board.272")}</button>
           <button type="button" data-act="lock" data-i18n="board.273">${_t("board.273")}</button>
           <button type="button" data-act="del" data-i18n="board.076">${_t("board.076")}</button>
@@ -2068,6 +2072,7 @@ function build() {
     <p id="bd-status" class="bd-status" role="status" aria-live="polite"></p>
     <div id="bd-tip" class="bd-tip" role="tooltip" hidden></div>
     <input id="bd-file-img" type="file" accept="image/*,application/pdf,.pdf" multiple hidden>
+    <input id="bd-file-lw" type="file" accept=".pdf,.svg,application/pdf,image/svg+xml" hidden>
     <input id="bd-file-repl" type="file" accept="image/*" hidden>
     <input id="bd-file-proj" type="file" accept=".atelier,.zip,application/zip" hidden>`;
   document.body.append(sec);
@@ -2144,6 +2149,8 @@ function wire() {
   for (const b of document.querySelectorAll("#board [data-mode]")) b.onclick = () => { if (b.dataset.mode !== "board") gotoMode(b.dataset.mode); };
   for (const b of document.querySelectorAll("#board [data-layout]")) b.onclick = () => setLayout(b.dataset.layout);
   $("#bd-file-proj").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) openFile(f); };
+  $("#bd-file-lw").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) openLineworkTool({ file: f }); };
+  $("#bd-lw-add").onclick = () => { closeMenus(); $("#bd-file-lw").click(); };
   $("#bd-file-img").onchange = e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) { ui.emptyDismissed = true; addImageFiles(fs); } };
   $("#bd-undo").onclick = undo;
   $("#bd-redo").onclick = redo;
@@ -2173,6 +2180,7 @@ function wire() {
     else if (m === "snap") saveSnapshot();
     else if (m === "week") addWeek();
     else if (m === "pdf") $("#bd-file-img").click();
+    else if (m === "lw") $("#bd-file-lw").click();
     else if (m === "promote") promoteKept(secActive() ? selSection : null);
   });
   // the stamp gallery is opened from the tool rail (S): clicks on that button or inside the gallery must not close it
@@ -3442,6 +3450,16 @@ async function importPdf(file) {
     }
     close(); ui.emptyDismissed = true; commit(); status(_t('board.468', { 0: done }));
   };
+}
+
+// Linework tool (선 위계 정리): loaded on first use so the board's start-up is unchanged; the result comes back through add() as a new diagram card
+async function openLineworkTool(src) {
+  status(_t("lw.loading"));
+  try {
+    const mod = await import("./board_v06_linework.js?v=20261122L");
+    status("");
+    await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
+  } catch (e) { console.warn(e); status(_t("lw.err.read")); }
 }
 
 // ---- public API ----------------------------------------------------------------------------------------------------------

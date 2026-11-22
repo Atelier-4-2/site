@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261122i";
+import { t as _t } from "./i18n.js?v=20261122L";
 // Board v2 dialogs: export panel, command palette (⌘K), shortcut sheet, board info (cartouche meta), text styles,
 // presentation mode. Created once by board_v06.js with a small api object; holds no document state of its own.
 import { contentRect, frameSize, parseRange, ROLES, ROLE_LABEL, PALETTE, WEIGHTS, needsTiles, pad2 } from "./board_v06_doc.js?v=20261122i";

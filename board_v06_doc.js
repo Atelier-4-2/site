@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261122i";
+import { t as _t } from "./i18n.js?v=20261122L";
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.

@@ -1,4 +1,4 @@
-import { t as _t, getLang as _lang } from "./i18n.js?v=20261122i";
+import { t as _t, getLang as _lang } from "./i18n.js?v=20261122L";
 // Build 4b: parent pages, spreads, style overrides, swatches, fields. Pure (no DOM, no imports) so node can test it.
 const PAPER = { A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297] };
 export const psize = (size, orient) => { const [a, b] = PAPER[size] || PAPER.A3; return orient === "portrait" ? [a, b] : [b, a]; };

@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261122i";
+import { t as _t } from "./i18n.js?v=20261122L";
 // Build 4a-2: output preflight (B11) and PDF presets (B12). Pure (no DOM) so node can test it.
 import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261122i";
 

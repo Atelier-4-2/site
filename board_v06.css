@@ -458,3 +458,65 @@ html.bd-open, html.bd-open body { overflow: hidden; }
 #board .bd-pdfcell { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; font-size: 11px; color: var(--muted); }
 #board .bd-pdfcell canvas { max-width: 100%; border: 1px solid var(--line); background: #fff; }
 #board .bd-pdfcell input { position: absolute; left: 4px; top: 4px; }
+
+/* ---- Linework tool (선 위계 정리): board_v06_linework.js ------------------------------------------------------------------ */
+#board .bd-addpop { flex-wrap: wrap; }
+#board .lw-dlg { position: absolute; inset: 0; z-index: 3200; display: flex; flex-direction: column; background: var(--background); color: var(--ink); outline: none; }
+#board .lw-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--line); flex: none; }
+#board .lw-title { font-weight: 600; }
+#board .lw-file { color: var(--muted); font-size: 12px; max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#board .lw-sp { flex: 1; }
+#board .lw-scale { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+#board .lw-seg { display: inline-flex; }
+#board .lw-seg .bd-btn[aria-pressed="true"] { border-color: var(--ink); font-weight: 600; }
+#board .lw-seg .bd-btn:first-child { border-radius: 6px 0 0 6px; }
+#board .lw-seg .bd-btn:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+#board .lw-main { flex: 1; min-height: 0; display: flex; }
+#board .lw-view { position: relative; flex: 1; min-width: 0; background: var(--canvas); display: flex; flex-direction: column; }
+#board .lw-stage { position: relative; flex: 1; min-height: 0; cursor: crosshair; touch-action: none; user-select: none; }
+#board .lw-stage.is-pan { cursor: grabbing; }
+#board .lw-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+#board .lw-svg [data-p] { vector-effect: none; }
+#board .lw-fit { position: absolute; right: 10px; bottom: 10px; }
+#board .lw-hint { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 120px); font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--background) 86%, transparent); padding: 3px 6px; border-radius: 4px; pointer-events: none; }
+#board .lw-msg { margin: auto; padding: 24px; color: var(--muted); }
+#board .lw-msg.is-err { color: var(--ink); }
+#board .lw-notice { position: absolute; left: 10px; top: 10px; right: 10px; padding: 8px 10px; font-size: 12px; background: var(--background); border: 1px solid var(--accent, var(--line)); border-radius: 6px; z-index: 2; }
+#board .lw-side { width: 340px; flex: none; border-left: 1px solid var(--line); overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+#board .lw-tbl summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
+#board .lw-tbody { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+#board .lw-trow { display: grid; grid-template-columns: 1fr 76px 44px; gap: 6px; align-items: center; font-size: 12px; }
+#board .lw-thead { color: var(--muted); font-size: 11px; }
+#board .lw-trow input[type="number"] { height: 26px; padding: 0 6px; width: 100%; box-sizing: border-box; }
+#board .lw-trow input[type="color"] { height: 26px; width: 44px; padding: 0; border: 1px solid var(--line); background: none; }
+#board .lw-penhead { font-weight: 600; font-size: 12px; color: var(--muted); }
+#board .lw-pens { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+#board .lw-pen { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+#board .lw-pen:focus-visible { outline: 2px solid var(--focus, var(--ink)); outline-offset: 1px; }
+#board .lw-pen.is-sel { border-color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+#board .lw-pentop { display: flex; align-items: center; gap: 8px; }
+#board .lw-penname { flex: 1; font-size: 12px; white-space: nowrap; }
+#board .lw-pentop select { height: 26px; max-width: 130px; }
+#board .lw-sw { flex: none; }
+#board .lw-peninfo { display: flex; gap: 8px; font-size: 11px; color: var(--muted); }
+#board .lw-cnt { flex: none; }
+#board .lw-ov { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+#board .lw-pick { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--background); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--bd-pop); font-size: 12px; }
+#board .lw-pages { position: absolute; inset: 56px 12% 40px; z-index: 5; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--background); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--bd-pop); overflow: hidden; }
+#board .lw-pageshead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#board .lw-pageshead b { margin-right: auto; font-weight: 600; }
+#board .lw-pageshead input { width: 64px; height: 28px; }
+#board .lw-pagegrid { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; align-content: start; }
+#board .lw-pagecell { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); background: none; border: 0; cursor: pointer; padding: 2px; }
+#board .lw-pagecell canvas { max-width: 100%; border: 1px solid var(--line); background: #fff; }
+#board .lw-pagecell:hover canvas, #board .lw-pagecell:focus-visible canvas { border-color: var(--ink); }
+@keyframes lw-pulse { 50% { opacity: .35; } }
+@media (max-width: 799px) {
+  #board .lw-main { flex-direction: column; overflow: auto; }
+  #board .lw-view { flex: none; height: 55vh; }
+  #board .lw-side { width: auto; border-left: 0; border-top: 1px solid var(--line); overflow: visible; flex: none; }
+  #board .lw-top { padding: 6px 8px; gap: 6px; }
+  #board .lw-file { max-width: 14ch; }
+  #board .lw-hint { max-width: calc(100% - 110px); }
+  #board .lw-pages { inset: 48px 8px 24px; }
+}
