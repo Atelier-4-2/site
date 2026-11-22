@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261122i";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261122M";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -9,16 +9,17 @@ import {
   DOC_VERSION, PAPER, SIZES, ROLES, ROLE_LABEL, ROLE_BOX, MEMO_COLORS, GRID_DEFAULT, TEMPLATE_KEYS, TEMPLATE_LABEL, LAYERS, LAYER_LABEL, MAX_GUIDES,
   makeTemplate, templateKey, safeImg, num, r2, pad2, frameSize, orientLabel, pageLabel, pageTitle, gridCells as gridCells0, cartHeight, pageAt, assignPages, defaultLayer,
   FSTYLES, FSTYLE_LABEL,
-  cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, STD_DENS, isNorthStamp, isBarStamp,
+  cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, STD_DENS, isNorthStamp, isBarStamp, isFigStamp, isPlanFig, clampHm,
   cleanSvgString, cleanPayload, sanitizeDoc, emptyDoc
-} from "./board_v06_doc.js?v=20261122i";
-import * as X from "./board_v06_export.js?v=20261122i";
-import { icon } from "./board_v06_icons.js?v=20261122i";
-import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122i";
-import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122i";
-import * as RC from "./board_v06_record.js?v=20261122i";
-import * as PR from "./board_v06_parent.js?v=20261122i";
-import { createChrome } from "./board_v06_chrome.js?v=20261122i";
+} from "./board_v06_doc.js?v=20261122M";
+import { FIGS, FIG_GROUPS, TREE_PRESETS } from "./board_v06_figs.js?v=20261122M";
+import * as X from "./board_v06_export.js?v=20261122M";
+import { icon } from "./board_v06_icons.js?v=20261122M";
+import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261122M";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261122M";
+import * as RC from "./board_v06_record.js?v=20261122M";
+import * as PR from "./board_v06_parent.js?v=20261122M";
+import { createChrome } from "./board_v06_chrome.js?v=20261122M";
 await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
@@ -110,7 +111,12 @@ function syncStamps() {
       const maxW = frameSize(pf)[0] - 2 * (pf.template ? pf.template.margin : (frameSize(pf)[0] >= 500 ? 15 : 10));
       if (b.w > maxW && maxW > 20) { st.len_m = Math.max(0.001, (maxW - 14) * st.den / 1000); b = stampBox(st); }
     }
-    if (b) { st.w = b.w; st.h = b.h; }
+    if (b) {
+      if (isFigStamp(st.stamp) && st.w > 0 && st.h > 0) {   // a figure keeps its feet (trees in plan: their centre) where they were when the scale or height changes
+        st.x = r2(st.x + (st.w - b.w) / 2); st.y = r2(st.y + (isPlanFig(st.stamp) ? (st.h - b.h) / 2 : st.h - b.h));
+      }
+      st.w = b.w; st.h = b.h;
+    }
   }
 }
 function commit() {
@@ -751,7 +757,7 @@ function updateCardEl(g, c) {
     t.setAttribute("x", 3); t.setAttribute("y", 7); t.setAttribute("font-size", 4.4); t.textContent = (c.title || "").slice(0, mc) + ((c.title || "").length > mc ? "…" : "");
     h.setAttribute("x", 3); h.setAttribute("y", c.h - 4); h.setAttribute("font-size", 3.2); h.textContent = RC.hostOf(c.url);
   } else if (c.kind === "stamp") {
-    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}`;
+    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}`;
     if (sg.dataset.k !== key) { sg.dataset.k = key; sg.innerHTML = stampSvg(c, c.den); }   // vector, numbers only
   } else {
     const ovl = g.querySelector(".bd-ovlr"); if (ovl) { ovl.setAttribute("width", c.w); ovl.setAttribute("height", c.h); ovl.style.display = c.from_parent && ui.layout === "print" ? "" : "none"; }
@@ -1205,7 +1211,8 @@ function placeCtx() {
 }
 function ctxAction(act) {
   switch (act) {
-    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; placeCtx(); break; }
+    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; const lb = m.querySelector('[data-act="lw"]'); if (lb) { const c = selCards()[0]; lb.hidden = !(selCards().length === 1 && c?.kind === "diagram" && payloads.get(c.ref)?.svg); } placeCtx(); break; }
+    case "lw": { $("#bd-ctxmenu").hidden = true; const c = selCards()[0], sv = c && payloads.get(c.ref)?.svg; if (sv) openLineworkTool({ svgText: sv, name: S.assets[c.ref]?.title || "diagram" }); else status(_t("lw.err.nosvg")); break; }
     case "front": $("#bd-ctxmenu").hidden = true; reorder(1); break;
     case "back": $("#bd-ctxmenu").hidden = true; reorder(-1); break;
     case "tofront": $("#bd-ctxmenu").hidden = true; reorder(1, true); break;
@@ -1953,6 +1960,7 @@ function build() {
             <button type="button" data-m="snap" data-i18n="board.125">${_t("board.125")}</button>
             <button type="button" data-m="week" data-i18n="board.123">${_t("board.123")}</button>
             <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
+            <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
             <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
@@ -1985,6 +1993,7 @@ function build() {
               <select id="bd-new-size" aria-label="${_t("board.244")}" data-i18n-attr="aria-label:board.244">${SIZES.map(s => `<option${s === "A3" ? " selected" : ""}>${s}</option>`).join("")}</select>
               <select id="bd-new-orient" aria-label="${_t("board.245")}" data-i18n-attr="aria-label:board.245"><option value="landscape" data-i18n="board.246">${_t("board.246")}</option><option value="portrait" data-i18n="board.247">${_t("board.247")}</option></select>
               <button id="bd-addpage-ok" class="bd-btn bd-strong" type="button" data-i18n="board.248">${_t("board.248")}</button>
+              <button id="bd-lw-add" class="bd-btn" type="button" data-i18n="lw.menu">${_t("lw.menu")}</button>
             </div>
           </div>
         </div>
@@ -2039,6 +2048,7 @@ function build() {
           <button type="button" data-act="tofront" data-i18n="board.270">${_t("board.270")}</button>
           <button type="button" data-act="toback" data-i18n="board.271">${_t("board.271")}</button>
           <span class="bd-msep" role="separator"></span>
+          <button type="button" data-act="lw" data-i18n="lw.menu.card" hidden>${_t("lw.menu.card")}</button>
           <button type="button" data-act="dup" data-i18n-html="board.272">${_t("board.272")}</button>
           <button type="button" data-act="lock" data-i18n="board.273">${_t("board.273")}</button>
           <button type="button" data-act="del" data-i18n="board.076">${_t("board.076")}</button>
@@ -2068,6 +2078,7 @@ function build() {
     <p id="bd-status" class="bd-status" role="status" aria-live="polite"></p>
     <div id="bd-tip" class="bd-tip" role="tooltip" hidden></div>
     <input id="bd-file-img" type="file" accept="image/*,application/pdf,.pdf" multiple hidden>
+    <input id="bd-file-lw" type="file" accept=".pdf,.svg,application/pdf,image/svg+xml" hidden>
     <input id="bd-file-repl" type="file" accept="image/*" hidden>
     <input id="bd-file-proj" type="file" accept=".atelier,.zip,application/zip" hidden>`;
   document.body.append(sec);
@@ -2144,6 +2155,8 @@ function wire() {
   for (const b of document.querySelectorAll("#board [data-mode]")) b.onclick = () => { if (b.dataset.mode !== "board") gotoMode(b.dataset.mode); };
   for (const b of document.querySelectorAll("#board [data-layout]")) b.onclick = () => setLayout(b.dataset.layout);
   $("#bd-file-proj").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) openFile(f); };
+  $("#bd-file-lw").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) openLineworkTool({ file: f }); };
+  $("#bd-lw-add").onclick = () => { closeMenus(); $("#bd-file-lw").click(); };
   $("#bd-file-img").onchange = e => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) { ui.emptyDismissed = true; addImageFiles(fs); } };
   $("#bd-undo").onclick = undo;
   $("#bd-redo").onclick = redo;
@@ -2173,6 +2186,7 @@ function wire() {
     else if (m === "snap") saveSnapshot();
     else if (m === "week") addWeek();
     else if (m === "pdf") $("#bd-file-img").click();
+    else if (m === "lw") $("#bd-file-lw").click();
     else if (m === "promote") promoteKept(secActive() ? selSection : null);
   });
   // the stamp gallery is opened from the tool rail (S): clicks on that button or inside the gallery must not close it
@@ -2623,7 +2637,7 @@ function buildProps() {
   if (cards.length === 1) {
     const c = cards[0], f = frameOf(c), media = c.kind === "image" || c.kind === "diagram";
     const pxs = media && !work ? srcPx(c) : null;
-    sig = `c|${ui.layout}|${c.id}|${c.kind}|${c.role || ""}|${c.align || ""}|${c.color || ""}|${c.locked}|${layerOf(c)}|${c.rot || 0}|${c.group || ""}|${f ? f.id : "-"}|${ui.ref}|${pxs ? pxs.join("x") : ""}|${c.scale ? c.scale.den + (c.scale.locked ? "L" : "") : ""}|${media ? cardDen(c, S.assets[c.ref]) : ""}|${c.stamp || ""}|${c.link || ""}|${c.link && cardById(c.link) ? 1 : 0}|${c.fit || ""}|${ppiInfo(c)?.text || ""}|${c.status || ""}|${(c.tags || []).join(",")}|${c.url || ""}|${c.stack || ""}|${c.fstyle || ""}|${PR.hasOverride(c) ? 1 : 0}|${c.cols || 1}|${(PR.overrideOf(c).color) || ""}|${S.swatches.length}`;
+    sig = `c|${ui.layout}|${c.id}|${c.kind}|${c.role || ""}|${c.align || ""}|${c.color || ""}|${c.locked}|${layerOf(c)}|${c.rot || 0}|${c.group || ""}|${f ? f.id : "-"}|${ui.ref}|${pxs ? pxs.join("x") : ""}|${c.scale ? c.scale.den + (c.scale.locked ? "L" : "") : ""}|${media ? cardDen(c, S.assets[c.ref]) : ""}|${c.stamp || ""}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}|${c.link || ""}|${c.link && cardById(c.link) ? 1 : 0}|${c.fit || ""}|${ppiInfo(c)?.text || ""}|${c.status || ""}|${(c.tags || []).join(",")}|${c.url || ""}|${c.stack || ""}|${c.fstyle || ""}|${PR.hasOverride(c) ? 1 : 0}|${c.cols || 1}|${(PR.overrideOf(c).color) || ""}|${S.swatches.length}`;
     const [rx, ry] = relXY(c), b = visBox(c);
     const widget = mk("div", "bd-ref"); widget.setAttribute("role", "group"); widget.setAttribute("aria-label", _t('board.320'));
     REF.forEach((_, i) => { const t = mk("button", "bd-refp"); t.type = "button"; t.setAttribute("aria-pressed", String(ui.ref === i)); t.setAttribute("aria-label", refName(i)); t.dataset.tip = _t('board.321') + refName(i); t.addEventListener("click", () => { ui.ref = i; renderProps(); }); widget.append(t); });
@@ -2875,12 +2889,23 @@ function stampSection(c) {
   if (!north) { const f = selField("stden", _t('board.375'), stdDenOpts(c.den), c.den, v => upd(k => { k.den = Math.round(clamp(Number(v), 1, 1e6)); })); f.querySelector("select").disabled = !!L; parts.push(f); }
   if (bar) parts.push(prow(numField("len", _t('board.393'), c.len_m, v => upd(k => { k.len_m = clamp(v, 0.001, 1e7); k.len_auto = false; }), { unit: "m" }), pbtn(_t('board.394'), null, () => upd(k => { k.len_auto = true; }))));
   if (north) parts.push(numField("angle", _t('board.395'), c.angle, v => upd(k => { k.angle = clamp(v, -360, 360); k.angleAuto = false; }), { unit: "°" }));
+  if (isFigStamp(c.stamp)) {
+    const plan = isPlanFig(c.stamp), hm = c.hm ?? FIGS[c.stamp].hm;
+    const hf = numField("hm", plan ? _t("st.dia") : _t("st.height"), hm, v => upd(k => { k.hm = clampHm(v, hm); }), { unit: "m" });
+    const hi = hf.querySelector("input"); hi.value = String(hm); hi.defaultValue = hi.value;   // numField rounds to 0.1; heights need 1.75
+    parts.push(hf);
+    if (FIGS[c.stamp].cat === "tree") parts.push(prow(...TREE_PRESETS.map(h => pbtn(h + " m", null, () => upd(k => { k.hm = h; }), { pressed: hm === h }))));
+    parts.push(chkField("flip", _t("st.flip"), c.flip, on => upd(k => { k.flip = on; })));
+    parts.push(selField("tone", _t("st.tone"), [["ink", _t("st.tone.ink")], ["soft", _t("st.tone.soft")]], c.tone || "ink", v => upd(k => { k.tone = v === "soft" ? "soft" : "ink"; })));
+    parts.push(prow(pbtn(_t("st.refit"), null, () => refitFigs())));
+  }
   if (c.link) parts.push(prow(pbtn(_t('board.396'), null, () => upd(k => { k.link = null; }))));
-  return psec(_t('board.397'), ...parts);
+  return psec(isFigStamp(c.stamp) ? _t("st.sec") : _t('board.397'), ...parts);
 }
 // stamp gallery (rail tool S): 6 live vector templates; click then click the canvas, or drag one onto the canvas
 const STAMP_BOX = { north_arrow: [12, 18], north_circle: [18, 18], north_cross: [22, 22] };
 function stampSample(k) {
+  if (isFigStamp(k)) { const hm = FIGS[k].hm, o = { stamp: k, den: hm * 1000 / 24, hm, len_m: 5, unit: "m", angle: 0 }, b = stampBox(o); o.w = b.w; o.h = b.h; return o; }   // gallery preview: 24 mm tall
   const o = { stamp: k, den: 100, len_m: 5, unit: "m", angle: 0, w: 12, h: 18 }, b = stampBox(o);
   if (b) { o.w = b.w; o.h = b.h; } else if (STAMP_BOX[k]) [o.w, o.h] = STAMP_BOX[k];
   return o;
@@ -2889,15 +2914,15 @@ const stampLinkCandidate = () => { const cs = selCards(); return cs.length === 1
 function renderStampGallery() {
   const box = $("#bd-stamps");
   box.replaceChildren();
-  const group = (title, keys) => {
+  const group = (title, keys, fig) => {
     box.append(mk("p", "bd-stamp-h", title));
-    const row = mk("div", "bd-stamp-row");
+    const row = mk("div", fig ? "bd-stamp-row bd-stamp-fig" : "bd-stamp-row");
     for (const k of keys) {
       const b = mk("button", "bd-stamp-it"); b.type = "button"; b.draggable = true; b.dataset.stamp = k; b.setAttribute("aria-label", STAMP_LABEL[k]);
       const o = stampSample(k), sv = document.createElementNS(NS, "svg");
       sv.setAttribute("viewBox", `0 0 ${o.w} ${o.h}`); sv.setAttribute("class", "bd-stamp-prev"); sv.setAttribute("font-family", "Pretendard, Noto Sans KR, sans-serif");
       sv.style.aspectRatio = `${o.w} / ${o.h}`;
-      sv.innerHTML = stampSvg(o, o.den);
+      sv.innerHTML = stampSvg(o, o.den, isFigStamp(k) ? { hair: 0.5 } : {});
       b.append(sv, mk("span", "", STAMP_LABEL[k]));
       row.append(b);
     }
@@ -2905,6 +2930,9 @@ function renderStampGallery() {
   };
   group(_t('board.398'), ["bar_ticks", "bar_alt", "ratio"]);
   group(_t('board.399'), ["north_arrow", "north_circle", "north_cross"]);
+  group(_t("st.g.people"), FIG_GROUPS.people, true);
+  group(_t("st.g.trees"), FIG_GROUPS.trees, true);
+  group(_t("st.g.plan"), FIG_GROUPS.plan, true);
   box.append(mk("p", "bd-stamp-n", stampLinkCandidate() ? _t('board.400') : _t('board.401')));
 }
 function toggleStamps() {
@@ -2923,6 +2951,7 @@ function placeStamp(at) {
   const pk = ui.stampPick;
   ui.stampPick = null; setTool("v");
   if (!pk || !STAMPS.includes(pk.k)) return;
+  if (isFigStamp(pk.k)) { placeFig(pk, at); return; }
   const lc = pk.link ? cardById(pk.link) : null, d = lc ? cardDen(lc, S.assets[lc.ref]) : null, o = stampSample(pk.k);
   o.den = d || 100; o.len_m = niceLen(o.den);
   const na = lc ? S.assets[lc.ref]?.meta?.north_deg : null;
@@ -2931,6 +2960,27 @@ function placeStamp(at) {
   const c = addCard({ kind: "stamp", stamp: pk.k, den: o.den, link: d ? lc.id : null, angle: o.angle, len_m: o.len_m, unit: "m", len_auto: true, angleAuto: true, w: o.w, h: o.h, x: r2(at[0] - o.w / 2), y: r2(at[1] - o.h / 2), layer: "text" });
   sel = new Set([c.id]); selFrame = null;
   commit();
+}
+
+// scale figures: placed on the drawing card under the pointer (its scale sets the size); no card -> selected card -> 1:100
+const mediaUnderPoint = (x, y) => S.cards.filter(c => isMedia(c) && x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h && cardDen(c, S.assets[c.ref])).sort((a, b) => b.z - a.z)[0] || null;
+function placeFig(pk, at) {
+  const g = FIGS[pk.k], lc = mediaUnderPoint(at[0], at[1]) || (pk.link ? cardById(pk.link) : null), d = lc ? cardDen(lc, S.assets[lc.ref]) : null;
+  const o = { stamp: pk.k, den: d || 100, hm: g.hm }, b = stampBox(o);
+  const c = addCard({ kind: "stamp", stamp: pk.k, den: o.den, hm: g.hm, flip: false, tone: "ink", link: d ? lc.id : null, angle: 0, len_m: 5, unit: "m", len_auto: true, angleAuto: false, w: b.w, h: b.h, x: r2(at[0] - b.w / 2), y: r2(at[1] - (g.plan ? b.h / 2 : b.h)), layer: "text" });
+  sel = new Set([c.id]); selFrame = null;
+  commit();
+  if (!d) status(_t("st.den100"));
+}
+function refitFigs() {   // re-read the scale: link each selected figure to the drawing card under its centre
+  let miss = 0;
+  for (const k of selCards()) {
+    if (k.kind !== "stamp" || !isFigStamp(k.stamp)) continue;
+    const lc = mediaUnderPoint(k.x + k.w / 2, k.y + k.h / 2);
+    if (lc) k.link = lc.id; else if (!k.link || !cardById(k.link)) miss++;
+  }
+  commit();
+  if (miss) status(_t("st.refit.none"));
 }
 
 // ---- build 4b: parent pages, overrides, spreads, swatches --------------------------------------------------------------------------
@@ -3442,6 +3492,16 @@ async function importPdf(file) {
     }
     close(); ui.emptyDismissed = true; commit(); status(_t('board.468', { 0: done }));
   };
+}
+
+// Linework tool (선 위계 정리): loaded on first use so the board's start-up is unchanged; the result comes back through add() as a new diagram card
+async function openLineworkTool(src) {
+  status(_t("lw.loading"));
+  try {
+    const mod = await import("./board_v06_linework.js?v=20261122N");
+    status("");
+    await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
+  } catch (e) { console.warn(e); status(_t("lw.err.read")); }
 }
 
 // ---- public API ----------------------------------------------------------------------------------------------------------

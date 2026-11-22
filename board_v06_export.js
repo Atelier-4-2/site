@@ -1,9 +1,9 @@
-import { t as _t } from "./i18n.js?v=20261122i";
+import { t as _t } from "./i18n.js?v=20261122M";
 // Board v2 rendering for output: one page = frame content in frame-local mm (cards + cartouche), wrapped per output mode.
 // Used by PDF / PNG export, presentation mode and (cartoucheSvg) the on-screen frame.
-import { sanitizeSvgTree, safeImg, safeId, num, r2, frameSize, frameMargin, cartHeight, tilePlan, needsTiles, TILE_SLUG, TILE_OVERLAP, ROLES, DEFAULT_STYLES, LAYERS, defaultLayer, contentRect, stampSvg, cardDen } from "./board_v06_doc.js?v=20261122i";
-import { arrowSegment as _arrowSeg, stackHidden as _stackHidden } from "./board_v06_record.js?v=20261122i";
-import { itemsFor, expandFields, pageDen, effectiveStyle, resolveColor, partnerOf } from "./board_v06_parent.js?v=20261122i";
+import { sanitizeSvgTree, safeImg, safeId, num, r2, frameSize, frameMargin, cartHeight, tilePlan, needsTiles, TILE_SLUG, TILE_OVERLAP, ROLES, DEFAULT_STYLES, LAYERS, defaultLayer, contentRect, stampSvg, cardDen } from "./board_v06_doc.js?v=20261122M";
+import { arrowSegment as _arrowSeg, stackHidden as _stackHidden } from "./board_v06_record.js?v=20261122M";
+import { itemsFor, expandFields, pageDen, effectiveStyle, resolveColor, partnerOf } from "./board_v06_parent.js?v=20261122M";
 
 const NS = "http://www.w3.org/2000/svg";
 export const esc = s => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F￾￿]/g, "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
