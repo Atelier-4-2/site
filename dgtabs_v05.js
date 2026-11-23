@@ -19,6 +19,7 @@ const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath, WIND_B1, KO_B1 } from "./dglb_wind_v02.js?v=20261116n";
 import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116p";
 import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261116n";
+import { createAxoView } from "./dgaxo.js?v=20261123c";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -28,7 +29,8 @@ const LB_BUILD = Object.fromEntries([
 ]);
 const TABS = [
   ["A1", "3D 볼륨"], ["A2", "일조·그림자"], ["A3", "바람"], ["A4", "열쾌적성"],
-  ["A5", "단면"], ["A6", "컨텍스트 맵"], ["A7", "다이어그램 오버레이"], ["A8", "3D 액소노메트릭"]
+  ["A5", "단면"], ["A6", "컨텍스트 맵"], ["A7", "다이어그램 오버레이"], ["A8", "3D 액소노메트릭"],
+  ["A9", document.documentElement.lang === "fr" ? "Axo au trait 3D" : "3D 선화 액소"]
 ];
 TABS.push(...LB_KINDS.map(d => [d.kind, d.ko]));
 const RAD = Math.PI / 180;
@@ -1838,6 +1840,60 @@ export function createTabs(api) {
     note.textContent = ZOOM_HINT + "벡터 기반 액소노메트릭(축측 투영) 도면입니다. [대지 강조 / 높이 5단계 / 단색 매스] 중 프리젠테이션 목적에 맞는 표현 방식을 선택해 주세요. " + SIM;
   }
 
+  // ---- A9 line-drawing axonometric (3D 선화 액소): the drawing pass lives in dgaxo.js, this builds its parts ------
+  function tabA9() {
+    const ctx = api.ctx(), data = api.data(), dem = data.dem, pal = api.pal();
+    const c0 = ctx.center, side = Math.max(ctx.extent[2] - ctx.extent[0], ctx.extent[3] - ctx.extent[1]);
+    const gm = terrain(pal); const ground = gm.geometry.clone(); gm.geometry.dispose(); gm.material.dispose();
+    const wm = water(pal); const waterGeo = wm ? wm.geometry.clone() : null; if (wm) { wm.geometry.dispose(); wm.material.dispose(); }
+    const small = siteIsSmallNow();
+    const bldgs = [];
+    for (const b of data.buildings) {
+      const cb = clipBld(b);
+      if (!cb) continue;
+      const shape = new THREE.Shape(cb.polygon.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1])));
+      for (const hole of cb.holes) shape.holes.push(new THREE.Path(hole.map(p => new THREE.Vector2(p[0] - c0[0], p[1] - c0[1]))));
+      let gmin = Infinity;
+      for (const p of b.polygon) gmin = Math.min(gmin, demAt(dem, p[0], p[1]));
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: hOf(b), bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2);
+      geo.translate(0, gmin - baseZ(), 0);        // same datum as A1 / A5 / A8
+      bldgs.push({ geo, known: heightOf(b) != null, target: small && inRing(ctx.site.ring, b.polygon[0][0], b.polygon[0][1]) });
+    }
+    const ext = ctx.extent;
+    const inExt = p => p[0] >= ext[0] && p[0] <= ext[2] && p[1] >= ext[1] && p[1] <= ext[3] && inShape(p[0], p[1]);
+    const seg = (arr, a, b, lift) => {
+      const pa = P3(a[0], a[1], demAt(dem, a[0], a[1]) + lift), pb = P3(b[0], b[1], demAt(dem, b[0], b[1]) + lift);
+      arr.push(pa.x, pa.y, pa.z, pb.x, pb.y, pb.z);
+    };
+    const site = [], parcels = [], roads = [];
+    const ring = ctx.site.ring;
+    for (let i = 0; i < ring.length; i++) seg(site, ring[i], ring[(i + 1) % ring.length], .35);
+    for (const f of data.parcels || []) for (const rings of f.polygons || []) for (const r of rings) for (let i = 1; i < r.length; i++) if (inExt(r[i - 1]) && inExt(r[i])) seg(parcels, r[i - 1], r[i], .3);
+    for (const f of data.roads || []) {
+      const wd = Number(f.props?.largeur_de_chaussee) || 6;
+      for (const line of f.lines || []) for (let i = 1; i < line.length; i++) {
+        const a = line[i - 1], b = line[i], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
+        if (!l) continue;
+        const nx = -dy / l * wd / 2, ny = dx / l * wd / 2;
+        for (const sg of [1, -1]) {
+          const a2 = [a[0] + sg * nx, a[1] + sg * ny], b2 = [b[0] + sg * nx, b[1] + sg * ny];
+          if (inExt(a2) && inExt(b2)) seg(roads, a2, b2, .2);
+        }
+      }
+    }
+    const dates = [...KEYS, { id: "today", label: "오늘" }];
+    const sunAt = (dateId, hour) => {
+      const d = dateOf(dateId), s = sunPosition(parisDate(d.y, d.m, d.d, hour), ctx.lat, ctx.lon), cv = CONV();
+      const dir = new THREE.Vector3(Math.sin(s.az + cv) * Math.cos(s.alt), Math.sin(s.alt), -Math.cos(s.az + cv) * Math.cos(s.alt));
+      return { dir, up: s.alt > 0, altDeg: s.alt / RAD, azDeg: s.az / RAD };
+    };
+    gl = createAxoView({
+      stage, controls, note, side, state, dates, sunAt, download: api.download,
+      parts: { ground, water: waterGeo, bldgs, lines: { site, parcels, roads } }
+    });
+  }
+
   function missing(msg) { stage.innerHTML = `<div class="dg-2d"><p class="note">${msg}</p></div>`; }
 
   // ---- routing ---------------------------------------------------------------------------------------------------
@@ -1854,7 +1910,7 @@ export function createTabs(api) {
     try {
       if (LB_BUILD[id]) (state.view[id] === "3d" ? tabLb3d(id) : tabLb(id));
       else if (state.view[id] === "plate") plateTab(id);
-      else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8 })[id]();
+      else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8, A9: tabA9 })[id]();
       fitStage();
     } catch (e) { console.error(e); missing("분석 다이어그램을 생성하지 못했습니다: " + e.message); }
   }
