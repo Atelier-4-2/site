@@ -301,6 +301,7 @@
           <label for="file" data-i18n="home.072"></label>
           <input id="file" type="file" accept=".dxf,.3dm"
                  aria-describedby="file-help file-note">
+          <script>/* iOS greys out .dxf/.3dm under accept (no UTI); extension is checked in app.js */(function(){var p=navigator.platform||"";if(/iP(hone|od|ad)/.test(p)||(p==="MacIntel"&&navigator.maxTouchPoints>1))document.getElementById("file").removeAttribute("accept");})();</script>
           <p id="file-help" class="note" data-i18n="home.073"></p>
           <p id="file-note" class="note" aria-live="polite"></p>
         </section>
