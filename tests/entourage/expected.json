@@ -1,0 +1,37 @@
+{
+ "sheet_pen.png": {
+  "figures": 8
+ },
+ "sheet_flat.png": {
+  "figures": 6
+ },
+ "sheet_white_inside.png": {
+  "figures": 3,
+  "inner_white_probe": [
+   [
+    160,
+    170
+   ],
+   [
+    160,
+    275
+   ],
+   [
+    460,
+    170
+   ],
+   [
+    460,
+    275
+   ],
+   [
+    760,
+    170
+   ],
+   [
+    760,
+    275
+   ]
+  ]
+ }
+}

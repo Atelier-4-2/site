@@ -111,6 +111,26 @@ export const FIG_KEYS = Object.keys(FIGS);
 export const FIG_GROUPS = { people: FIG_KEYS.filter(k => FIGS[k].cat === "person"), trees: FIG_KEYS.filter(k => FIGS[k].cat === "tree" || FIGS[k].cat === "car"), plan: FIG_KEYS.filter(k => FIGS[k].cat === "plan") };
 export const TREE_PRESETS = [6, 10, 14];
 export const isFigStamp = k => Object.prototype.hasOwnProperty.call(FIGS, k);
+// ---- "내 점경": figures the user cut from a sheet (board_v06_entourage.js). Raster PNG (data URL) instead of path parts. ----------------
+// Registered at runtime into FIGS under a key "my_xxxxxxxx", so every existing stamp path (size from the card scale, flip, tone, export) works unchanged.
+export const MY_KEY = /^my_[a-z0-9]{6,12}$/;
+export const isCustomKey = k => typeof k === "string" && MY_KEY.test(k);
+const PNG_URL = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+/** register / update a cut figure. meta: { name, hm (m), w, h (px of the PNG), png (data URL), kind?, tree? } -> true when accepted */
+let _ver = 0;
+export function registerCustom(key, meta) {
+  if (!isCustomKey(key) || !meta || !PNG_URL.test(meta.png || "") || !(meta.w > 0 && meta.h > 0)) return false;
+  FIGS[key] = { cat: meta.tree ? "tree" : "my", custom: true, hm: Math.min(60, Math.max(0.1, Number(meta.hm) || 1.75)), W: Math.round(meta.w / meta.h * 10000) / 100, parts: [], img: meta.png, name: String(meta.name || key).slice(0, 60), kind: meta.kind || "other", v: ++_ver };
+  return true;
+}
+/** a card from a project file may name a figure this browser does not have: keep the card, draw a dashed placeholder */
+export function ensureCustom(key) {
+  if (!isCustomKey(key)) return false;
+  if (!FIGS[key]) FIGS[key] = { cat: "my", custom: true, missing: true, hm: 1.75, W: 30, parts: [], img: null, name: "?", kind: "other", v: ++_ver };
+  return true;
+}
+export const unregisterCustom = key => { if (FIGS[key]?.custom) delete FIGS[key]; };
+export const customKeys = () => Object.keys(FIGS).filter(k => FIGS[k].custom && !FIGS[k].missing);
 export const isPlanFig = k => !!FIGS[k]?.plan;
 export const HM_MIN = 0.1, HM_MAX = 60;
 export const clampHm = (v, d = 1.75) => { v = Number(v); return Number.isFinite(v) ? Math.min(HM_MAX, Math.max(HM_MIN, v)) : d; };
@@ -127,6 +147,11 @@ export const figH = (hm, den) => clampHm(hm) * 1000 / Math.max(1, den);   // mm
 export function figSvg(st, opt = {}) {
   const g = FIGS[st.stamp]; if (!g) return "";
   const col = st.tone === "soft" ? FIG_SOFT : FIG_INK, h = st.h, s = h / 100, w = st.w, x0 = (w - g.W * s) / 2;
+  if (g.custom) {   // a cut figure: its own PNG, stretched to the box (the box keeps the PNG's proportion), feet on the bottom edge
+    const flipC = st.flip ? `translate(${f2(w)} 0) scale(-1 1) ` : "", op = st.tone === "soft" ? ' opacity="0.55"' : "";
+    if (!g.img) return `<g transform="${flipC}translate(${f2(x0)} 0) scale(${Math.round(s * 1e6) / 1e6})"><rect x="0" y="0" width="${g.W}" height="100" fill="none" stroke="${FIG_SOFT}" stroke-width="${f2(0.13 / s)}" stroke-dasharray="${f2(1.4 / s)} ${f2(1 / s)}"/></g>`;
+    return `<g transform="${flipC}translate(${f2(x0)} 0) scale(${Math.round(s * 1e6) / 1e6})"${op}><image x="0" y="0" width="${g.W}" height="100" preserveAspectRatio="none" href="${g.img}" xlink:href="${g.img}"/></g>`;
+  }
   const hair = opt.hair || 0, solid = st.fill === true || g.plan;   // outline unless the "fill" option is on
   const parts = solid ? g.parts : (g.outline || g.parts.map(p => ({ k: "s", abs: OUT_MM, d: p.d })));
   let o = "";

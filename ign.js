@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261123a";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123b";
 await loadedPromise;   // the catalogs are ready before any module-level t() call
 const L = globalThis.L;
 const proj4 = globalThis.proj4;

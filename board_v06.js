@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261123a";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123b";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -9,17 +9,17 @@ import {
   DOC_VERSION, PAPER, SIZES, ROLES, ROLE_LABEL, ROLE_BOX, MEMO_COLORS, GRID_DEFAULT, TEMPLATE_KEYS, TEMPLATE_LABEL, LAYERS, LAYER_LABEL, MAX_GUIDES,
   makeTemplate, templateKey, safeImg, num, r2, pad2, frameSize, orientLabel, pageLabel, pageTitle, gridCells as gridCells0, cartHeight, pageAt, assignPages, defaultLayer,
   FSTYLES, FSTYLE_LABEL,
-  cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, STD_DENS, isNorthStamp, isBarStamp, isFigStamp, isPlanFig, clampHm,
+  cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, stampLabel, isStampKey, STD_DENS, isNorthStamp, isBarStamp, isFigStamp, isPlanFig, clampHm,
   cleanSvgString, cleanPayload, sanitizeDoc, emptyDoc
-} from "./board_v06_doc.js?v=20261123a";
-import { FIGS, FIG_GROUPS, TREE_PRESETS } from "./board_v06_figs.js?v=20261123a";
-import * as X from "./board_v06_export.js?v=20261123a";
-import { icon } from "./board_v06_icons.js?v=20261123a";
-import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261123a";
-import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261123a";
-import * as RC from "./board_v06_record.js?v=20261123a";
-import * as PR from "./board_v06_parent.js?v=20261123a";
-import { createChrome } from "./board_v06_chrome.js?v=20261123a";
+} from "./board_v06_doc.js?v=20261123b";
+import { FIGS, FIG_GROUPS, TREE_PRESETS, customKeys } from "./board_v06_figs.js?v=20261123b";
+import * as X from "./board_v06_export.js?v=20261123b";
+import { icon } from "./board_v06_icons.js?v=20261123b";
+import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261123b";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261123b";
+import * as RC from "./board_v06_record.js?v=20261123b";
+import * as PR from "./board_v06_parent.js?v=20261123b";
+import { createChrome } from "./board_v06_chrome.js?v=20261123b";
 await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
@@ -757,7 +757,7 @@ function updateCardEl(g, c) {
     t.setAttribute("x", 3); t.setAttribute("y", 7); t.setAttribute("font-size", 4.4); t.textContent = (c.title || "").slice(0, mc) + ((c.title || "").length > mc ? "…" : "");
     h.setAttribute("x", 3); h.setAttribute("y", c.h - 4); h.setAttribute("font-size", 3.2); h.textContent = RC.hostOf(c.url);
   } else if (c.kind === "stamp") {
-    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}|${c.fill ? 1 : 0}`;
+    const sg = g.querySelector(".bd-stamp"), key = `${c.stamp}|${c.den}|${c.len_m}|${c.angle}|${c.w}|${c.h}|${c.unit}|${c.hm || ""}|${c.flip ? 1 : 0}|${c.tone || ""}|${c.fill ? 1 : 0}|${FIGS[c.stamp]?.v || 0}`;
     if (sg.dataset.k !== key) { sg.dataset.k = key; sg.innerHTML = stampSvg(c, c.den); }   // vector, numbers only
   } else {
     const ovl = g.querySelector(".bd-ovlr"); if (ovl) { ovl.setAttribute("width", c.w); ovl.setAttribute("height", c.h); ovl.style.display = c.from_parent && ui.layout === "print" ? "" : "none"; }
@@ -1113,7 +1113,7 @@ function listRow(c, i, n, btn) {
   } else if (c.kind === "link") {
     row.append(mk("span", "bd-lk", _t('board.071')), mk("span", "bd-lt", c.title || c.url));
   } else if (c.kind === "stamp") {
-    row.append(mk("span", "bd-lk", _t('board.072')), mk("span", "bd-lt", `${STAMP_LABEL[c.stamp] || c.stamp} · 1:${c.den}`));
+    row.append(mk("span", "bd-lk", _t('board.072')), mk("span", "bd-lt", `${stampLabel(c.stamp)} · 1:${c.den}`));
   } else {
     const ta = mk("textarea", "bd-ltext");
     ta.value = c.text || ""; ta.dataset.lid = c.id; ta.rows = 2;
@@ -1211,8 +1211,9 @@ function placeCtx() {
 }
 function ctxAction(act) {
   switch (act) {
-    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; const lb = m.querySelector('[data-act="lw"]'); if (lb) { const c = selCards()[0]; lb.hidden = !(selCards().length === 1 && c?.kind === "diagram" && payloads.get(c.ref)?.svg); } placeCtx(); break; }
+    case "more": { const m = $("#bd-ctxmenu"); m.hidden = !m.hidden; const lb = m.querySelector('[data-act="lw"]'); if (lb) { const c = selCards()[0]; lb.hidden = !(selCards().length === 1 && c?.kind === "diagram" && payloads.get(c.ref)?.svg); const eb = m.querySelector('[data-act="ent"]'); if (eb) eb.hidden = !(selCards().length === 1 && c?.kind === "image" && payloads.get(c.ref)?.img); } placeCtx(); break; }
     case "lw": { $("#bd-ctxmenu").hidden = true; const c = selCards()[0], sv = c && payloads.get(c.ref)?.svg; if (sv) openLineworkTool({ svgText: sv, name: S.assets[c.ref]?.title || "diagram" }); else status(_t("lw.err.nosvg")); break; }
+    case "ent": { $("#bd-ctxmenu").hidden = true; const c = selCards()[0], im = c && payloads.get(c.ref)?.img; if (im) openEntourage({ tab: "sheet", imageUrl: im, name: S.assets[c.ref]?.title || "" }); break; }
     case "front": $("#bd-ctxmenu").hidden = true; reorder(1); break;
     case "back": $("#bd-ctxmenu").hidden = true; reorder(-1); break;
     case "tofront": $("#bd-ctxmenu").hidden = true; reorder(1, true); break;
@@ -1926,6 +1927,7 @@ function build() {
             <button type="button" data-m="open" data-i18n="board.177">${_t("board.177")}</button>
             <button type="button" data-m="save" data-i18n="board.217">${_t("board.217")}</button>
             <button type="button" data-m="img" data-i18n="board.105">${_t("board.105")}</button>
+            <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
           </div>
         </div>
         <span id="bd-save-state" class="bd-savestate" role="status" aria-live="polite"></span>
@@ -1962,6 +1964,7 @@ function build() {
             <button type="button" data-m="week" data-i18n="board.123">${_t("board.123")}</button>
             <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
             <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
+            <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
             <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
@@ -2050,6 +2053,7 @@ function build() {
           <button type="button" data-act="toback" data-i18n="board.271">${_t("board.271")}</button>
           <span class="bd-msep" role="separator"></span>
           <button type="button" data-act="lw" data-i18n="lw.menu.card" hidden>${_t("lw.menu.card")}</button>
+          <button type="button" data-act="ent" data-i18n="ent.menu.card" hidden>${_t("ent.menu.card")}</button>
           <button type="button" data-act="dup" data-i18n-html="board.272">${_t("board.272")}</button>
           <button type="button" data-act="lock" data-i18n="board.273">${_t("board.273")}</button>
           <button type="button" data-act="del" data-i18n="board.076">${_t("board.076")}</button>
@@ -2144,7 +2148,7 @@ function wire() {
     const pk0 = e.dataTransfer.getData("text/atelier-parent");
     if (pk0) { const pf = frameAt(...at); if (pf) applyParentTo(pf.id, pk0); return; }   // drop a parent onto a page
     const sk = e.dataTransfer.getData("text/atelier-stamp");
-    if (STAMPS.includes(sk)) { ui.stampPick = { k: sk, link: stampLinkCandidate() }; placeStamp(at); return; }
+    if (isStampKey(sk)) { ui.stampPick = { k: sk, link: stampLinkCandidate() }; placeStamp(at); return; }
     ui.emptyDismissed = true;
     if (e.dataTransfer.files?.length) { addImageFiles(e.dataTransfer.files, at); return; }
     const id = e.dataTransfer.getData("text/atelier-asset");
@@ -2170,7 +2174,7 @@ function wire() {
     btn.onclick = e => { e.stopPropagation(); const open = pop.hidden; closeMenus(); pop.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
     pop.addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b || b.disabled) return; closeMenus(); on(b.dataset.m); });
   };
-  menu("#bd-name-menu", "#bd-name-pop", m => { if (m === "new") newBoard(); else if (m === "open") $("#bd-file-proj").click(); else if (m === "save") saveFile(); else if (m === "img") $("#bd-file-img").click(); });
+  menu("#bd-name-menu", "#bd-name-pop", m => { if (m === "new") newBoard(); else if (m === "open") $("#bd-file-proj").click(); else if (m === "save") saveFile(); else if (m === "img") $("#bd-file-img").click(); else if (m === "ent") openEntourage(); });
   menu("#bd-more", "#bd-more-pop", m => {
     if (m === "present") present();
     else if (m === "minimap") { ui.minimap = !ui.minimap; renderChrome(); scheduleMini(); }
@@ -2188,6 +2192,7 @@ function wire() {
     else if (m === "week") addWeek();
     else if (m === "pdf") $("#bd-file-img").click();
     else if (m === "lw") $("#bd-file-lw").click();
+    else if (m === "ent") openEntourage();
     else if (m === "promote") promoteKept(secActive() ? selSection : null);
   });
   // the stamp gallery is opened from the tool rail (S): clicks on that button or inside the gallery must not close it
@@ -2264,7 +2269,7 @@ function wire() {
   dz.addEventListener("dragleave", () => dz.classList.remove("is-over"));
   dz.addEventListener("drop", e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove("is-over"); if (e.dataTransfer.files?.length) { ui.emptyDismissed = true; addImageFiles(e.dataTransfer.files, null); } });
   const sgal = $("#bd-stamps");
-  sgal.addEventListener("click", e => { const b = e.target.closest("[data-stamp]"); if (b) pickStamp(b.dataset.stamp); });
+  sgal.addEventListener("click", e => { if (e.target.closest("[data-ent]")) { sgal.hidden = true; openEntourage(); return; } const b = e.target.closest("[data-stamp]"); if (b) pickStamp(b.dataset.stamp); });
   sgal.addEventListener("dragstart", e => { const b = e.target.closest("[data-stamp]"); if (b) { e.dataTransfer.setData("text/atelier-stamp", b.dataset.stamp); e.dataTransfer.effectAllowed = "copy"; sgal.hidden = true; } });
   sgal.addEventListener("pointerdown", e => e.stopPropagation());
   $("#bd-file-repl").onchange = async e => {   // 내용 교체: new image for THIS card only, frame and content offsets stay
@@ -2886,7 +2891,7 @@ function stampSection(c) {
   const L = c.link ? cardById(c.link) : null, north = isNorthStamp(c.stamp), bar = isBarStamp(c.stamp);
   const note = !c.link ? _t('board.389') : !L ? _t('board.390') : _t('board.392', { 0: S.assets[L.ref]?.title || _t('board.391'), 1: c.den });
   const upd = fn => { for (const k of selCards()) if (k.kind === "stamp") fn(k); commit(); };
-  const parts = [pnote(STAMP_LABEL[c.stamp]), pnote(note)];
+  const parts = [pnote(stampLabel(c.stamp)), pnote(note)];
   if (!north) { const f = selField("stden", _t('board.375'), stdDenOpts(c.den), c.den, v => upd(k => { k.den = Math.round(clamp(Number(v), 1, 1e6)); })); f.querySelector("select").disabled = !!L; parts.push(f); }
   if (bar) parts.push(prow(numField("len", _t('board.393'), c.len_m, v => upd(k => { k.len_m = clamp(v, 0.001, 1e7); k.len_auto = false; }), { unit: "m" }), pbtn(_t('board.394'), null, () => upd(k => { k.len_auto = true; }))));
   if (north) parts.push(numField("angle", _t('board.395'), c.angle, v => upd(k => { k.angle = clamp(v, -360, 360); k.angleAuto = false; }), { unit: "°" }));
@@ -2920,12 +2925,12 @@ function renderStampGallery() {
     box.append(mk("p", "bd-stamp-h", title));
     const row = mk("div", fig ? "bd-stamp-row bd-stamp-fig" : "bd-stamp-row");
     for (const k of keys) {
-      const b = mk("button", "bd-stamp-it"); b.type = "button"; b.draggable = true; b.dataset.stamp = k; b.setAttribute("aria-label", STAMP_LABEL[k]);
+      const b = mk("button", "bd-stamp-it"); b.type = "button"; b.draggable = true; b.dataset.stamp = k; b.setAttribute("aria-label", stampLabel(k));
       const o = stampSample(k), sv = document.createElementNS(NS, "svg");
       sv.setAttribute("viewBox", `0 0 ${o.w} ${o.h}`); sv.setAttribute("class", "bd-stamp-prev"); sv.setAttribute("font-family", "Pretendard, Noto Sans KR, sans-serif");
       sv.style.aspectRatio = `${o.w} / ${o.h}`;
       sv.innerHTML = stampSvg(o, o.den, isFigStamp(k) ? { hair: 0.5 } : {});
-      b.append(sv, mk("span", "", STAMP_LABEL[k]));
+      b.append(sv, mk("span", "", stampLabel(k)));
       row.append(b);
     }
     box.append(row);
@@ -2935,6 +2940,8 @@ function renderStampGallery() {
   group(_t("st.g.people"), FIG_GROUPS.people, true);
   group(_t("st.g.trees"), FIG_GROUPS.trees, true);
   group(_t("st.g.plan"), FIG_GROUPS.plan, true);
+  if (customKeys().length) group(_t("ent.g.title"), customKeys(), true);
+  const mkb = tr_(mk("button", "bd-btn en-make", _t("ent.g.make")), "ent.g.make"); mkb.type = "button"; mkb.dataset.ent = "1"; box.append(mkb);
   box.append(mk("p", "bd-stamp-n", stampLinkCandidate() ? _t('board.400') : _t('board.401')));
 }
 function toggleStamps() {
@@ -2946,13 +2953,13 @@ function pickStamp(k) {
   ui.stampPick = { k, link: stampLinkCandidate() };
   $("#bd-stamps").hidden = true;
   setTool("s");
-  status(_t('board.402', { 0: STAMP_LABEL[k] }));
+  status(_t('board.402', { 0: stampLabel(k) }));
 }
 function placeStamp(at) {
   status("");
   const pk = ui.stampPick;
   ui.stampPick = null; setTool("v");
-  if (!pk || !STAMPS.includes(pk.k)) return;
+  if (!pk || !isStampKey(pk.k)) return;
   if (isFigStamp(pk.k)) { placeFig(pk, at); return; }
   const lc = pk.link ? cardById(pk.link) : null, d = lc ? cardDen(lc, S.assets[lc.ref]) : null, o = stampSample(pk.k);
   o.den = d || 100; o.len_m = niceLen(o.den);
@@ -3496,11 +3503,26 @@ async function importPdf(file) {
   };
 }
 
+// Entourage tool (점경 만들기): prompt templates, sheet cutter, photo silhouette, "내 점경" library. Loaded on demand; the library is registered at start-up (init) so saved cards render.
+const tr_ = (e, key) => { e.dataset.i18n = key; return e; };
+let entMod = null;
+const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123b");
+const entCtx = () => ({
+  status, download, FFLATE,
+  onChange: () => { if (!$("#bd-stamps").hidden) renderStampGallery(); render(); },
+  pickStamp: key => { pickStamp(key); }
+});
+async function openEntourage(o = {}) {
+  status(_t("ent.loading"));
+  try { const m = await entLoad(); await m.init(entCtx()); status(""); await m.open($("#board"), o); } catch (e) { console.warn(e); status(_t("ent.s.err")); }
+}
+async function entInit() { try { const m = await entLoad(); await m.init(entCtx()); } catch (e) { console.warn("entourage library", e); } }
+
 // Linework tool (선 위계 정리): loaded on first use so the board's start-up is unchanged; the result comes back through add() as a new diagram card
 async function openLineworkTool(src) {
   status(_t("lw.loading"));
   try {
-    const mod = await import("./board_v06_linework.js?v=20261123a");
+    const mod = await import("./board_v06_linework.js?v=20261123b");
     status("");
     await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
   } catch (e) { console.warn(e); status(_t("lw.err.read")); }
@@ -3510,6 +3532,7 @@ async function openLineworkTool(src) {
 let migrated = false;
 const loaded = (async () => {
   build();
+  await entInit();
   try {
     const rec = await idb.get("project");
     if (rec?.S) {
