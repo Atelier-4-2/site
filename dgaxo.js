@@ -11,10 +11,10 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 const RAD = Math.PI / 180;
 const FR = () => document.documentElement.lang === "fr";
 const TXT = {
-  mode: ["표시", "Rendu"], mLine: ["선화", "Trait"], mFlat: ["선화 + 면색", "Trait + aplats"], mFill: ["면만", "Aplats"],
-  cam: ["카메라", "Caméra"], cIso: ["등각 액소", "Axo isométrique"], cObl: ["평면 사선", "Plan oblique"], cPersp: ["원근", "Perspective"],
+  mode: ["표시", "Rendu"], mLine: ["선화", "Trait"], mFlat: ["선화 + 면색", "Trait + aplats"], mFill: ["면색", "Aplats"],
+  cam: ["카메라", "Caméra"], cIso: ["등각 액소", "Axo isométrique"], cObl: ["평면 사선", "Plan oblique"], cPersp: ["투시", "Perspective"],
   sun: ["그림자", "Ombres"], on: ["켜기", "Activer"], hour: ["시각", "Heure"],
-  explode: ["분해 보기", "Vue éclatée"], replay: ["▶ 다시 보기", "▶ Revoir"], intro: ["소개 동작", "Intro animée"],
+  explode: ["분해 보기", "Vue éclatée"], replay: ["▶ 다시 보기", "▶ Revoir"], intro: ["둘러보기", "Intro animée"],
   fit: ["전체 보기", "Tout voir"], lw: ["선 굵기", "Épaisseur"], trees: ["나무", "Arbres"],
   oAng: ["사선 각도", "Angle"], oK: ["높이 비율", "Hauteurs"],
   png: ["PNG", "PNG"], save: ["저장", "Enregistrer"],
@@ -22,10 +22,10 @@ const TXT = {
   explodedNote: ["분해 보기에서는 그림자를 끕니다.", "Ombres désactivées en vue éclatée."],
   layers: ["위: 대상 대지 건물 · 중간: 기존 건물 · 아래: 땅", "Haut : bâti du site · milieu : bâti existant · bas : sol"],
   layers2: ["위: 건물 · 아래: 땅", "Haut : bâti · bas : sol"],
-  est: ["높이 미상 건물 {n}동은 3 m로 추정해 연한 색으로 표시합니다.", "{n} bâtiment(s) sans hauteur connue : 3 m estimés, teinte claire."],
+  est: ["높이 정보가 없는 건물 {n}동은 3 m로 추정해 연하게 표시합니다.", "{n} bâtiment(s) sans hauteur connue : 3 m estimés, teinte claire."],
   src: ["건물 BD TOPO · 표고 RGE ALTI · © IGN", "Bâti BD TOPO · altitudes RGE ALTI · © IGN"],
   sim: ["참고용 시뮬레이션 · 법적 효력 없음", "Simulation indicative · sans valeur juridique"],
-  hint: ["드래그로 회전, 휠·핀치로 확대. 화면을 만지면 소개 동작이 멈춥니다.", "Glisser pour tourner, molette ou pincer pour zoomer. Toucher l’écran arrête l’intro."],
+  hint: ["드래그로 회전, 휠·핀치로 확대. 화면을 누르면 둘러보기가 멈춥니다.", "Glisser pour tourner, molette ou pincer pour zoomer. Toucher l’écran arrête l’intro."],
   dates: { winter: ["동지 12/21", "Solstice d’hiver 21/12"], equinox: ["춘분 3/20", "Équinoxe 20/3"], autumn: ["추분 9/23", "Équinoxe 23/9"], summer: ["하지 6/21", "Solstice d’été 21/6"], today: ["오늘", "Aujourd’hui"] }
 };
 const tr = k => TXT[k][FR() ? 1 : 0];
@@ -249,7 +249,7 @@ export function createAxoView(o) {
     return out.map(p => p.map(q => [(q[0] - 50) / 50, (q[1] - 50) / 50]));
   };
   if ((parts.trees || []).length) {
-    fetch(new URL("./dgplantrees_A.json?v=20261123f", import.meta.url)).then(r => r.json()).then(js => {
+    fetch(new URL("./dgplantrees_A.json?v=20261123g", import.meta.url)).then(r => r.json()).then(js => {
       if (disposed) return;
       variants = js.map(v => [...v.paths, ...(v.dash || [])].flatMap(flatten));
       buildTrees(); request();

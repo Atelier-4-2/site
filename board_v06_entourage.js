@@ -1,10 +1,10 @@
 // Entourage ("점경 만들기"): prompt templates, sheet cutter, photo silhouette, "내 점경" library (IndexedDB) -> board stamps.
 // Loaded with a dynamic import from board_v06.js; the pixel work lives in board_v06_cut.js, the prompt text in board_v06_entprompt.js (both pure, node-tested).
 // Cut figures become ordinary figure stamps (board_v06_figs.js registerCustom), so scale-fit (card scale -> size), flip, tone and export work unchanged.
-import { t as _t } from "./i18n.js?v=20261123f";
-import { registerCustom, unregisterCustom, customKeys, FIGS, isCustomKey } from "./board_v06_figs.js?v=20261123f";
-import * as C from "./board_v06_cut.js?v=20261123f";
-import * as P from "./board_v06_entprompt.js?v=20261123f";
+import { t as _t } from "./i18n.js?v=20261123g";
+import { registerCustom, unregisterCustom, customKeys, FIGS, isCustomKey } from "./board_v06_figs.js?v=20261123g";
+import * as C from "./board_v06_cut.js?v=20261123g";
+import * as P from "./board_v06_entprompt.js?v=20261123g";
 
 const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const tr = (e, key) => { e.dataset.i18n = key; return e; };

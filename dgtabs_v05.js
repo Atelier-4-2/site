@@ -19,7 +19,7 @@ const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath, WIND_B1, KO_B1 } from "./dglb_wind_v02.js?v=20261116n";
 import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116p";
 import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261116n";
-import { createAxoView } from "./dgaxo.js?v=20261123f";
+import { createAxoView } from "./dgaxo.js?v=20261123g";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -1918,13 +1918,13 @@ export function createTabs(api) {
     fitStage();
     // bring the tab bar under the sticky header so tabs + controls + the whole stage fit without scrolling
     { const t = bar.getBoundingClientRect().top; if (Math.abs(t - 64) > 8) window.scrollTo({ top: window.scrollY + t - 64, behavior: "auto" }); }
-    if (!ready()) return missing("다이어그램 생성 단계에서 건물 데이터를 먼저 조회해 주세요.");
+    if (!ready()) return missing(document.documentElement.lang === "fr" ? "Veuillez d’abord charger les données bâti pour générer le diagramme." : "다이어그램을 만들려면 건물 데이터를 먼저 조회해 주세요.");
     try {
       if (LB_BUILD[id]) (state.view[id] === "3d" ? tabLb3d(id) : tabLb(id));
       else if (state.view[id] === "plate") plateTab(id);
       else ({ A1: tabA1, A2: tabA2, A3: tabA3, A4: tabA4, A5: tabA5, A6: tabA6, A7: tabA7, A8: tabA8, A9: tabA9 })[id]();
       fitStage();
-    } catch (e) { console.error(e); missing("분석 다이어그램을 생성하지 못했습니다: " + e.message); }
+    } catch (e) { console.error(e); missing((document.documentElement.lang === "fr" ? "Impossible de générer le diagramme : " : "다이어그램을 생성하지 못했습니다: ") + e.message); }
   }
 
   return { show: () => show(active), refresh: () => show(active), stop: () => { gl?.stopPlay?.(); clearStage(); } };

@@ -1,11 +1,11 @@
-import { t as _t } from "./i18n.js?v=20261123f";
-import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm, ensureCustom, isCustomKey } from "./board_v06_figs.js?v=20261123f";
+import { t as _t } from "./i18n.js?v=20261123g";
+import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm, ensureCustom, isCustomKey } from "./board_v06_figs.js?v=20261123g";
 export { isFigStamp, isPlanFig, clampHm, isCustomKey };
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.
-import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261123f";
-import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261123f";
+import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261123g";
+import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261123g";
 export const DOC_VERSION = 5;
 export const LAYERS = ["bg", "art", "text"];   // stacking order, bottom to top
 export const LAYER_LABEL = { get bg() { return _t('board.doc.001'); }, get art() { return _t('board.doc.002'); }, get text() { return _t('board.doc.003'); } };
