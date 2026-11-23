@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261123b";
+import { t as _t } from "./i18n.js?v=20261123d";
 // Board tool "선 위계 정리" (Linework): a vector drawing (PDF or SVG) goes in, strokes are grouped into "pens" (same width, colour,
 // dash, fill-only), every pen is given an architectural hierarchy class and redrawn with the owner's v02 line weights
 // (docs/drawing-graphic-standard.md, section 2). Semi-automatic: automatic classification, then a few clicks to correct it.
@@ -542,7 +542,7 @@ let current = null;   // only one dialog at a time
 export async function parseSvgElements(svgText, opts = {}) {
   const dp = new DOMParser().parseFromString(svgText, "image/svg+xml"), root0 = dp.documentElement;
   if (!root0 || dp.querySelector("parsererror") || root0.localName !== "svg") throw new LimitError("bad_svg");
-  const { sanitizeSvgTree } = await import("./board_v06_doc.js?v=20261123b");
+  const { sanitizeSvgTree } = await import("./board_v06_doc.js?v=20261123d");
   sanitizeSvgTree(root0);
   const fr = document.createElement("iframe");
   fr.setAttribute("sandbox", "allow-same-origin");   // no scripts; its CSS cannot touch the board page

@@ -1,11 +1,11 @@
-import { t as _t } from "./i18n.js?v=20261123b";
+import { t as _t } from "./i18n.js?v=20261123d";
 // Board v2 dialogs: export panel, command palette (⌘K), shortcut sheet, board info (cartouche meta), text styles,
 // presentation mode. Created once by board_v06.js with a small api object; holds no document state of its own.
-import { contentRect, frameSize, parseRange, ROLES, ROLE_LABEL, PALETTE, WEIGHTS, needsTiles, pad2 } from "./board_v06_doc.js?v=20261123b";
-import * as X from "./board_v06_export.js?v=20261123b";
-import { PRESETS, PRESET_KEYS, presetOptions, downsampleTarget, todayStamp, summarize } from "./board_v06_preflight.js?v=20261123b";
-import { resolveColor } from "./board_v06_parent.js?v=20261123b";
-import { icon } from "./board_v06_icons.js?v=20261123b";
+import { contentRect, frameSize, parseRange, ROLES, ROLE_LABEL, PALETTE, WEIGHTS, needsTiles, pad2 } from "./board_v06_doc.js?v=20261123d";
+import * as X from "./board_v06_export.js?v=20261123d";
+import { PRESETS, PRESET_KEYS, presetOptions, downsampleTarget, todayStamp, summarize } from "./board_v06_preflight.js?v=20261123d";
+import { resolveColor } from "./board_v06_parent.js?v=20261123d";
+import { icon } from "./board_v06_icons.js?v=20261123d";
 
 const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const field = (label, input, hint) => { const l = mk("label", "bd-field"); l.append(mk("span", "bd-field-l", label), input); if (hint) l.append(mk("small", "bd-field-h", hint)); return l; };

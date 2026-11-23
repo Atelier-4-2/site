@@ -21,8 +21,8 @@ ok("real sizes per spec: child 1.20, seated 1.30, bike 1.10, wheelchair 1.25, ca
   assert.equal(hm("fig_car"), 1.5); near(F.figBox("fig_car", 1.5, 1000).w / F.figBox("fig_car", 1.5, 1000).h, 4.4 / 1.5, 0.01);
   assert.deepEqual([hm("fig_tree_small"), hm("fig_tree_conifer"), hm("fig_tree_big")], [6, 10, 14]); assert.deepEqual(F.TREE_PRESETS, [6, 10, 14]);
 });
-ok("counts: 8 people-class, 4 elevation trees, 3 plan trees, 1 car", () => {
-  assert.equal(F.FIG_GROUPS.people.length, 8); assert.equal(F.FIG_GROUPS.plan.length, 3);
+ok("counts: 8 people-class, 4 elevation trees, 9 plan trees (+3 legacy ids), 1 car", () => {
+  assert.equal(F.FIG_GROUPS.people.length, 8); assert.equal(F.FIG_GROUPS.plan.length, 9);
   assert.equal(F.FIG_GROUPS.trees.filter(k => F.FIGS[k].cat === "tree").length, 4); assert.equal(F.FIG_GROUPS.trees.filter(k => F.FIGS[k].cat === "car").length, 1);
 });
 ok("every figure has at most 3 path parts and sane unit width", () => {
@@ -63,9 +63,17 @@ ok("broadleaf crown is one closed irregular outline + two trunk lines; conifer o
   assert.ok(F.figSvg({ stamp: "fig_car", w: 10, h: 5 }).split("<path").length > 3);
   assert.equal(D.cleanFig({ stamp: "fig_car", fill: true }).fill, true); assert.equal(D.cleanFig({ stamp: "fig_car", fill: "yes" }).fill, false);
 });
+ok("plan trees: default crown 4/6/9 m by row, 6 m at 1:200 = 30 mm, legacy ids still draw", () => {
+  const dia = k => F.FIGS[k].hm;
+  assert.deepEqual(["s1", "s2", "s3", "m1", "m2", "m3", "l1", "l2", "l3"].map(r => dia("fig_plan_a_" + r)), [4, 4, 4, 6, 6, 6, 9, 9, 9]);
+  const b = F.figBox("fig_plan_a_m1", 6, 200); near(b.w, 30, 0.01); near(b.h, 30, 0.01);
+  for (const k of ["fig_plan_circle", "fig_plan_dash", "fig_plan_branch"]) { assert.ok(F.FIGS[k].legacy && !F.FIG_GROUPS.plan.includes(k)); assert.ok(F.figSvg({ stamp: k, w: 30, h: 30 }).includes("<path")); }
+  for (const k of F.FIG_GROUPS.plan) { const sv = F.figSvg({ stamp: k, w: 30, h: 30, tone: "soft" }); assert.ok(sv.includes("#7D848D")); assert.ok(F.FIGS[k].parts.every(p => p.d.length < 3500), k); }
+  assert.ok(F.FIGS.fig_plan_a_m2.parts.length === 2 && F.FIGS.fig_plan_a_s1.parts.length === 1);   // dashed crowns carry a separate dash part
+});
 ok("plan tree lines stay 0.18 mm whatever the scale", () => {
   for (const den of [20, 100, 500]) {
-    const b = F.figBox("fig_plan_circle", 6, den), svg = F.figSvg({ stamp: "fig_plan_circle", w: b.w, h: b.h }), s = b.h / 100;
+    const b = F.figBox("fig_plan_a_m2", 6, den), svg = F.figSvg({ stamp: "fig_plan_a_m2", w: b.w, h: b.h }), s = b.h / 100;
     const sw = Number(/stroke-width="([\d.]+)"/.exec(svg)[1]) * s;
     near(sw, 0.18, 0.005);
   }

@@ -4,6 +4,7 @@
 // parts: { d, k: "f" } solid fill (evenodd) | { d, k: "s", w } stroke, w in units (proportional) or { abs } mm (print-safe line)
 // Default look is OUTLINE (drawing style v02: line only): `outline` parts when a figure has its own, else every filled part stroked at OUT_MM.
 // Solid silhouettes (`parts`) stay available as the optional "fill" (st.fill).
+import { PLAN_TREES_A } from "./board_v06_plantrees.js";
 export const FIG_INK = "#1E2124", FIG_SOFT = "#7D848D", FIG_ACCENT = "#E6B89C";
 export const FIG_TONES = ["ink", "soft"];
 
@@ -46,18 +47,9 @@ const TREE_STREET = ell(25, 34, 22, 34) + "M22.6 66H27.4V100H22.6Z";
 
 // ---- trees (plan view): hm = crown diameter ----------------------------------------------------------------------------
 const PLAN_ABS = 0.18;   // mm, constant line weight whatever the scale
-const PLAN_CIRCLE = [{ k: "s", abs: PLAN_ABS, d: circ(50, 50, 49.5) }];
-const PLAN_DASH = [{ k: "s", abs: PLAN_ABS, dash: [1.4, 1], d: circ(50, 50, 49.5) }];
-const branches = () => {   // three limbs 120 deg apart, each forking once; ends stay inside the crown line
-  const pt = (ang, r) => [50 + r * Math.cos(ang * Math.PI / 180), 50 + r * Math.sin(ang * Math.PI / 180)].map(v => Math.round(v * 10) / 10).join(" ");
-  let d = "";
-  for (const a of [-90, 30, 150]) d += `M50 50L${pt(a, 40)}M${pt(a, 22)}L${pt(a - 30, 38)}M${pt(a, 22)}L${pt(a + 30, 38)}`;
-  return d;
-};
-const PLAN_BRANCH = [
-  { k: "s", abs: PLAN_ABS, d: circ(50, 50, 49.5) },
-  { k: "s", abs: 0.13, d: branches() }
-];
+const planParts = t => [{ k: "s", abs: PLAN_ABS, d: t.s }].concat(t.d ? [{ k: "s", abs: PLAN_ABS, d: t.d }] : []);   // dashes are their own short sub-paths
+const PLAN_BY = Object.fromEntries(PLAN_TREES_A.map(t => [t.id, t]));
+const PLAN_DIA = { s: 4, m: 6, l: 9 };   // default crown diameter (m) by row: small / medium / large
 
 const P = (d) => [{ k: "f", d }];
 
@@ -103,12 +95,22 @@ export const FIGS = {
   fig_tree_small: { cat: "tree", hm: 6, W: 66, parts: P(TREE_SMALL), outline: O_TREE_SMALL },
   fig_tree_conifer: { cat: "tree", hm: 10, W: 40, parts: P(TREE_CONIFER) },
   fig_tree_street: { cat: "tree", hm: 10, W: 44, parts: P(TREE_STREET), outline: O_TREE_STREET },
-  fig_plan_circle: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_CIRCLE },
-  fig_plan_dash: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_DASH },
-  fig_plan_branch: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_BRANCH }
+  fig_plan_a_s1: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s1) },
+  fig_plan_a_s2: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s2) },
+  fig_plan_a_s3: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s3) },
+  fig_plan_a_m1: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m1) },
+  fig_plan_a_m2: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m2) },
+  fig_plan_a_m3: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m3) },
+  fig_plan_a_l1: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l1) },
+  fig_plan_a_l2: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l2) },
+  fig_plan_a_l3: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l3) },
+  // legacy ids (older documents): same drawings as the closest new ones, hidden from the gallery
+  fig_plan_circle: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m1) },
+  fig_plan_dash: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m2) },
+  fig_plan_branch: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m3) }
 };
 export const FIG_KEYS = Object.keys(FIGS);
-export const FIG_GROUPS = { people: FIG_KEYS.filter(k => FIGS[k].cat === "person"), trees: FIG_KEYS.filter(k => FIGS[k].cat === "tree" || FIGS[k].cat === "car"), plan: FIG_KEYS.filter(k => FIGS[k].cat === "plan") };
+export const FIG_GROUPS = { people: FIG_KEYS.filter(k => FIGS[k].cat === "person"), trees: FIG_KEYS.filter(k => FIGS[k].cat === "tree" || FIGS[k].cat === "car"), plan: FIG_KEYS.filter(k => FIGS[k].cat === "plan" && !FIGS[k].legacy) };
 export const TREE_PRESETS = [6, 10, 14];
 export const isFigStamp = k => Object.prototype.hasOwnProperty.call(FIGS, k);
 // ---- "내 점경": figures the user cut from a sheet (board_v06_entourage.js). Raster PNG (data URL) instead of path parts. ----------------
