@@ -1400,11 +1400,108 @@ function snapCells(px, py, gf, tol, grid) {
   const near = (v, list, off) => { let best = v, bd = tol; for (const [a, b] of list) for (const e of [a + off, b + off]) if (Math.abs(e - v) <= bd) { bd = Math.abs(e - v); best = e; } return best; };
   return [near(px, cells.xs, gf.x), near(py, cells.ys, gf.y)];
 }
+function snapResize(o, h, px, py, movingId, tol, grid, gf, gl, aspect) {
+  const west = h.includes("w"), north = h.includes("n");
+  const hx = h.length === 2 || h === "e" || h === "w", hy = h.length === 2 || h === "n" || h === "s";
+  const ax = west ? o.x + o.w : o.x, ay = north ? o.y + o.h : o.y;
+  const others = [];
+  for (const c of S.cards) if (c.id !== movingId && !layerHidden(c)) { const b = visBox(c); others.push({ x: b.x, y: b.y, w: b.w, h: b.h, card: true }); }
+  const frames = S.frames.map(f => { const [w, hh] = frameSize(f); return { x: f.x, y: f.y, w, h: hh, card: false }; });
+
+  // 1) Snap dragged edges to user guides, template cells, frame edges/centres, and other card edges/centres
+  let bx = null, by = null;
+  const better = (cur, d, t) => !cur || t < cur.t || (t === cur.t && Math.abs(d) < Math.abs(cur.d));
+  if (hx) {
+    if (gl) for (const gx of gl.xs) { const d = gx - px; if (Math.abs(d) <= tol && better(bx, d, 0)) bx = { d, at: gx, o: { x: gx, y: o.y - 8, w: 0, h: o.h + 16 }, t: 0 }; }
+    const cells = gf && gridCells(gf);
+    if (cells) for (const [a, b] of cells.xs) for (const e of [gf.x + a, gf.x + b]) { const d = e - px; if (Math.abs(d) <= tol && better(bx, d, 1)) bx = { d, at: e, o: { x: e, y: gf.y + cells.y0, w: 0, h: cells.y1 - cells.y0 }, t: 1 }; }
+    for (const ob of [...others, ...frames]) for (const ox of [ob.x, ob.x + ob.w / 2, ob.x + ob.w]) { const d = ox - px; if (Math.abs(d) <= tol && better(bx, d, ob.card ? 2 : 3)) bx = { d, at: ox, o: ob, t: ob.card ? 2 : 3 }; }
+  }
+  if (hy) {
+    if (gl) for (const gy of gl.ys) { const d = gy - py; if (Math.abs(d) <= tol && better(by, d, 0)) by = { d, at: gy, o: { x: o.x - 8, y: gy, w: o.w + 16, h: 0 }, t: 0 }; }
+    const cells = gf && gridCells(gf);
+    if (cells) for (const [a, b] of cells.ys) for (const e of [gf.y + a, gf.y + b]) { const d = e - py; if (Math.abs(d) <= tol && better(by, d, 1)) by = { d, at: e, o: { x: gf.x + cells.x0, y: e, w: cells.x1 - cells.x0, h: 0 }, t: 1 }; }
+    for (const ob of [...others, ...frames]) for (const oy of [ob.y, ob.y + ob.h / 2, ob.y + ob.h]) { const d = oy - py; if (Math.abs(d) <= tol && better(by, d, ob.card ? 2 : 3)) by = { d, at: oy, o: ob, t: ob.card ? 2 : 3 }; }
+  }
+
+  // 2) Equal width / equal height snap against other cards (PPT / Canva style)
+  let sw = null, sh = null;
+  const rawW = hx ? Math.max(5, west ? ax - px : px - ax) : o.w;
+  const rawH = hy ? Math.max(5, north ? ay - py : py - ay) : o.h;
+  if (hx) for (const ob of others) { const d = ob.w - rawW; if (Math.abs(d) <= tol && (!sw || Math.abs(d) < Math.abs(sw.d))) sw = { d, val: ob.w, o: ob }; }
+  if (hy) for (const ob of others) { const d = ob.h - rawH; if (Math.abs(d) <= tol && (!sh || Math.abs(d) < Math.abs(sh.d))) sh = { d, val: ob.h, o: ob }; }
+
+  // Combine edge snap vs same-size snap (pick closer per axis; edge wins on tie)
+  let sx = px, sy = py, usedX = null, usedY = null;
+  if (hx) {
+    if (bx && (!sw || Math.abs(bx.d) <= Math.abs(sw.d))) { sx = bx.at; usedX = { kind: "edge", hit: bx }; }
+    else if (sw) { sx = west ? ax - sw.val : ax + sw.val; usedX = { kind: "same", hit: sw }; }
+    else if (grid && gf && !gridCells(gf)) sx = gf.x + Math.round((px - gf.x) / grid) * grid;
+  }
+  if (hy) {
+    if (by && (!sh || Math.abs(by.d) <= Math.abs(sh.d))) { sy = by.at; usedY = { kind: "edge", hit: by }; }
+    else if (sh) { sy = north ? ay - sh.val : ay + sh.val; usedY = { kind: "same", hit: sh }; }
+    else if (grid && gf && !gridCells(gf)) sy = gf.y + Math.round((py - gf.y) / grid) * grid;
+  }
+
+  let nw, nh;
+  if (aspect) {
+    const ar = o.w / o.h;
+    const dxs = usedX ? Math.abs(sx - px) : Infinity, dys = usedY ? Math.abs(sy - py) : Infinity;
+    const useX = hx && (!hy || dxs <= dys);
+    if (useX) { nw = Math.max(5, west ? ax - sx : sx - ax); nh = nw / ar; usedY = null; }
+    else { nh = Math.max(5, north ? ay - sy : sy - ay); nw = nh * ar; usedX = null; }
+    if (nh < 5) { nh = 5; nw = nh * ar; }
+    if (nw < 5) { nw = 5; nh = nw / ar; }
+    // Even under aspect lock, if the derived dimension happens to match another card, show the equal-size guide
+    if (!usedY) for (const ob of others) if (Math.abs(ob.h - nh) <= tol * 0.5) { usedY = { kind: "same", hit: { val: ob.h, o: ob } }; break; }
+    if (!usedX) for (const ob of others) if (Math.abs(ob.w - nw) <= tol * 0.5) { usedX = { kind: "same", hit: { val: ob.w, o: ob } }; break; }
+  } else {
+    nw = hx ? Math.max(5, west ? ax - sx : sx - ax) : o.w;
+    nh = hy ? Math.max(5, north ? ay - sy : sy - ay) : o.h;
+  }
+
+  const vx = west ? ax - nw : ax, vy = north ? ay - nh : ay;
+  const guides = [];
+  const off = 5 / view.z;
+  if (usedX?.kind === "edge") {
+    const ob = usedX.hit.o;
+    guides.push({ x1: usedX.hit.at, x2: usedX.hit.at, y1: Math.min(vy, ob.y), y2: Math.max(vy + nh, ob.y + ob.h) });
+  } else if (usedX?.kind === "same") {
+    const ob = usedX.hit.o, lab = `= ${Math.round(nw * 10) / 10}`;
+    guides.push({ x1: vx, x2: vx + nw, y1: vy - off, y2: vy - off, label: lab, same: true });
+    guides.push({ x1: ob.x, x2: ob.x + ob.w, y1: ob.y - off, y2: ob.y - off, label: lab, same: true });
+  }
+  if (usedY?.kind === "edge") {
+    const ob = usedY.hit.o;
+    guides.push({ y1: usedY.hit.at, y2: usedY.hit.at, x1: Math.min(vx, ob.x), x2: Math.max(vx + nw, ob.x + ob.w) });
+  } else if (usedY?.kind === "same") {
+    const ob = usedY.hit.o, lab = `= ${Math.round(nh * 10) / 10}`;
+    guides.push({ x1: vx + nw + off, x2: vx + nw + off, y1: vy, y2: vy + nh, label: lab, same: true });
+    guides.push({ x1: ob.x + ob.w + off, x2: ob.x + ob.w + off, y1: ob.y, y2: ob.y + ob.h, label: lab, same: true });
+  }
+  return { vx, vy, nw, nh, guides };
+}
 function drawGuides(gs) {
   layerGuides.replaceChildren();
+  const tick = 3.5 / view.z;
   for (const g of gs || []) {
-    el("line", { x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, class: "bd-smart", "vector-effect": "non-scaling-stroke" }, layerGuides);
-    if (g.label) { const t = el("text", { x: (g.x1 + g.x2) / 2 + (g.x1 === g.x2 ? 4 / view.z : 0), y: (g.y1 + g.y2) / 2 - (g.y1 === g.y2 ? 3 / view.z : 0), "font-size": 11 / view.z, class: "bd-gaplab", "text-anchor": g.x1 === g.x2 ? "start" : "middle" }, layerGuides); t.textContent = g.label + " mm"; }
+    const cls = g.same ? "bd-smart is-same" : g.gap ? "bd-smart is-gap" : "bd-smart";
+    el("line", { x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, class: cls, "vector-effect": "non-scaling-stroke" }, layerGuides);
+    if (g.same || g.gap) {
+      const horiz = Math.abs(g.y1 - g.y2) < 1e-3;
+      if (horiz) {
+        el("line", { x1: g.x1, y1: g.y1 - tick, x2: g.x1, y2: g.y1 + tick, class: cls, "vector-effect": "non-scaling-stroke" }, layerGuides);
+        el("line", { x1: g.x2, y1: g.y2 - tick, x2: g.x2, y2: g.y2 + tick, class: cls, "vector-effect": "non-scaling-stroke" }, layerGuides);
+      } else {
+        el("line", { x1: g.x1 - tick, y1: g.y1, x2: g.x1 + tick, y2: g.y1, class: cls, "vector-effect": "non-scaling-stroke" }, layerGuides);
+        el("line", { x1: g.x2 - tick, y1: g.y2, x2: g.x2 + tick, y2: g.y2, class: cls, "vector-effect": "non-scaling-stroke" }, layerGuides);
+      }
+    }
+    if (g.label) {
+      const t = el("text", { x: (g.x1 + g.x2) / 2 + (g.x1 === g.x2 ? 4 / view.z : 0), y: (g.y1 + g.y2) / 2 - (g.y1 === g.y2 ? 3 / view.z : 0), "font-size": 11 / view.z, class: g.same ? "bd-gaplab is-same" : "bd-gaplab", "text-anchor": g.x1 === g.x2 ? "start" : "middle" }, layerGuides);
+      t.textContent = g.label + " mm";
+    }
   }
 }
 
@@ -1568,17 +1665,18 @@ function onPointerMove(e) {
   } else if (drag.type === "resize") {
     const { c, o } = drag, h = drag.vh;   // o and h are in the visual box (rotation aware)
     const gf = frameOf(c);
-    let px = wx, py = wy, sx = wx, sy = wy;
-    if (!noSnap) [sx, sy] = snapPoint(px, py, gf, tol, gf?.grid_mm, guideLines(gf));
-    const west = h.includes("w"), north = h.includes("n"), hx = h.length === 2 || h === "e" || h === "w", hy = h.length === 2 || h === "n" || h === "s";
-    const ax = west ? o.x + o.w : o.x, ay = north ? o.y + o.h : o.y;   // anchored opposite corner
-    let nw, nh;
-    if (drag.aspect) {   // snap on whichever axis is closer to a snap line, derive the other from the aspect
-      const ar = o.w / o.h, dxs = sx !== px ? Math.abs(sx - px) : Infinity, dys = sy !== py ? Math.abs(sy - py) : Infinity, useX = dxs <= dys;   // compare only axes that really snapped
-      if (useX) { nw = Math.max(5, west ? ax - sx : sx - ax); nh = nw / ar; } else { nh = Math.max(5, north ? ay - sy : sy - ay); nw = nh * ar; }
-      if (nh < 5) { nh = 5; nw = nh * ar; } if (nw < 5) { nw = 5; nh = nw / ar; }
-    } else { nw = hx ? Math.max(5, west ? ax - sx : sx - ax) : o.w; nh = hy ? Math.max(5, north ? ay - sy : sy - ay) : o.h; }
-    const vx = west ? ax - nw : ax, vy = north ? ay - nh : ay;
+    let vx, vy, nw, nh, rguides = [];
+    if (!noSnap) {
+      const s = snapResize(o, h, wx, wy, c.id, tol, gf?.grid_mm, gf, guideLines(gf), drag.aspect);
+      vx = s.vx; vy = s.vy; nw = s.nw; nh = s.nh; rguides = s.guides;
+    } else {
+      const west = h.includes("w"), north = h.includes("n"), hx = h.length === 2 || h === "e" || h === "w", hy = h.length === 2 || h === "n" || h === "s";
+      const ax = west ? o.x + o.w : o.x, ay = north ? o.y + o.h : o.y;
+      if (drag.aspect) { const ar = o.w / o.h; nw = Math.max(5, west ? ax - wx : wx - ax); nh = nw / ar; if (nh < 5) { nh = 5; nw = nh * ar; } }
+      else { nw = hx ? Math.max(5, west ? ax - wx : wx - ax) : o.w; nh = hy ? Math.max(5, north ? ay - wy : wy - ay) : o.h; }
+      vx = west ? ax - nw : ax; vy = north ? ay - nh : ay;
+    }
+    drawGuides(rguides);
     if (quarter(c)) { c.w = r2(nh); c.h = r2(nw); c.x = r2(vx + nw / 2 - c.w / 2); c.y = r2(vy + nh / 2 - c.h / 2); }
     else { c.w = r2(nw); c.h = r2(nh); c.x = r2(vx); c.y = r2(vy); }
     renderCards(); renderSel(); scheduleMini(); scheduleProps();
@@ -2062,9 +2160,10 @@ function build() {
         <div id="bd-empty" class="bd-emptycard" hidden>
           <h2 data-i18n="board.275">${_t("board.275")}</h2>
           <p data-i18n="board.276">${_t("board.276")}</p>
+          <button type="button" class="bd-btn bd-strong" data-empty="blank" data-i18n-html="board.blank">${_t("board.blank")}</button>
           <button type="button" class="bd-btn" data-empty="diagrams" data-i18n="board.253">${_t("board.253")}</button>
           <button type="button" class="bd-btn" data-empty="image" data-i18n-html="board.277">${_t("board.277")}</button>
-          <button type="button" class="bd-btn bd-strong" data-empty="semester" data-i18n-html="board.278">${_t("board.278")}</button>
+          <button type="button" class="bd-btn" data-empty="semester" data-i18n-html="board.278">${_t("board.278")}</button>
           <button type="button" class="bd-btn" data-empty="final" data-i18n-html="board.279">${_t("board.279")}</button>
         </div>
         <div id="bd-minimap" class="bd-minimap" hidden><svg id="bd-mini" viewBox="0 0 176 116" aria-label="${_t("board.280")}" role="img" data-i18n-attr="aria-label:board.280"></svg></div>
@@ -2326,7 +2425,8 @@ function wire() {
     const b = e.target.closest("[data-empty]");
     if (!b) return;
     ui.emptyDismissed = true;
-    if (b.dataset.empty === "diagrams") gotoMode("diagrams");
+    if (b.dataset.empty === "blank") { renderEmpty(); if (S.frames[0]) zoomToFrame(S.frames[0]); }
+    else if (b.dataset.empty === "diagrams") gotoMode("diagrams");
     else if (b.dataset.empty === "image") { $("#bd-file-img").click(); renderEmpty(); }
     else if (b.dataset.empty === "semester") startSemester();
     else startFinalPanel();
@@ -3506,7 +3606,7 @@ async function importPdf(file) {
 // Entourage tool (점경 만들기): prompt templates, sheet cutter, photo silhouette, "내 점경" library. Loaded on demand; the library is registered at start-up (init) so saved cards render.
 const tr_ = (e, key) => { e.dataset.i18n = key; return e; };
 let entMod = null;
-const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123g");
+const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123h");
 const entCtx = () => ({
   status, download, FFLATE,
   onChange: () => { if (!$("#bd-stamps").hidden) renderStampGallery(); render(); },

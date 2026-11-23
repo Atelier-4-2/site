@@ -223,9 +223,20 @@ export async function open(host, opts = {}) {
     async function loadFile(f) {
       try { await loadUrl(await readFileUrl(f), f.name); } catch (e) { console.warn(e); info.textContent = _t("ent.s.err"); }
     }
+    const guessKind = (name) => {
+      const n = String(name || "").toLowerCase();
+      if (!n) return null;
+      if (/(plan[_ -]?tree|tree[_ -]?plan|평면.*나무|나무.*평면)/.test(n)) return C.KINDS.includes("tree_plan") ? "tree_plan" : "tree";
+      if (/(tree|arbre|나무|수목)/.test(n)) return "tree";
+      if (/(car|voiture|auto|차량|자동차)/.test(n)) return C.KINDS.includes("car") ? "car" : null;
+      if (/(people|person|personne|인물|사람)/.test(n)) return "person";
+      return null;
+    };
     async function loadUrl(url, name) {
       const im = await loadImg(url), r = toImageData(im, MAX_SHEET);
       S.id = r.img; S.name = name || ""; S.pick.clear();
+      const g = guessKind(name);
+      if (g) { S.kind = g; kSel.value = g; }
       run();
       if (r.scaled) info.textContent += " · " + _t("ent.s.big", { w: r.img.width, h: r.img.height });
     }

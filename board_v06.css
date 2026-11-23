@@ -171,6 +171,8 @@ html.bd-open, html.bd-open body { overflow: hidden; }
 .bd-handle[data-handle="n"], .bd-handle[data-handle="s"] { cursor: ns-resize; }
 .bd-handle[data-handle="e"], .bd-handle[data-handle="w"] { cursor: ew-resize; }
 .bd-smart { stroke: var(--bd-smart); stroke-width: .75; stroke-dasharray: 4 3; pointer-events: none; }
+.bd-smart.is-gap { stroke-dasharray: none; stroke-width: .9; }
+.bd-smart.is-same { stroke: var(--bd-guide); stroke-dasharray: none; stroke-width: 1; }
 .bd-ug { stroke: var(--bd-user-guide); stroke-width: .75; pointer-events: none; }
 .bd-ug.is-sel { stroke-width: 1.5; }
 .bd-ug-hit { stroke: transparent; stroke-width: 8; pointer-events: stroke; cursor: move; }
@@ -376,6 +378,7 @@ html.bd-open, html.bd-open body { overflow: hidden; }
 #board .bd-pf-ti { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
 #board .bd-pfline.is-err { color: #ff3b30; font-weight: 600; }
 .bd-gaplab { fill: var(--bd-smart); font-family: "Pretendard", "Noto Sans KR", sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+.bd-gaplab.is-same { fill: var(--bd-guide); font-weight: 700; }
 .bd-ovmark { pointer-events: none; }
 
 /* build 4b: parent items, frame styles, labels */

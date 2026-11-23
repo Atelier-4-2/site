@@ -211,7 +211,12 @@ footer .brand-name {
 
 /* top-right segmented site switcher */
 .site-switch {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -220,13 +225,16 @@ footer .brand-name {
   background: var(--surface, #f5f5f7);
   border: 1px solid var(--line, #d2d2d7);
 }
+.site-switch::-webkit-scrollbar { display: none; }
 
 .site-switch a {
+  flex: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 28px;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 980px;
   font-family: "Pretendard Variable", "Pretendard", sans-serif;
   font-size: 12px;
@@ -235,6 +243,17 @@ footer .brand-name {
   text-decoration: none;
   color: var(--muted, #6e6e73);
   transition: background-color 150ms ease, color 150ms ease;
+}
+
+@media (max-width: 767px) {
+  .page-header .nav-inner { gap: 6px; }
+  .page-header #step-count { display: none; }
+  #brand-home.product-name { padding: 8px 4px 8px 0; }
+  #brand-home .brand-divider { margin: 0 6px; }
+  #brand-home .brand-tool { font-size: 15px; }
+  .site-switch a { padding: 4px 8px; font-size: 11.5px; }
+  .lang-switch { margin-left: 0; }
+  .lang-switch button { padding: 4px 7px; font-size: 11.5px; }
 }
 
 .site-switch a:hover {
