@@ -120,6 +120,7 @@ function syncStamps() {
   }
 }
 function commit() {
+  if (cloudMod) cloudMod.pushCollabState(toolCtx());
   if (contentEdit) { const cc = cardById(contentEdit); if (!cc || quarter(cc)) contentEdit = null; }
   syncStamps();
   PR.pruneOverrides(S);
@@ -2063,6 +2064,11 @@ function build() {
             <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
             <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
             <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
+            <button type="button" data-m="photo">모형 사진 정리</button>
+            <button type="button" data-m="axo">평면 → 분해 액소</button>
+            <span class="bd-msep" role="separator"></span>
+            <button type="button" data-m="cloud">Drive 프로젝트 저장 · 열기</button>
+            <button type="button" data-m="collab">실시간 같이 편집 (Beta)</button>
             <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
@@ -2292,6 +2298,10 @@ function wire() {
     else if (m === "pdf") $("#bd-file-img").click();
     else if (m === "lw") $("#bd-file-lw").click();
     else if (m === "ent") openEntourage();
+    else if (m === "photo") openPhotoTool();
+    else if (m === "axo") openAxoTool();
+    else if (m === "cloud") openCloudTool();
+    else if (m === "collab") openCollabTool();
     else if (m === "promote") promoteKept(secActive() ? selSection : null);
   });
   // the stamp gallery is opened from the tool rail (S): clicks on that button or inside the gallery must not close it
@@ -3607,6 +3617,59 @@ async function importPdf(file) {
 const tr_ = (e, key) => { e.dataset.i18n = key; return e; };
 let entMod = null;
 const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123h");
+let cloudMod = null, photoMod = null, axoMod = null;
+function toolCtx() {
+  return {
+    author: ui.author,
+    status,
+    exportSnapshot() {
+      const FS = PR.flattenEdit(S);
+      return { v: 1, doc: FS, payloads: Object.fromEntries([...payloads.entries()]) };
+    },
+    importSnapshot(snap, fromRemote) {
+      if (!snap || !snap.doc) return;
+      S = sanitizeDoc(snap.doc);
+      payloads.clear();
+      if (snap.payloads) for (const [k, v] of Object.entries(snap.payloads)) payloads.set(k, v);
+      resetCanvasState();
+      ui.emptyDismissed = true;
+      render();
+      if (!fromRemote && S.frames[0]) zoomToFrame(S.frames[0]);
+    },
+    addImageCard(dataUrl, w, h, title) {
+      const id = "img_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      S.assets[id] = { id, kind: "image", title: title || "Image", w: w || 400, h: h || 300, meta: {} };
+      payloads.set(id, { img: dataUrl });
+      ui.emptyDismissed = true;
+      const c = placeAsset(id);
+      if (c) { sel = new Set([c.id]); selFrame = null; }
+      commit();
+      status(`${title || "이미지"} 카드를 보드에 넣었습니다.`);
+    },
+  };
+}
+async function openCloudTool() { try { cloudMod ||= await import("./board_v06_cloud.js?v=20261123h"); await cloudMod.openCloudModal(toolCtx()); } catch (e) { console.error(e); status("Drive 모듈을 열지 못했습니다."); } }
+async function openCollabTool() { try { cloudMod ||= await import("./board_v06_cloud.js?v=20261123h"); cloudMod.openCollabModal(toolCtx()); } catch (e) { console.error(e); status("실시간 편집 모듈을 열지 못했습니다."); } }
+async function openPhotoTool() {
+  try {
+    photoMod ||= await import("./board_v06_photo.js?v=20261123h");
+    const first = [...sel].map(cardById).find(c => c && c.ref && payloads.get(c.ref)?.img);
+    photoMod.openPhotoModal(toolCtx(), first ? payloads.get(first.ref).img : null);
+  } catch (e) { console.error(e); status("사진 정리 도구를 열지 못했습니다."); }
+}
+async function openAxoTool() {
+  try {
+    axoMod ||= await import("./board_v06_axo.js?v=20261123h");
+    const init = S.cards.filter(c => c.ref && (payloads.get(c.ref)?.img || payloads.get(c.ref)?.preview)).slice(0, 6).map(c => ({
+      name: S.assets[c.ref]?.title || c.id,
+      dataUrl: payloads.get(c.ref)?.img || payloads.get(c.ref)?.preview,
+    }));
+    axoMod.openAxoModal(toolCtx(), init);
+  } catch (e) { console.error(e); status("분해 액소 도구를 열지 못했습니다."); }
+}
+if (/room=[^&]+&key=[^&]+/.test(location.hash || "")) {
+  import("./board_v06_cloud.js?v=20261123h").then(m => { cloudMod = m; m.checkCollabHash(toolCtx()); }).catch(() => {});
+}
 const entCtx = () => ({
   status, download, FFLATE,
   onChange: () => { if (!$("#bd-stamps").hidden) renderStampGallery(); render(); },
