@@ -15,6 +15,8 @@ const TXT = {
   cam: ["카메라", "Caméra"], cIso: ["등각 액소", "Axo isométrique"], cObl: ["평면 사선", "Plan oblique"], cPersp: ["원근", "Perspective"],
   sun: ["그림자", "Ombres"], on: ["켜기", "Activer"], hour: ["시각", "Heure"],
   explode: ["분해 보기", "Vue éclatée"], replay: ["▶ 다시 보기", "▶ Revoir"], intro: ["소개 동작", "Intro animée"],
+  fit: ["전체 보기", "Tout voir"], lw: ["선 굵기", "Épaisseur"], trees: ["나무", "Arbres"],
+  oAng: ["사선 각도", "Angle"], oK: ["높이 비율", "Hauteurs"],
   png: ["PNG", "PNG"], save: ["저장", "Enregistrer"],
   sunUp: ["고도 {alt}° · 방위 {az}°", "hauteur {alt}° · azimut {az}°"], sunDown: ["일몰 후 (그림자 없음)", "soleil couché (pas d’ombres)"],
   explodedNote: ["분해 보기에서는 그림자를 끕니다.", "Ombres désactivées en vue éclatée."],
@@ -31,7 +33,7 @@ const fmtHour = h => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.ro
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
 const INTRO_KEY = "a42.axo.intro";
 let introSeen = false;
-const keep = { mode: 1, shadow: false, explode: false, preset: "iso" };   // survives the tab rebuild when late data layers arrive                       // the intro plays once per page load, the first time A9 opens
+const keep = { mode: 1, shadow: false, explode: false, preset: "iso", trees: true, lw: 1, oblAng: 45, oblK: 1 };   // survives the tab rebuild when late data layers arrive                       // the intro plays once per page load, the first time A9 opens
 const readIntroPref = () => {
   try { const v = localStorage.getItem(INTRO_KEY); if (v === "on" || v === "off") return v === "on"; } catch { /* private mode */ }
   return !matchMedia("(prefers-reduced-motion: reduce)").matches;   // reduced motion: off by default
@@ -49,6 +51,8 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D tN, tI, tD, tS, tL;
 uniform vec2 uPx;
+uniform vec3 uW;
+uniform float uLw;
 uniform float uPxScale, uOrtho, uNear, uFar, uZn, uZf, uSunUp, uShadowOn, uMode, uLines;
 uniform vec3 uSun;
 uniform vec3 cInk, cHair, cGround, cWater, cRoof, cWall, cAccent, cWhite;
@@ -109,14 +113,16 @@ void main(){
 
   // ---- lines
   if (uLines > .5) {
-    float s = uPxScale * fade;
-    float contour = edgeAt(uv, 1.2 * s).x;
-    float crease = edgeAt(uv, .55 * s).y;
-    float hair = edgeAt(uv, .4 * s).z;
+    // widths are given in css px and scaled to the render-target pixels; below 2 target px (= 1 px at 2x supersampling)
+    // a line keeps the thinnest band but fades to grey in proportion, so thin lines never break up
+    float wc = uW.x * uPxScale * fade, wk = uW.y * uPxScale * fade, wh = uW.z * uPxScale * fade;
+    float contour = edgeAt(uv, wc < 2. ? .75 : wc * .5).x * min(1., wc / 2.);
+    float crease = edgeAt(uv, wk < 2. ? .75 : wk * .5).y * min(1., wk / 2.);
+    float hair = edgeAt(uv, wh < 2. ? .75 : wh * .5).z * min(1., wh / 2.);
     col = mix(col, cHair, hair);
     col = mix(col, cInk, max(contour, crease));
-    // thin drawn lines (site / parcels / road edges): drawn in their own pass, dilated by ~1 px
-    float r = .5 * uPxScale;
+    // thin drawn lines (site / parcels / road edges / trees): drawn in their own pass, dilated
+    float r = .5 * uPxScale * uLw;
     vec4 l = texture2D(tL, uv);
     vec4 l1 = texture2D(tL, uv + vec2(r * uPx.x, 0.)), l2 = texture2D(tL, uv - vec2(r * uPx.x, 0.));
     vec4 l3 = texture2D(tL, uv + vec2(0., r * uPx.y)), l4 = texture2D(tL, uv - vec2(0., r * uPx.y));
@@ -128,11 +134,13 @@ void main(){
 }`;
 const BLIT_FS = "varying vec2 vUv; uniform sampler2D tO; void main(){ gl_FragColor = vec4(texture2D(tO, vUv).rgb, 1.); }";
 
-const PRESETS = {
-  iso:   { az: 45, el: 35.264, ortho: true,  shear: false },
-  obl:   { az: 0,  el: 89.4,   ortho: true,  shear: true  },
-  persp: { az: 32, el: 30,     ortho: false, shear: false }
-};
+// Plan oblique (military axonometric): the plan keeps its true shape, rotated by 45/45 or 30/60 degrees, and the
+// verticals are drawn straight up at full height (k = 1) or reduced (k = .75). Implemented as a y-shear of a top view.
+const presetDef = (name, ui) => name === "obl"
+  ? { az: ui.oblAng, el: 89.95, ortho: true, shear: true, k: ui.oblK }
+  : name === "persp" ? { az: 32, el: 30, ortho: false, shear: false }
+  : { az: 45, el: 35.264, ortho: true, shear: false };
+const FIT = .06;                                                          // margin around the fitted model
 
 /**
  * @param {object} o  { stage, controls, note, parts, side, dates, sunAt, state, download, sunCap }
@@ -141,6 +149,7 @@ const PRESETS = {
  */
 export function createAxoView(o) {
   const { stage, controls, note, parts, side, state } = o;
+  const ui = { mode: keep.mode, shadow: keep.shadow, explode: keep.explode, trees: keep.trees, lw: keep.lw, oblAng: keep.oblAng, oblK: keep.oblK };
   const w0 = stage.clientWidth || 800, h0 = stage.clientHeight || 500;
   const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
   renderer.setClearColor(0xffffff, 1);
@@ -196,6 +205,57 @@ export function createAxoView(o) {
   addLines(parts.lines.roads, "#8a8a84", "ground");
   addLines(parts.lines.site, "#1e1e1c", "ground");
 
+  // trees: plan canopy drawn on a horizontal plane at crown height + a thin trunk line down to the ground; line only, so the
+  // buildings behind stay readable. Canopy outline = plan-tree style A (placeholder circle until loaded).
+  const treeObj = [];
+  const circle = (n = 28) => Array.from({ length: n + 1 }, (_, i) => [Math.cos(i / n * 2 * Math.PI), Math.sin(i / n * 2 * Math.PI)]);
+  let variants = [[circle()]];                                          // placeholder until style A loads: one thin circle
+  const hash = (x, y) => { const v = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return v - Math.floor(v); };
+  function buildTrees() {
+    for (const o2 of treeObj) { o2.parent?.remove(o2); o2.geometry.dispose(); o2.material.dispose(); }
+    treeObj.length = 0;
+    const seg = [];
+    for (const t of parts.trees || []) {
+      const r = t.d / 2, cy = Math.max(t.d / 2, t.h - t.d / 2 * .8), y = t.p[1] + cy;
+      const hs = hash(t.p[0], t.p[2]);
+      const set = variants.length >= 9 ? variants.slice(t.d < 8 ? 0 : t.d < 13 ? 3 : 6, t.d < 8 ? 3 : t.d < 13 ? 6 : 9) : variants;   // S / M / L
+      const shape = set[Math.floor(hs * set.length * 7.3) % set.length];
+      const ang = hs * 2 * Math.PI * 3.7, ca = Math.cos(ang), sa = Math.sin(ang);
+      seg.push(t.p[0], t.p[1], t.p[2], t.p[0], y, t.p[2]);
+      for (const pl of shape) for (let i = 1; i < pl.length; i++) {
+        const [x0, z0] = pl[i - 1], [x1, z1] = pl[i];
+        seg.push(t.p[0] + (x0 * ca - z0 * sa) * r, y, t.p[2] + (x0 * sa + z0 * ca) * r, t.p[0] + (x1 * ca - z1 * sa) * r, y, t.p[2] + (x1 * sa + z1 * ca) * r);
+      }
+    }
+    if (!seg.length) return;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(seg, 3));
+    const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color().setRGB(...hex("#5f5f58"), THREE.LinearSRGBColorSpace) }));
+    l.visible = ui.trees; lineScene.add(l); layer.ground.push(l); treeObj.push(l);
+  }
+  buildTrees();
+  // owner-chosen plan-tree style A (vector data: 9 variants S1-3 / M1-3 / L1-3, SVG paths M/L/C in a 100-unit box)
+  const flatten = d => {
+    const out = [], tk = d.match(/[MLC]|-?\d*\.?\d+/g) || []; let i = 0, cur = null, pl = null;
+    const n = () => Number(tk[i++]);
+    while (i < tk.length) {
+      const c = tk[i++];
+      if (c === "M") { cur = [n(), n()]; pl = [cur]; out.push(pl); }
+      else if (c === "L") { cur = [n(), n()]; pl.push(cur); }
+      else if (c === "C") { const p0 = cur, a = [n(), n()], b = [n(), n()], e = [n(), n()];
+        for (let k = 1; k <= 6; k++) { const t = k / 6, u = 1 - t; pl.push([u * u * u * p0[0] + 3 * u * u * t * a[0] + 3 * u * t * t * b[0] + t * t * t * e[0], u * u * u * p0[1] + 3 * u * u * t * a[1] + 3 * u * t * t * b[1] + t * t * t * e[1]]); }
+        cur = e; }
+    }
+    return out.map(p => p.map(q => [(q[0] - 50) / 50, (q[1] - 50) / 50]));
+  };
+  if ((parts.trees || []).length) {
+    fetch(new URL("./dgplantrees_A.json?v=20261123e", import.meta.url)).then(r => r.json()).then(js => {
+      if (disposed) return;
+      variants = js.map(v => [...v.paths, ...(v.dash || [])].flatMap(flatten));
+      buildTrees(); request();
+    }).catch(() => { /* keeps the placeholder circles */ });
+  }
+
   // guide verticals for the exploded view (unit height, scaled with the lift)
   const half = side / 2;
   const guideGeo = new THREE.BufferGeometry();
@@ -230,7 +290,7 @@ export function createAxoView(o) {
   const uni = {
     tN: { value: null }, tI: { value: null }, tD: { value: null }, tS: { value: null }, tL: { value: null },
     uPx: { value: new THREE.Vector2() }, uPxScale: { value: 1 }, uOrtho: { value: 1 }, uNear: { value: 1 }, uFar: { value: 100 },
-    uZn: { value: 0 }, uZf: { value: 1 }, uSunUp: { value: 1 }, uShadowOn: { value: 0 }, uMode: { value: 1 }, uLines: { value: 1 },
+    uW: { value: new THREE.Vector3(1.8, .9, .5) }, uLw: { value: 1 }, uZn: { value: 0 }, uZf: { value: 1 }, uSunUp: { value: 1 }, uShadowOn: { value: 0 }, uMode: { value: 1 }, uLines: { value: 1 },
     uSun: { value: new THREE.Vector3(0, 1, 0) },
     cInk: { value: col("#1e1e1c") }, cHair: { value: col("#8a8a84") }, cGround: { value: col("#ebe8df") },
     cWater: { value: col("#e3e8ea") }, cRoof: { value: col("#faf8f3") }, cWall: { value: col("#d2cdbf") },
@@ -246,47 +306,87 @@ export function createAxoView(o) {
   // ---- cameras -----------------------------------------------------------------------------------------------
   const persp = new THREE.PerspectiveCamera(32, w0 / h0, .5, side * 40);
   const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, .5, side * 40);
-  const shearK = .42;
   ortho.userData.shear = false;
   const baseUpdate = THREE.OrthographicCamera.prototype.updateProjectionMatrix;
   ortho.updateProjectionMatrix = function () {                           // plan oblique = shear of the ortho projection
     baseUpdate.call(this);
     if (this.userData.shear) {
-      const d = this.userData.dist || 1, k = shearK;
-      const S = new THREE.Matrix4().set(1, 0, k, k * d, 0, 1, k, k * d, 0, 0, 1, 0, 0, 0, 0, 1);
+      const d = this.userData.dist || 1, k = this.userData.k || 1;
+      const S = new THREE.Matrix4().set(1, 0, 0, 0, 0, 1, k, k * d, 0, 0, 1, 0, 0, 0, 0, 1);   // y' = y + k (z + d): verticals stay vertical
       this.projectionMatrix.multiply(S);
       this.projectionMatrixInverse.copy(this.projectionMatrix).invert();
     }
   };
   let cam = ortho;
-  const target = new THREE.Vector3(), tweenDist = { v: 1 };
+  const target = new THREE.Vector3(), look = new THREE.Vector3(), tweenDist = { v: 1 };
   const controlsO = new OrbitControls(cam, renderer.domElement);
   controlsO.enableDamping = false; controlsO.maxPolarAngle = Math.PI * .5;
   controlsO.addEventListener("change", () => request());
 
-  let preset = keep.preset, R = side, aspect = w0 / h0, pose = { az: PRESETS[keep.preset].az, el: PRESETS[keep.preset].el };
-  let lift = 0, shadowDirty = true, raf = 0, anim = null, disposed = false;
-  function bounds() { return new THREE.Box3().setFromObject(scene); }
-  function fitFrustum() {
-    const box = bounds();
+  let preset = keep.preset, R = side, aspect = w0 / h0;
+  let pose = { az: presetDef(preset, ui).az, el: presetDef(preset, ui).el };
+  let lift = 0, shadowDirty = true, raf = 0, anim = null, disposed = false, modelPx = 600;
+  let corners = [], sphR = side;
+  const cv = new THREE.Vector3();
+  // the whole model (buildings at their lifted height, ground, drawn lines, trees) as 8 box corners
+  function cacheBounds() {
+    const box = new THREE.Box3().setFromObject(scene).union(new THREE.Box3().setFromObject(lineScene));
     const sph = box.getBoundingSphere(new THREE.Sphere());
-    R = sph.radius; target.copy(sph.center);
-    const pr = PRESETS[preset];
-    const asp = Math.min(1, aspect);
-    const dist = pr.ortho ? R * 3 : R * 1.1 / Math.sin(Math.atan(Math.tan(persp.fov * RAD / 2) * asp));
-    tweenDist.v = dist;
+    R = sphR = sph.radius; target.copy(sph.center);
+    const { min: a, max: b } = box;
+    corners = [];
+    for (const x of [a.x, b.x]) for (const y of [a.y, b.y]) for (const z of [a.z, b.z]) corners.push(new THREE.Vector3(x, y, z));
+  }
+  function extent() {                                                    // projected bounding box in NDC for the current camera pose
+    cam.updateMatrixWorld(true);
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const c of corners) { cv.copy(c).project(cam); x0 = Math.min(x0, cv.x); x1 = Math.max(x1, cv.x); y0 = Math.min(y0, cv.y); y1 = Math.max(y1, cv.y); }
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, hx: Math.max(1e-4, (x1 - x0) / 2), hy: Math.max(1e-4, (y1 - y0) / 2) };
+  }
+  // Fit the projected bounding box into the canvas with a 6 % margin. blend 0 = loose bounding-sphere frame (intro spin,
+  // no breathing), 1 = tight fit. Ortho: size / offset the frustum. Perspective: dolly and slide the look-at point.
+  function refit(blend = 1) {
+    const pr = presetDef(preset, ui), lim = 1 - FIT;
     if (pr.ortho) {
-      const halfH = R * (pr.shear ? 1.0 : 0.92) / asp;
-      ortho.left = -halfH * aspect; ortho.right = halfH * aspect; ortho.top = halfH; ortho.bottom = -halfH;
-      ortho.near = .5; ortho.far = dist + R * 6;
-      ortho.userData.dist = dist; ortho.userData.shear = pr.shear;
+      const dist = tweenDist.v;
       ortho.zoom = 1;
+      ortho.left = -R * aspect; ortho.right = R * aspect; ortho.top = R; ortho.bottom = -R;
+      ortho.near = .5; ortho.far = dist + R * 6;
+      ortho.userData.dist = dist; ortho.userData.shear = pr.shear; ortho.userData.k = pr.k;
       ortho.updateProjectionMatrix();
+      const e = extent();
+      const f = (1 - blend) * (1 + FIT) + blend * Math.max(e.hx, e.hy) / lim, cx = e.cx * blend, cy = e.cy * blend;
+      const W = R * aspect, H = R;
+      ortho.left = cx * W - W * f; ortho.right = cx * W + W * f; ortho.top = cy * H + H * f; ortho.bottom = cy * H - H * f;
+      ortho.updateProjectionMatrix();
+      modelPx = Math.max(e.hx / f * css[0], e.hy / f * css[1]);
+      uni.uZn.value = dist - R; uni.uZf.value = dist + R;
     } else {
-      persp.aspect = aspect; persp.near = Math.max(.5, dist - R * 1.2); persp.far = dist + R * 6;
-      persp.updateProjectionMatrix();
+      persp.aspect = aspect;
+      for (let i = 0; i < 6; i++) {
+        persp.near = Math.max(.5, tweenDist.v - sphR * 1.3); persp.far = tweenDist.v + sphR * 6; persp.updateProjectionMatrix();
+        setPose(pose.az, pose.el, tweenDist.v);
+        const e = extent();
+        const hH = tweenDist.v * Math.tan(persp.fov * RAD / 2);
+        const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+        look.addScaledVector(right, e.cx * hH * aspect).addScaledVector(up, e.cy * hH);
+        tweenDist.v *= Math.max(.2, Math.min(5, Math.max(e.hx, e.hy) / lim));
+      }
+      persp.near = Math.max(.5, tweenDist.v - sphR * 1.3); persp.far = tweenDist.v + sphR * 6; persp.updateProjectionMatrix();
+      setPose(pose.az, pose.el, tweenDist.v);
+      const e = extent();
+      modelPx = Math.max(e.hx * css[0], e.hy * css[1]);
+      uni.uZn.value = tweenDist.v - sphR; uni.uZf.value = tweenDist.v + sphR;
     }
-    uni.uZn.value = dist - R; uni.uZf.value = dist + R;
+  }
+  function fitFrustum() {
+    cacheBounds();
+    look.copy(target);
+    const pr = presetDef(preset, ui);
+    const asp = Math.min(1, aspect);
+    tweenDist.v = pr.ortho ? R * 3 : R * 1.1 / Math.sin(Math.atan(Math.tan(persp.fov * RAD / 2) * asp));
+    setPose(pose.az, pose.el, tweenDist.v);
+    refit(1);
     // the shadow camera covers the whole model
     const sc = sh.camera;
     Object.assign(sc, { left: -R, right: R, top: R, bottom: -R, near: .5, far: R * 6 });
@@ -296,26 +396,27 @@ export function createAxoView(o) {
   function setPose(az, el, dist = tweenDist.v) {
     pose = { az, el };
     const a = az * RAD, e = el * RAD;
-    cam.position.set(target.x + dist * Math.sin(a) * Math.cos(e), target.y + dist * Math.sin(e), target.z + dist * Math.cos(a) * Math.cos(e));
+    cam.position.set(look.x + dist * Math.sin(a) * Math.cos(e), look.y + dist * Math.sin(e), look.z + dist * Math.cos(a) * Math.cos(e));
     cam.up.set(0, 1, 0);
-    cam.lookAt(target);
-    controlsO.target.copy(target);
+    cam.lookAt(look);
+    controlsO.target.copy(look);
     controlsO.update();
   }
   function usePreset(name, animate = true) {
     stopAnim();
     const from = { az: pose.az, el: pose.el }, fromOrtho = cam === ortho;
     preset = name;
-    const pr = PRESETS[name];
+    const pr = presetDef(name, ui);
     const newCam = pr.ortho ? ortho : persp;
     const sameKind = fromOrtho === pr.ortho;
     if (newCam !== cam) { cam = newCam; controlsO.object = cam; }
+    if (!animate || !sameKind) { pose = { az: pr.az, el: pr.el }; fitFrustum(); request(); return; }
     fitFrustum();
-    if (!animate || !sameKind) { setPose(pr.az, pr.el); request(); return; }
-    // shear changes the projection: switch it at the start, the angle tween does the rest
     runAnim(650, t => {
       const e = t * t * (3 - 2 * t);
       setPose(from.az + (pr.az - from.az) * e, from.el + (pr.el - from.el) * e);
+      if (!pr.ortho) return;
+      refit(1);                                                          // the frame follows the angle, so nothing is ever cut off
     });
   }
 
@@ -344,7 +445,6 @@ export function createAxoView(o) {
     scn.overrideMaterial = null;
   };
 
-  const ui = { mode: keep.mode, shadow: keep.shadow, explode: keep.explode };
   function sunNow() {
     const s = o.sunAt(state.date, state.hour);
     return s;
@@ -359,6 +459,10 @@ export function createAxoView(o) {
     uni.uNear.value = cam.near; uni.uFar.value = cam.far;
     uni.uSun.value.copy(s.dir); uni.uSunUp.value = s.up ? 1 : 0;
     uni.uShadowOn.value = shadowsOn && s.up ? 1 : 0;
+    // line weights follow the on-screen size of the model (css px, thin-line floor), times the user's slider
+    const sz = Math.max(.3, Math.min(1.7, modelPx * (cam === ortho ? cam.zoom : 1) / 800));
+    uni.uW.value.set(Math.max(1.1, 1.5 * sz) * ui.lw, Math.max(.6, .75 * sz) * ui.lw, Math.max(.4, .45 * sz) * ui.lw);
+    uni.uLw.value = Math.max(.8, .9 * sz) * ui.lw;
     uni.uMode.value = ui.mode === 0 ? 0 : 1; uni.uLines.value = ui.mode === 2 ? 0 : 1;
     renderer.setRenderTarget(null);
     // G-buffers
@@ -381,10 +485,10 @@ export function createAxoView(o) {
   function request() { if (!raf && !disposed) raf = requestAnimationFrame(render); handle.raf = raf; }
 
   // ---- animation (intro, preset tween, explode) ---------------------------------------------------------------
-  function runAnim(ms, step, done) {
+  function runAnim(ms, step, done, intro) {
     stopAnim();
     const t0 = performance.now();
-    const a = { id: 0, done };
+    const a = { id: 0, done, intro };
     anim = a;
     const tick = now => {
       if (anim !== a || disposed) return;
@@ -412,25 +516,25 @@ export function createAxoView(o) {
     const from = lift, to = on ? 1 : 0;
     // frame the exploded stack first so nothing leaves the view while it rises
     const saved = lift; setLift(to); fitFrustum(); setLift(saved);
-    setPose(pose.az, pose.el);
     runAnim(700, t => { const e = t * t * (3 - 2 * t); setLift(from + (to - from) * e); });
   }
 
   const introMotion = () => {
     if (preset !== "iso") usePreset("iso", false);
-    const el0 = PRESETS.iso.el, az0 = PRESETS.iso.az;
+    const el0 = presetDef("iso", ui).el, az0 = presetDef("iso", ui).az;
     stage.classList.add("axo-intro");
+    refit(0);                                                            // loose sphere frame while the model turns, tight fit at the end
     // plan -> tilt to the axonometric -> one full turn -> back to the start angle (about 4.4 s)
     const T1 = 1500, T2 = 2600, T3 = 400;
     const ease = t => t * t * (3 - 2 * t);
     runAnim(T1 + T2 + T3, tt => {
       const ms = tt * (T1 + T2 + T3);
-      if (ms < T1) { const e = ease(ms / T1); setPose(az0, 89.4 + (el0 - 89.4) * e); }
+      if (ms < T1) { const e = ease(ms / T1); setPose(az0, 89.95 + (el0 - 89.95) * e); }
       else if (ms < T1 + T2) { const e = ease((ms - T1) / T2); setPose(az0 + 360 * e, el0); }
-      else setPose(az0, el0);
-    }, () => { stage.classList.remove("axo-intro"); });
+      else { setPose(az0, el0); const e = ease((ms - T1 - T2) / T3); refit(e); }
+    }, () => { stage.classList.remove("axo-intro"); refit(1); }, true);
   };
-  const userStop = () => { if (anim) stopAnim(); };
+  const userStop = () => { if (anim) { const was = anim.intro; stopAnim(); if (was) { refit(1); request(); } } };
   for (const ev of ["pointerdown", "wheel", "touchstart", "keydown"]) renderer.domElement.addEventListener(ev, userStop, { passive: true });
   renderer.domElement.tabIndex = 0;
 
@@ -442,9 +546,14 @@ export function createAxoView(o) {
   controls.innerHTML = `
     <span role="group" aria-label="${tr("mode")}">${tr("mode")} ${[["0", tr("mLine")], ["1", tr("mFlat")], ["2", tr("mFill")]].map(([v, l]) => bt("axo-mode", v, l, ui.mode === Number(v))).join("")}</span>
     <span role="group" aria-label="${tr("cam")}">${tr("cam")} ${[["iso", tr("cIso")], ["obl", tr("cObl")], ["persp", tr("cPersp")]].map(([v, l]) => bt("axo-cam", v, l, preset === v)).join("")}</span>
+    <span id="axo-obl" role="group" aria-label="${tr("oAng")}" ${preset === "obl" ? "" : "hidden"}>${tr("oAng")} ${[["45", "45°/45°"], ["30", "30°/60°"]].map(([v, l]) => bt("axo-ang", v, l, ui.oblAng === Number(v))).join("")}
+      ${tr("oK")} ${[["1", "×1"], ["0.75", "×0.75"]].map(([v, l]) => bt("axo-ok", v, l, ui.oblK === Number(v))).join("")}</span>
     <span role="group" aria-label="${tr("sun")}">${tr("sun")} <button type="button" data-axo-shadow="1" aria-pressed="${ui.shadow}">${tr("on")}</button>
       <span id="axo-dates">${dateIds.map(id => bt("axo-date", id, dateLabel(id), state.date === id)).join("")}</span></span>
     <label>${tr("hour")} <input id="axo-hour" type="range" min="0" max="23.75" step="0.25" value="${state.hour}"> <output id="axo-hour-out">${fmtHour(state.hour)}</output></label>
+    <button type="button" data-axo-trees="1" aria-pressed="${ui.trees}">${tr("trees")}</button>
+    <button type="button" data-axo-fit="1">${tr("fit")}</button>
+    <label>${tr("lw")} <input id="axo-lw" type="range" min="0.6" max="2" step="0.1" value="${ui.lw}"> <output id="axo-lw-out">${ui.lw.toFixed(1)}×</output></label>
     <button type="button" data-axo-explode="1" aria-pressed="${ui.explode}">${tr("explode")}</button>
     <span role="group" aria-label="${tr("intro")}"><button type="button" data-axo-replay="1">${tr("replay")}</button>
       <label><input id="axo-intro-on" type="checkbox" ${savedIntro ? "checked" : ""}> ${tr("intro")}</label></span>
@@ -458,11 +567,17 @@ export function createAxoView(o) {
     $c("axo-info").textContent = ui.shadow ? base + (lift > .01 ? " · " + tr("explodedNote") : "") : "";
   }
   controls.onclick = async e => {
-    queueMicrotask(() => Object.assign(keep, { mode: ui.mode, shadow: ui.shadow, explode: ui.explode, preset }));
+    queueMicrotask(() => Object.assign(keep, { mode: ui.mode, shadow: ui.shadow, explode: ui.explode, preset, trees: ui.trees, lw: ui.lw, oblAng: ui.oblAng, oblK: ui.oblK }));
     const t = e.target.closest("button"); if (!t) return;
     const d = t.dataset;
     if (d.axoMode != null) { ui.mode = Number(d.axoMode); press("[data-axo-mode]", ui.mode, "axoMode"); request(); }
-    else if (d.axoCam) { usePreset(d.axoCam); press("[data-axo-cam]", d.axoCam, "axoCam"); }
+    else if (d.axoCam) { usePreset(d.axoCam); press("[data-axo-cam]", d.axoCam, "axoCam"); $c("axo-obl").hidden = d.axoCam !== "obl"; }
+    else if (d.axoAng || d.axoOk) {
+      if (d.axoAng) { ui.oblAng = Number(d.axoAng); press("[data-axo-ang]", d.axoAng, "axoAng"); } else { ui.oblK = Number(d.axoOk); press("[data-axo-ok]", d.axoOk, "axoOk"); }
+      usePreset("obl");
+    }
+    else if (d.axoTrees) { ui.trees = !ui.trees; t.setAttribute("aria-pressed", String(ui.trees)); for (const l of treeObj) l.visible = ui.trees; request(); }
+    else if (d.axoFit) usePreset(preset);
     else if (d.axoShadow) { ui.shadow = !ui.shadow; t.setAttribute("aria-pressed", String(ui.shadow)); shadowDirty = true; updateInfo(); request(); }
     else if (d.axoDate) { state.date = d.axoDate; press("[data-axo-date]", d.axoDate, "axoDate"); shadowDirty = true; updateInfo(); request(); }
     else if (d.axoExplode) { toggleExplode(!ui.explode); t.setAttribute("aria-pressed", String(ui.explode)); updateInfo(); }
@@ -470,6 +585,7 @@ export function createAxoView(o) {
     else if (d.axoPng) await exportPng();
   };
   $c("axo-hour").addEventListener("input", e => { state.hour = Number(e.target.value); $c("axo-hour-out").textContent = fmtHour(state.hour); shadowDirty = true; updateInfo(); request(); });
+  $c("axo-lw").addEventListener("input", e => { ui.lw = Number(e.target.value); $c("axo-lw-out").textContent = ui.lw.toFixed(1) + "×"; keep.lw = ui.lw; request(); });
   $c("axo-intro-on").addEventListener("change", e => writeIntroPref(e.target.checked));
 
   const nUnknown = parts.bldgs.filter(b => !b.known).length;
@@ -502,7 +618,7 @@ export function createAxoView(o) {
   const handle = { renderer, scene, camera: cam, controls: controlsO, raf: 0, ui, usePreset, introMotion, toggleExplode, exportPng, render, request, get preset() { return preset; }, layer };
   handle.resize = () => {
     if (disposed || !stage.clientWidth || !stage.clientHeight) return;
-    sizeTargets(); fitFrustum(); setPose(pose.az, pose.el); request();
+    sizeTargets(); fitFrustum(); request();
   };
   handle.fit = () => {};
   handle.stopPlay = () => { disposed = true; stopAnim(); cancelAnimationFrame(raf); disposeRT(); for (const g of own) g.dispose(); for (const l of lineObjs) { l.geometry.dispose(); l.material.dispose(); } guideGeo.dispose(); matN.dispose(); matI.dispose(); matS.dispose(); matC.dispose(); matB.dispose(); depthMat.dispose(); quadGeo.dispose(); };
@@ -510,9 +626,9 @@ export function createAxoView(o) {
   handle.ro = new ResizeObserver(() => { cancelAnimationFrame(roFrame); roFrame = requestAnimationFrame(() => handle.resize()); });   // deferred: no ResizeObserver loop warning
   handle.ro.observe(stage);
 
-  if (!PRESETS[preset].ortho) { cam = persp; controlsO.object = cam; }
+  if (!presetDef(preset, ui).ortho) { cam = persp; controlsO.object = cam; }
   if (ui.explode) setLift(1);
-  sizeTargets(); fitFrustum(); setPose(PRESETS[preset].az, PRESETS[preset].el);
+  sizeTargets(); fitFrustum();
   updateInfo();
   render();
   if (!introSeen && savedIntro && !ui.explode && !new URLSearchParams(location.search).has("nointro")) { introSeen = true; introMotion(); }

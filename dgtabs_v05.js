@@ -19,7 +19,7 @@ const SIM = "참고용 시뮬레이션 · 법적 효력 없음";
 import { LB_KINDS as WIND_KINDS, buildLbPlate as windPlate, smoothPath, WIND_B1, KO_B1 } from "./dglb_wind_v02.js?v=20261116n";
 import { LB_KINDS as SUN_KINDS, buildLbPlate as sunPlate } from "./dglb_sun_v02.js?v=20261116p";
 import { LB_KINDS as PSY_KINDS, buildLbPlate as psyPlate } from "./dglb_psy_v02.js?v=20261116n";
-import { createAxoView } from "./dgaxo.js?v=20261123c";
+import { createAxoView } from "./dgaxo.js?v=20261123e";
 
 const LB_KINDS = [...WIND_KINDS, ...SUN_KINDS, ...PSY_KINDS];
 const LB_BUILD = Object.fromEntries([
@@ -1882,6 +1882,18 @@ export function createTabs(api) {
         }
       }
     }
+    // street / park trees (official crowns, else OSM points) as plan canopies: base point on the terrain, crown width, height
+    const trees = [];
+    {
+      const T = data.trees;
+      const src = T?.crowns?.length ? T.crowns : (T?.points || []).map(p => ({ p, d: 5, h: 7 }));
+      for (const c of src) {
+        if (!inShape(c.p[0], c.p[1])) continue;
+        const d = Math.max(2, c.d || 5), h = c.h || Math.max(5, d * 1.6);
+        const b = P3(c.p[0], c.p[1], demAt(dem, c.p[0], c.p[1]));
+        trees.push({ p: [b.x, b.y, b.z], d, h });
+      }
+    }
     const dates = [...KEYS, { id: "today", label: "오늘" }];
     const sunAt = (dateId, hour) => {
       const d = dateOf(dateId), s = sunPosition(parisDate(d.y, d.m, d.d, hour), ctx.lat, ctx.lon), cv = CONV();
@@ -1890,7 +1902,7 @@ export function createTabs(api) {
     };
     gl = createAxoView({
       stage, controls, note, side, state, dates, sunAt, download: api.download,
-      parts: { ground, water: waterGeo, bldgs, lines: { site, parcels, roads } }
+      parts: { ground, water: waterGeo, bldgs, trees, lines: { site, parcels, roads } }
     });
   }
 
