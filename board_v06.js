@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261123d";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123f";
 // Board mode of Atelier 4·2, v3 (InDesign-like layout): pin-up canvas + final panels (pages). Third mode of the site (body.dataset.mode = "board").
 //   globalThis.atelierBoard = { add(item), open(), close(), count() }     event: atelierBoard:ready
 // Screen = raster previews in an SVG world (mm units); export = vector SVG composed per page (board_v06_export.js).
@@ -11,15 +11,15 @@ import {
   FSTYLES, FSTYLE_LABEL,
   cardDen, widthForDen, realWidthM, niceLen, ppiOf, ppiClass, contentRect, coverScale, stampBox, stampSvg, STAMPS, STAMP_LABEL, stampLabel, isStampKey, STD_DENS, isNorthStamp, isBarStamp, isFigStamp, isPlanFig, clampHm,
   cleanSvgString, cleanPayload, sanitizeDoc, emptyDoc
-} from "./board_v06_doc.js?v=20261123d";
-import { FIGS, FIG_GROUPS, TREE_PRESETS, customKeys } from "./board_v06_figs.js?v=20261123d";
-import * as X from "./board_v06_export.js?v=20261123d";
-import { icon } from "./board_v06_icons.js?v=20261123d";
-import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261123d";
-import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261123d";
-import * as RC from "./board_v06_record.js?v=20261123d";
-import * as PR from "./board_v06_parent.js?v=20261123d";
-import { createChrome } from "./board_v06_chrome.js?v=20261123d";
+} from "./board_v06_doc.js?v=20261123f";
+import { FIGS, FIG_GROUPS, TREE_PRESETS, customKeys } from "./board_v06_figs.js?v=20261123f";
+import * as X from "./board_v06_export.js?v=20261123f";
+import { icon } from "./board_v06_icons.js?v=20261123f";
+import { preflight, summarize, groupByPage, cardTitle, PRESET_KEYS } from "./board_v06_preflight.js?v=20261123f";
+import { getLang, setLang, fmtDate, onLang } from "./i18n.js?v=20261123f";
+import * as RC from "./board_v06_record.js?v=20261123f";
+import * as PR from "./board_v06_parent.js?v=20261123f";
+import { createChrome } from "./board_v06_chrome.js?v=20261123f";
 await loadedPromise;   // the catalogs are ready before any module-level t() call
 
 const FFLATE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
@@ -3506,7 +3506,7 @@ async function importPdf(file) {
 // Entourage tool (점경 만들기): prompt templates, sheet cutter, photo silhouette, "내 점경" library. Loaded on demand; the library is registered at start-up (init) so saved cards render.
 const tr_ = (e, key) => { e.dataset.i18n = key; return e; };
 let entMod = null;
-const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123d");
+const entLoad = () => entMod ||= import("./board_v06_entourage.js?v=20261123f");
 const entCtx = () => ({
   status, download, FFLATE,
   onChange: () => { if (!$("#bd-stamps").hidden) renderStampGallery(); render(); },
@@ -3522,7 +3522,7 @@ async function entInit() { try { const m = await entLoad(); await m.init(entCtx(
 async function openLineworkTool(src) {
   status(_t("lw.loading"));
   try {
-    const mod = await import("./board_v06_linework.js?v=20261123d");
+    const mod = await import("./board_v06_linework.js?v=20261123f");
     status("");
     await mod.openLinework({ host: $("#board"), file: src.file, svgText: src.svgText, name: src.name, ctx: { loadPdfJs, add, status } });
   } catch (e) { console.warn(e); status(_t("lw.err.read")); }

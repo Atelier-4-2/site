@@ -6,7 +6,7 @@
 //   arrets                                          (Licence Ouverte v2.0 Etalab)
 //     fields arrname, arrtype (bus/tram/metro/rail/cableway), arrxepsg2154, arryepsg2154, arrgeopoint
 //   referentiel-des-lignes                          (ODbL) id_line, colourweb_hexa (colour fallback)
-import { toL93, toWGS84, fetchOsmTransit } from "./ign.js?v=20261123d";
+import { toL93, toWGS84, fetchOsmTransit } from "./ign.js?v=20261123f";
 import { clipLineRect } from "./dganalysis.js?v=20261113p";
 
 const IDFM = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/";

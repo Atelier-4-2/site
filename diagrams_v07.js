@@ -4,7 +4,7 @@ import {
   fetchBuildingsDetailed, fetchVegetation, fetchWaterSurfaces, fetchWaterLines,
   fetchRoads, fetchParcels, fetchOrthophoto, toWGS84,
   fetchPluZones, fetchSup, fetchReservedSites, fetchIsochrones, fetchElevationGrid
-} from "./ign.js?v=20261123d";
+} from "./ign.js?v=20261123f";
 import { zipSync, strToU8 } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 import { DIAGRAMS, isReady } from "./dgdefs_v06.js?v=20261116p";
 import { PALETTES, PALETTE_ORDER } from "./dgpalettes.js?v=20261116p";
@@ -12,7 +12,7 @@ import { STYLES } from "./dgsemantic_v02.js?v=20261116p";
 import { fetchTrees } from "./dgtrees.js?v=20261113p";
 import { fetchTransit } from "./dgtransit.js?v=20261113p";
 import { KO } from "./dgstrings.js?v=20261114t1";
-import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261116p";
+import { createTabs, panZoom } from "./dgtabs_v05.js?v=20261123f";
 const DETAIL_ZOOM_HINT = "더블클릭하면 그 지점을 확대하고, 다시 더블클릭하면 원래 크기로 돌아갑니다. 확대한 상태에서는 드래그로 이동할 수 있습니다.";
 import { renderSvg, svgToPng, loadFontCss, circleRing, SHEET, sheetScale } from "./dgcore_v04.js?v=20261116p";
 import { toDxf } from "./dgdxf_v03.js?v=20261116p";

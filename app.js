@@ -1,6 +1,6 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261123d";
-import { IGNMap, searchPlaces, fetchBuildings, fetchTerrain, toWGS84 } from "./ign.js?v=20261123d";
-import { Viewer3D } from "./viewer3d.js?v=20261123d";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123f";
+import { IGNMap, searchPlaces, fetchBuildings, fetchTerrain, toWGS84 } from "./ign.js?v=20261123f";
+import { Viewer3D } from "./viewer3d.js?v=20261123f";
 import {
   zipSync,
   strToU8

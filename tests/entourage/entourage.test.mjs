@@ -5,7 +5,7 @@ import fs from "node:fs";
 import zlib from "node:zlib";
 import * as C from "../../board_v06_cut.js";
 import * as P from "../../board_v06_entprompt.js";
-import * as F from "../../board_v06_figs.js?v=20261123d";   // same URL as board_v06_doc.js imports, so one registry
+import * as F from "../../board_v06_figs.js?v=20261123f";   // same URL as board_v06_doc.js imports, so one registry
 import * as D from "../../board_v06_doc.js";
 
 let n = 0;

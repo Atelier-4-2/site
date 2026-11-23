@@ -54,7 +54,7 @@ export function setLang(l) {
   document.dispatchEvent(new CustomEvent("a42:lang", { detail: { lang: l } }));
 }
 export const onLang = fn => { document.addEventListener("a42:lang", e => fn(e.detail.lang)); };
-const load = async l => { try { const r = await fetch(`./i18n/${l}.json?v=20261123d`); if (r.ok) cats[l] = await r.json(); } catch (e) { console.warn(`[i18n] cannot load ${l}.json`, e); } };
+const load = async l => { try { const r = await fetch(`./i18n/${l}.json?v=20261123f`); if (r.ok) cats[l] = await r.json(); } catch (e) { console.warn(`[i18n] cannot load ${l}.json`, e); } };
 function ready() { document.documentElement.setAttribute("data-i18n-ready", ""); }
 export const loadedPromise = IS_NODE ? (async () => {
   const fs = await import("node:fs");
