@@ -2,6 +2,9 @@
 // Pure module (no DOM, no imports) so the board, the export and the node tests share one source.
 // Every figure is drawn in its own unit box: height = 100 units = the real height `hm`, y down, feet / trunk base on y = 100.
 // parts: { d, k: "f" } solid fill (evenodd) | { d, k: "s", w } stroke, w in units (proportional) or { abs } mm (print-safe line)
+// Default look is OUTLINE (drawing style v02: line only): `outline` parts when a figure has its own, else every filled part stroked at OUT_MM.
+// Solid silhouettes (`parts`) stay available as the optional "fill" (st.fill).
+import { PLAN_TREES_A } from "./board_v06_plantrees.js";
 export const FIG_INK = "#1E2124", FIG_SOFT = "#7D848D", FIG_ACCENT = "#E6B89C";
 export const FIG_TONES = ["ink", "soft"];
 
@@ -37,27 +40,46 @@ const CAR = [
 
 // ---- trees (elevation) -------------------------------------------------------------------------------------------------
 const ell = (cx, cy, rx, ry) => `M${cx - rx} ${cy}a${rx} ${ry} 0 1 1 ${2 * rx} 0a${rx} ${ry} 0 1 1 ${-2 * rx} 0Z`;
-const TREE_BIG = ell(45, 35, 45, 35) + "M42.2 66H47.8V100H42.2Z";
+const TREE_BIG = ell(45, 35, 45, 35) + "M42.2 66H47.8V100H42.2Z";   // solid (fill option)
 const TREE_SMALL = ell(35, 36, 33, 36) + "M32.6 68H37.4V100H32.6Z";
 const TREE_CONIFER = "M20 0L33 40H29L40 78H23.2V100H16.8V78H0L11 40H7Z";
 const TREE_STREET = ell(25, 34, 22, 34) + "M22.6 66H27.4V100H22.6Z";
 
 // ---- trees (plan view): hm = crown diameter ----------------------------------------------------------------------------
 const PLAN_ABS = 0.18;   // mm, constant line weight whatever the scale
-const PLAN_CIRCLE = [{ k: "s", abs: PLAN_ABS, d: circ(50, 50, 49.5) }];
-const PLAN_DASH = [{ k: "s", abs: PLAN_ABS, dash: [1.4, 1], d: circ(50, 50, 49.5) }];
-const branches = () => {   // three limbs 120 deg apart, each forking once; ends stay inside the crown line
-  const pt = (ang, r) => [50 + r * Math.cos(ang * Math.PI / 180), 50 + r * Math.sin(ang * Math.PI / 180)].map(v => Math.round(v * 10) / 10).join(" ");
-  let d = "";
-  for (const a of [-90, 30, 150]) d += `M50 50L${pt(a, 40)}M${pt(a, 22)}L${pt(a - 30, 38)}M${pt(a, 22)}L${pt(a + 30, 38)}`;
-  return d;
-};
-const PLAN_BRANCH = [
-  { k: "s", abs: PLAN_ABS, d: circ(50, 50, 49.5) },
-  { k: "s", abs: 0.13, d: branches() }
-];
+const planParts = t => [{ k: "s", abs: PLAN_ABS, d: t.s }].concat(t.d ? [{ k: "s", abs: PLAN_ABS, d: t.d }] : []);   // dashes are their own short sub-paths
+const PLAN_BY = Object.fromEntries(PLAN_TREES_A.map(t => [t.id, t]));
+const PLAN_DIA = { s: 4, m: 6, l: 9 };   // default crown diameter (m) by row: small / medium / large
 
 const P = (d) => [{ k: "f", d }];
+
+// ---- outline versions ----------------------------------------------------------------------------------------------------
+export const OUT_MM = 0.13;   // paper line weight of figure outlines, constant at every scale (like the plan trees)
+const rd = v => Math.round(v * 10) / 10;
+/** closed, slightly irregular crown outline (smooth Catmull-Rom through lobed radii); deterministic per seed */
+function crown(cx, cy, rx, ry, seed, n = 14) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * 2 * Math.PI, m = 1 + 0.07 * Math.sin(3 * a + seed) + 0.05 * Math.sin(5 * a + 2 * seed);
+    pts.push([cx + rx * m * Math.cos(a), cy + ry * m * Math.sin(a)]);
+  }
+  let d = `M${rd(pts[0][0])} ${rd(pts[0][1])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i + n - 1) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    d += `C${rd(p1[0] + (p2[0] - p0[0]) / 6)} ${rd(p1[1] + (p2[1] - p0[1]) / 6)} ${rd(p2[0] - (p3[0] - p1[0]) / 6)} ${rd(p2[1] - (p3[1] - p1[1]) / 6)} ${rd(p2[0])} ${rd(p2[1])}`;
+  }
+  return d + "Z";
+}
+const trunk = (x0, x1, y0) => `M${x0} 100V${y0}M${x1} 100V${y0 - 0.5}`;   // two lines from the ground up into the crown
+const OS = d => ({ k: "s", abs: OUT_MM, d });
+const O_TREE_BIG = [OS(crown(45, 35, 43, 33, 0.6)), OS(trunk(42.2, 47.8, 66.5))];
+const O_TREE_SMALL = [OS(crown(35, 36, 31, 34, 2.1)), OS(trunk(32.6, 37.4, 67))];
+const O_TREE_STREET = [OS(crown(25, 34, 21, 32, 4.0)), OS(trunk(22.6, 27.4, 65))];
+const O_CAR = [
+  OS("M41 88H3V70Q3 62 12 60L56 54Q70 30 84 10Q88 2 98 2H176Q188 2 196 12L222 50L274 58Q290 62 290 72V88H249M207 88H83"),   // wheel arches left open
+  OS("M92 14Q94 10 99 10H128V46H72ZM134 10H174Q180 10 184 16L204 46H134Z"),
+  OS(circ(62, 79, 20) + circ(228, 79, 20) + circ(62, 79, 7) + circ(228, 79, 7))
+];
 // key -> { cat, hm default (m), W unit width at height 100, parts, plan?, tip: short description for the sheet }
 export const FIGS = {
   fig_stand_1: { cat: "person", hm: 1.75, W: 30, parts: P(STAND_1) },
@@ -68,19 +90,49 @@ export const FIGS = {
   fig_child: { cat: "person", hm: 1.20, W: 26, parts: P(CHILD) },
   fig_bike: { cat: "person", hm: 1.10, W: 160, parts: BIKE },
   fig_wheelchair: { cat: "person", hm: 1.25, W: 82, parts: WHEELCHAIR },
-  fig_car: { cat: "car", hm: 1.50, W: 293.33, parts: CAR },
-  fig_tree_big: { cat: "tree", hm: 14, W: 90, parts: P(TREE_BIG) },
-  fig_tree_small: { cat: "tree", hm: 6, W: 66, parts: P(TREE_SMALL) },
+  fig_car: { cat: "car", hm: 1.50, W: 293.33, parts: CAR, outline: O_CAR },
+  fig_tree_big: { cat: "tree", hm: 14, W: 90, parts: P(TREE_BIG), outline: O_TREE_BIG },
+  fig_tree_small: { cat: "tree", hm: 6, W: 66, parts: P(TREE_SMALL), outline: O_TREE_SMALL },
   fig_tree_conifer: { cat: "tree", hm: 10, W: 40, parts: P(TREE_CONIFER) },
-  fig_tree_street: { cat: "tree", hm: 10, W: 44, parts: P(TREE_STREET) },
-  fig_plan_circle: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_CIRCLE },
-  fig_plan_dash: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_DASH },
-  fig_plan_branch: { cat: "plan", hm: 6, W: 100, plan: true, parts: PLAN_BRANCH }
+  fig_tree_street: { cat: "tree", hm: 10, W: 44, parts: P(TREE_STREET), outline: O_TREE_STREET },
+  fig_plan_a_s1: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s1) },
+  fig_plan_a_s2: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s2) },
+  fig_plan_a_s3: { cat: "plan", hm: PLAN_DIA["s"], W: 100, plan: true, parts: planParts(PLAN_BY.s3) },
+  fig_plan_a_m1: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m1) },
+  fig_plan_a_m2: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m2) },
+  fig_plan_a_m3: { cat: "plan", hm: PLAN_DIA["m"], W: 100, plan: true, parts: planParts(PLAN_BY.m3) },
+  fig_plan_a_l1: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l1) },
+  fig_plan_a_l2: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l2) },
+  fig_plan_a_l3: { cat: "plan", hm: PLAN_DIA["l"], W: 100, plan: true, parts: planParts(PLAN_BY.l3) },
+  // legacy ids (older documents): same drawings as the closest new ones, hidden from the gallery
+  fig_plan_circle: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m1) },
+  fig_plan_dash: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m2) },
+  fig_plan_branch: { cat: "plan", legacy: true, hm: 6, W: 100, plan: true, parts: planParts(PLAN_BY.m3) }
 };
 export const FIG_KEYS = Object.keys(FIGS);
-export const FIG_GROUPS = { people: FIG_KEYS.filter(k => FIGS[k].cat === "person"), trees: FIG_KEYS.filter(k => FIGS[k].cat === "tree" || FIGS[k].cat === "car"), plan: FIG_KEYS.filter(k => FIGS[k].cat === "plan") };
+export const FIG_GROUPS = { people: FIG_KEYS.filter(k => FIGS[k].cat === "person"), trees: FIG_KEYS.filter(k => FIGS[k].cat === "tree" || FIGS[k].cat === "car"), plan: FIG_KEYS.filter(k => FIGS[k].cat === "plan" && !FIGS[k].legacy) };
 export const TREE_PRESETS = [6, 10, 14];
 export const isFigStamp = k => Object.prototype.hasOwnProperty.call(FIGS, k);
+// ---- "내 점경": figures the user cut from a sheet (board_v06_entourage.js). Raster PNG (data URL) instead of path parts. ----------------
+// Registered at runtime into FIGS under a key "my_xxxxxxxx", so every existing stamp path (size from the card scale, flip, tone, export) works unchanged.
+export const MY_KEY = /^my_[a-z0-9]{6,12}$/;
+export const isCustomKey = k => typeof k === "string" && MY_KEY.test(k);
+const PNG_URL = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/;
+/** register / update a cut figure. meta: { name, hm (m), w, h (px of the PNG), png (data URL), kind?, tree? } -> true when accepted */
+let _ver = 0;
+export function registerCustom(key, meta) {
+  if (!isCustomKey(key) || !meta || !PNG_URL.test(meta.png || "") || !(meta.w > 0 && meta.h > 0)) return false;
+  FIGS[key] = { cat: meta.tree ? "tree" : "my", custom: true, hm: Math.min(60, Math.max(0.1, Number(meta.hm) || 1.75)), W: Math.round(meta.w / meta.h * 10000) / 100, parts: [], img: meta.png, name: String(meta.name || key).slice(0, 60), kind: meta.kind || "other", v: ++_ver };
+  return true;
+}
+/** a card from a project file may name a figure this browser does not have: keep the card, draw a dashed placeholder */
+export function ensureCustom(key) {
+  if (!isCustomKey(key)) return false;
+  if (!FIGS[key]) FIGS[key] = { cat: "my", custom: true, missing: true, hm: 1.75, W: 30, parts: [], img: null, name: "?", kind: "other", v: ++_ver };
+  return true;
+}
+export const unregisterCustom = key => { if (FIGS[key]?.custom) delete FIGS[key]; };
+export const customKeys = () => Object.keys(FIGS).filter(k => FIGS[k].custom && !FIGS[k].missing);
 export const isPlanFig = k => !!FIGS[k]?.plan;
 export const HM_MIN = 0.1, HM_MAX = 60;
 export const clampHm = (v, d = 1.75) => { v = Number(v); return Number.isFinite(v) ? Math.min(HM_MAX, Math.max(HM_MIN, v)) : d; };
@@ -97,9 +149,15 @@ export const figH = (hm, den) => clampHm(hm) * 1000 / Math.max(1, den);   // mm
 export function figSvg(st, opt = {}) {
   const g = FIGS[st.stamp]; if (!g) return "";
   const col = st.tone === "soft" ? FIG_SOFT : FIG_INK, h = st.h, s = h / 100, w = st.w, x0 = (w - g.W * s) / 2;
-  const hair = opt.hair || 0;
+  if (g.custom) {   // a cut figure: its own PNG, stretched to the box (the box keeps the PNG's proportion), feet on the bottom edge
+    const flipC = st.flip ? `translate(${f2(w)} 0) scale(-1 1) ` : "", op = st.tone === "soft" ? ' opacity="0.55"' : "";
+    if (!g.img) return `<g transform="${flipC}translate(${f2(x0)} 0) scale(${Math.round(s * 1e6) / 1e6})"><rect x="0" y="0" width="${g.W}" height="100" fill="none" stroke="${FIG_SOFT}" stroke-width="${f2(0.13 / s)}" stroke-dasharray="${f2(1.4 / s)} ${f2(1 / s)}"/></g>`;
+    return `<g transform="${flipC}translate(${f2(x0)} 0) scale(${Math.round(s * 1e6) / 1e6})"${op}><image x="0" y="0" width="${g.W}" height="100" preserveAspectRatio="none" href="${g.img}" xlink:href="${g.img}"/></g>`;
+  }
+  const hair = opt.hair || 0, solid = st.fill === true || g.plan;   // outline unless the "fill" option is on
+  const parts = solid ? g.parts : (g.outline || g.parts.map(p => ({ k: "s", abs: OUT_MM, d: p.d })));
   let o = "";
-  for (const p of g.parts) {
+  for (const p of parts) {
     if (p.k === "f") o += `<path d="${p.d}" fill="${col}" fill-rule="${p.eo ? "evenodd" : "nonzero"}"/>`;
     else {
       const wmm = p.abs != null ? Math.max(p.abs, hair) : Math.max(p.w * s, hair || 0.12);

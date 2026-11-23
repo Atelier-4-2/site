@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261122M";
+import { t as _t } from "./i18n.js?v=20261123d";
 // Build 5a: semester work record (sections, dates, status, tags, comments, marks, snapshots, search). Pure (no DOM, no imports).
 const r2 = n => Math.round(n * 100) / 100;
 const num = (v, d, lo, hi) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };

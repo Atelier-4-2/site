@@ -1,4 +1,4 @@
-import { t as _t, loadedPromise } from "./i18n.js?v=20261122M";
+import { t as _t, loadedPromise } from "./i18n.js?v=20261123d";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { STLExporter } from "three/addons/exporters/STLExporter.js";

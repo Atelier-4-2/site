@@ -1,4 +1,4 @@
-import { t as _t } from "./i18n.js?v=20261122M";
+import { t as _t } from "./i18n.js?v=20261123d";
 // Board tool "선 위계 정리" (Linework): a vector drawing (PDF or SVG) goes in, strokes are grouped into "pens" (same width, colour,
 // dash, fill-only), every pen is given an architectural hierarchy class and redrawn with the owner's v02 line weights
 // (docs/drawing-graphic-standard.md, section 2). Semi-automatic: automatic classification, then a few clicks to correct it.
@@ -315,7 +315,7 @@ export function svgPaper(root) {
   const vbs = String(root.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number), vb = vbs.length === 4 && vbs.every(Number.isFinite) && vbs[2] > 0 && vbs[3] > 0 ? vbs : null;
   const w = parseLen(root.getAttribute("width")), h = parseLen(root.getAttribute("height"));
   let W, H, sx, sy;
-  if (w && h && w.v > 0 && h.v > 0) { W = w.mm; H = h.mm; sx = vb ? W / vb[2] : w.mm / w.v; sy = vb ? H / vb[3] : h.mm / h.v; }
+  if (w && h && w.v > 0 && h.v > 0) { W = w.mm; H = h.mm; sx = vb ? W / vb[2] : UNIT_MM.px; sy = vb ? H / vb[3] : UNIT_MM.px; }   // no viewBox: a user unit is a CSS px whatever unit width / height use (as a browser draws it)
   else if (vb) { sx = sy = UNIT_MM.px; W = vb[2] * sx; H = vb[3] * sy; if (w && w.v > 0 && !h) { sx = sy = w.mm / vb[2]; W = w.mm; H = vb[3] * sy; } else if (h && h.v > 0 && !w) { sx = sy = h.mm / vb[3]; H = h.mm; W = vb[2] * sx; } }
   else return null;
   const m = mul([sx, 0, 0, sy, 0, 0], [1, 0, 0, 1, vb ? -vb[0] : 0, vb ? -vb[1] : 0]);
@@ -542,7 +542,7 @@ let current = null;   // only one dialog at a time
 export async function parseSvgElements(svgText, opts = {}) {
   const dp = new DOMParser().parseFromString(svgText, "image/svg+xml"), root0 = dp.documentElement;
   if (!root0 || dp.querySelector("parsererror") || root0.localName !== "svg") throw new LimitError("bad_svg");
-  const { sanitizeSvgTree } = await import("./board_v06_doc.js?v=20261122M");
+  const { sanitizeSvgTree } = await import("./board_v06_doc.js?v=20261123d");
   sanitizeSvgTree(root0);
   const fr = document.createElement("iframe");
   fr.setAttribute("sandbox", "allow-same-origin");   // no scripts; its CSS cannot touch the board page
@@ -550,13 +550,25 @@ export async function parseSvgElements(svgText, opts = {}) {
   fr.style.cssText = "position:fixed;left:-20000px;top:0;width:1200px;height:900px;border:0;opacity:0;pointer-events:none";
   document.body.append(fr);
   try {
-    await new Promise((res, rej) => { fr.onload = res; fr.onerror = rej; fr.srcdoc = `<!doctype html><html><body style="margin:0">${new XMLSerializer().serializeToString(root0)}</body></html>`; });
+    await new Promise((res, rej) => { fr.onload = res; fr.onerror = rej; fr.srcdoc = `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"></head><body style="margin:0">${new XMLSerializer().serializeToString(root0)}</body></html>`; });
     const doc = fr.contentDocument, win = fr.contentWindow, root = doc.querySelector("svg");
     if (!root) throw new LimitError("bad_svg");
     const px = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : NaN; };
+    // computed styles cached by (ancestor chain + tag + class + id + style + presentation attributes); off when the sheet uses position-dependent selectors
+    const cache = new Map(), keys = new WeakMap(), PRES = ["stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "fill", "fill-opacity", "display", "font-size", "text-anchor", "opacity", "visibility"];
+    const useCache = !/:(nth|first|last|only)-|[+~]/.test([...doc.querySelectorAll("style")].map(x => x.textContent).join(" "));
+    const keyOf = el => {
+      if (!el || el.nodeType !== 1) return "";
+      let k = keys.get(el); if (k != null) return k;
+      k = keyOf(el.parentNode) + ">" + el.localName + "|" + (el.getAttribute("class") || "") + "|" + (el.getAttribute("id") || "") + "|" + (el.getAttribute("style") || "") + "|" + PRES.map(a => el.getAttribute(a) || "").join(",");
+      keys.set(el, k); return k;
+    };
     return svgDomToElements(root, el => {
-      const cs = win.getComputedStyle(el);
-      return { stroke: cs.stroke, strokeWidth: px(cs.strokeWidth), fill: cs.fill, dash: cs.strokeDasharray, display: cs.display, fillOpacity: cs.fillOpacity, strokeOpacity: cs.strokeOpacity, fontSize: px(cs.fontSize), textAnchor: cs.textAnchor };
+      const ck = useCache ? keyOf(el) : null, hit = ck != null ? cache.get(ck) : null;
+      if (hit) return hit;
+      const cs = win.getComputedStyle(el), r = { stroke: cs.stroke, strokeWidth: px(cs.strokeWidth), fill: cs.fill, dash: cs.strokeDasharray, display: cs.display, fillOpacity: cs.fillOpacity, strokeOpacity: cs.strokeOpacity, fontSize: px(cs.fontSize), textAnchor: cs.textAnchor };
+      if (ck != null) cache.set(ck, r);
+      return r;
     }, opts);
   } finally { fr.remove(); }
 }
@@ -592,7 +604,7 @@ const reasonText = r => r ? _t(r.k, r.v) : "";
 export async function openLinework({ host, file, svgText, name, ctx }) {
   if (current) current.close();
   const status = ctx?.status || (() => {});
-  let closed = false, langOff = null;
+  let closed = false, langOff = null, pdfDoc = null, failKey = null, langHandler = () => {};
   const dlg = mk("div", "lw-dlg"); dlg.setAttribute("role", "dialog"); dlg.setAttribute("aria-modal", "true"); dlg.setAttribute("aria-label", _t("lw.title")); dlg.tabIndex = -1;
   const top = mk("div", "lw-top"), h2 = tr(mk("b", "lw-title", _t("lw.title")), "lw.title"), fileEl = mk("span", "lw-file"), spacer = mk("span", "lw-sp");
   const scaleLbl = mk("label", "lw-scale"), scaleTxt = tr(mk("span", "", _t("lw.scale")), "lw.scale"), scaleSel = mk("select"); for (const s of SCALES) { const o = mk("option", "", "1/" + s); o.value = s; scaleSel.append(o); }
@@ -612,10 +624,13 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
   const onKey = e => { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); close(); } else e.stopPropagation(); };
   dlg.addEventListener("keydown", onKey);
   const prevFocus = document.activeElement;
-  function close() { if (closed) return; closed = true; current = null; langOff?.(); dlg.remove(); try { prevFocus?.focus?.(); } catch { /* gone */ } }
+  function close() { if (closed) return; closed = true; current = null; langOff?.(); if (rafId) cancelAnimationFrame(rafId); try { pdfDoc?.destroy?.(); } catch { /* gone */ } pdfDoc = null; dlg.remove(); try { prevFocus?.focus?.(); } catch { /* gone */ } }
   current = { close };
+  let rafId = 0;
+  { const h = () => langHandler(); document.addEventListener("a42:lang", h); langOff = () => document.removeEventListener("a42:lang", h); }
+  langHandler = () => { dlg.setAttribute("aria-label", _t("lw.title")); if (failKey) msg.textContent = _t(failKey, { max: MAX_ELEMENTS }); };   // also while loading / after a failure
   bClose.onclick = close; bClose.focus();
-  const fail = key => { delete msg.dataset.i18n; msg.textContent = _t(key, { max: MAX_ELEMENTS }); msg.classList.add("is-err"); status(_t(key, { max: MAX_ELEMENTS })); };
+  const fail = key => { failKey = key; delete msg.dataset.i18n; msg.textContent = _t(key, { max: MAX_ELEMENTS }); msg.classList.add("is-err"); status(_t(key, { max: MAX_ELEMENTS })); };
 
   // ---- load ------------------------------------------------------------------------------------------------------------------
   let model;
@@ -627,12 +642,13 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
     if (isPdf) {
       const lib = await ctx.loadPdfJs();
       if (closed) return;
-      const pdf = await lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false, enableXfa: false }).promise;
+      const pdf = pdfDoc = await lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false, enableXfa: false }).promise;
+      if (closed) { pdf.destroy?.(); return; }
       let pageNo = 1;
-      if (pdf.numPages > 1) { pageNo = await pickPage(dlg, pdf, () => closed); if (!pageNo) { pdf.destroy?.(); close(); return; } }
+      if (pdf.numPages > 1) { pageNo = await pickPage(dlg, pdf, () => closed); if (!pageNo) { close(); return; } }
       msg.textContent = _t("lw.loading");
       model = await pdfPageToModel(await pdf.getPage(pageNo), lib);
-      pdf.destroy?.();
+      pdf.destroy?.(); pdfDoc = null;
       if (model.vectorCount < 5 && model.imageCount > 0) { fail("lw.err.scan"); return; }
       if (!model.vectorCount && !model.elements.length) { fail("lw.err.empty"); return; }
     } else {
@@ -643,6 +659,7 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
   } catch (e) {
     if (closed) return;
     console.warn(e);
+    try { pdfDoc?.destroy?.(); } catch { /* gone */ } pdfDoc = null;
     fail(e?.code === "too_many" ? "lw.err.many" : "lw.err.read"); return;
   }
   if (closed) return;
@@ -657,12 +674,12 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
   const clsOf = e => elCls.get(e.id) ?? penCls[e.pen];
 
   msg.remove();
-  if (auto.notice === "single") { notice.textContent = _t("lw.notice.single"); notice.dataset.i18n = "lw.notice.single"; notice.hidden = false; }
-  if (model.clipped || model.complexClip) {   // PDF clipping: shapes outside a rectangular clip were dropped, other clip shapes were not applied
-    const line = mk("div", "", _t("lw.notice.clip", { n: model.clipped || 0, c: model.complexClip || 0 }));
-    if (notice.hidden) { notice.textContent = ""; delete notice.dataset.i18n; }
-    notice.append(line); notice.hidden = false;
-  }
+  const notes = [];
+  if (auto.notice === "single") notes.push({ k: "lw.notice.single", v: {} });
+  if (model.clipped || model.complexClip) notes.push({ k: "lw.notice.clip", v: { n: model.clipped || 0, c: model.complexClip || 0 } });   // PDF clipping: shapes outside a rectangular clip dropped, other clip shapes not applied
+  if (model.warnings?.length) notes.push({ k: "lw.notice.skip", v: { tags: model.warnings.map(w => "<" + w + ">").join(" ") } });   // svg use / image are not read
+  const renderNotes = () => { notice.textContent = ""; for (const n of notes) notice.append(mk("div", "", _t(n.k, n.v))); notice.hidden = !notes.length; };
+  renderNotes();
   const hint = tr(mk("div", "lw-hint", _t("lw.hint")), "lw.hint"); view.append(hint);
 
   // ---- preview svg ---------------------------------------------------------------------------------------------------------
@@ -695,14 +712,15 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
   }
   paintGroups();
   const moveEl = (e, cls) => { const n = nodeOf.get(e.id); if (n) groups[cls].append(n); };
-  const movePen = (p, cls) => { for (const e of elements) if (e.pen === p.key && !elCls.has(e.id)) moveEl(e, cls); };
+  const movePen = (p, cls) => { const fr = document.createDocumentFragment(); for (const e of elements) if (e.pen === p.key && !elCls.has(e.id)) { const n = nodeOf.get(e.id); if (n) fr.append(n); } groups[cls].append(fr); };
   const wrap = mk("div", "lw-stage"); wrap.append(svg); view.append(wrap);
   const fitBtn = tr(mk("button", "bd-btn lw-fit", _t("lw.fit")), "lw.fit"); fitBtn.type = "button"; view.append(fitBtn);
   const vb = { x: 0, y: 0, w: paper.w, h: paper.h };
-  const setVb = () => svg.setAttribute("viewBox", `${r3(vb.x)} ${r3(vb.y)} ${r3(vb.w)} ${r3(vb.h)}`);
-  const fit = () => { const m = Math.max(paper.w, paper.h) * 0.02; vb.x = -m; vb.y = -m; vb.w = paper.w + 2 * m; vb.h = paper.h + 2 * m; setVb(); };
+  const flushVb = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } svg.setAttribute("viewBox", `${r3(vb.x)} ${r3(vb.y)} ${r3(vb.w)} ${r3(vb.h)}`); };
+  const setVb = () => { if (!rafId) rafId = requestAnimationFrame(flushVb); };   // wheel / drag: at most one viewBox write per frame
+  const fit = () => { const m = Math.max(paper.w, paper.h) * 0.02; vb.x = -m; vb.y = -m; vb.w = paper.w + 2 * m; vb.h = paper.h + 2 * m; flushVb(); };
   fit(); fitBtn.onclick = fit;
-  const toUser = (cx, cy) => { const m = svg.getScreenCTM(); if (!m) return null; const p = new DOMPoint(cx, cy).matrixTransform(m.inverse()); return [p.x, p.y]; };
+  const toUser = (cx, cy) => { flushVb(); const m = svg.getScreenCTM(); if (!m) return null; const p = new DOMPoint(cx, cy).matrixTransform(m.inverse()); return [p.x, p.y]; };
   wrap.addEventListener("wheel", e => {
     e.preventDefault();
     const p = toUser(e.clientX, e.clientY); if (!p) return;
@@ -784,6 +802,7 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
       li.addEventListener("mouseenter", () => { hover = p.i; refreshHl(); }); li.addEventListener("mouseleave", () => { hover = -1; refreshHl(); });
       li.addEventListener("focus", () => { hover = p.i; refreshHl(); }); li.addEventListener("blur", () => { hover = -1; refreshHl(); });
       li.addEventListener("click", e => { if (e.target !== sel) select(p.i); });
+      li.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target === li) { e.preventDefault(); select(p.i, true); } });
       list.append(li); rows[p.i] = { li, sel, why };
     }
   };
@@ -799,7 +818,7 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
     const s = mk("select"); for (const k of opts) { const o = mk("option", "", CLS_LABEL(k)); o.value = k; s.append(o); } s.value = cur;
     const ok = mk("button", "bd-btn bd-strong", _t("lw.ok")), no = mk("button", "bd-btn", _t("lw.cancel")); ok.type = no.type = "button";
     pop.append(mk("span", "", _t("lw.one")), s, ok, no); view.append(pop); s.focus();
-    const done = () => pop.remove();
+    const done = () => { pop.remove(); dlg.focus({ preventScroll: true }); };
     ok.onclick = () => { if (s.value === penCls[e.pen]) elCls.delete(e.id); else elCls.set(e.id, s.value); moveEl(e, s.value); updOv(); done(); };
     no.onclick = done;
     pop.addEventListener("keydown", ev => { if (ev.key === "Escape") { ev.stopPropagation(); done(); } else if (ev.key === "Enter" && ev.target === s) { ev.preventDefault(); ok.click(); } });
@@ -812,8 +831,7 @@ export async function openLinework({ host, file, svgText, name, ctx }) {
     ovBar.append(mk("span", "", _t("lw.ov", { n: elCls.size })), b);
   };
   buildTable(); buildList();
-  const onLang = () => { dlg.setAttribute("aria-label", _t("lw.title")); buildTable(); buildList(); updOv(); select(selPen); };
-  document.addEventListener("a42:lang", onLang); langOff = () => document.removeEventListener("a42:lang", onLang);
+  langHandler = () => { dlg.setAttribute("aria-label", _t("lw.title")); buildTable(); buildList(); updOv(); renderNotes(); select(selPen); };
   scaleSel.value = String(scale);
   scaleSel.onchange = () => { scale = Number(scaleSel.value); table = defaultTable(scale); paintGroups(); buildTable(); };
   const setMode = m => { mode = m; gClean.style.display = m === "clean" ? "" : "none"; if (m === "orig") buildOrig(); gOrig.style.display = m === "orig" ? "" : "none"; bClean.setAttribute("aria-pressed", String(m === "clean")); bOrig.setAttribute("aria-pressed", String(m === "orig")); };

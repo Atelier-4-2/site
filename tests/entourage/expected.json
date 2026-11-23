@@ -1,0 +1,49 @@
+{
+ "sheet_pen.png": {
+  "figures": 8
+ },
+ "sheet_flat.png": {
+  "figures": 6
+ },
+ "sheet_white_inside.png": {
+  "figures": 3,
+  "inner_white_probe": [
+   [
+    160,
+    170
+   ],
+   [
+    160,
+    275
+   ],
+   [
+    460,
+    170
+   ],
+   [
+    460,
+    275
+   ],
+   [
+    760,
+    170
+   ],
+   [
+    760,
+    275
+   ]
+  ]
+ },
+ "real_trees_sheet.jpg": {
+  "figures": 9,
+  "note": "JPG: checked in the browser / node probe (no JPG decoder in node tests)"
+ },
+ "real_plan_trees_sheet.jpg": {
+  "figures": 9,
+  "note": "dashed canopy (79 raw parts) must group into one; defaults tol 40 gap 6 minArea 30"
+ },
+ "real_people_sheet.jpg": {
+  "figures": 12,
+  "note": "touching groups stay one piece; gap >= 40 px would wrongly merge neighbours"
+ }
+}

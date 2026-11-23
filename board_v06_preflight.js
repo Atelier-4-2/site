@@ -1,6 +1,6 @@
-import { t as _t } from "./i18n.js?v=20261122M";
+import { t as _t } from "./i18n.js?v=20261123d";
 // Build 4a-2: output preflight (B11) and PDF presets (B12). Pure (no DOM) so node can test it.
-import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261122M";
+import { frameSize, pageLabel, pageTitle, contentRect, ppiOf, ROLE_LABEL, STAMP_LABEL, stampLabel, defaultLayer, LAYERS, pad2 } from "./board_v06_doc.js?v=20261123d";
 
 export const PRESETS = {
   print: { get label() { return _t('board.preflight.001'); }, fmt: "pdf", bleed: true, booklet: false, tiles: false, maxPpi: 300 },
@@ -18,7 +18,7 @@ const META_NAMES = { get project() { return _t('board.preflight.004'); }, get au
 const hiddenLayer = (S, c) => !!S.layers?.[LAYERS.includes(c.layer) ? c.layer : defaultLayer(c.kind)]?.hidden;
 export function cardTitle(S, c) {
   if (c.kind === "diagram" || c.kind === "image") return S.assets?.[c.ref]?.title || (c.kind === "image" ? _t('board.preflight.008') : _t('board.preflight.009'));
-  if (c.kind === "stamp") return STAMP_LABEL[c.stamp] || _t('board.preflight.010');
+  if (c.kind === "stamp") return stampLabel(c.stamp) || _t('board.preflight.010');
   return (c.text || ROLE_LABEL[c.role] || _t('board.preflight.011')).split("\n")[0].slice(0, 24);
 }
 // env: { imgPx(card) -> [w,h]|null, overset(card) -> bool }  (injected: the browser measures, node fakes)

@@ -1,11 +1,11 @@
-import { t as _t } from "./i18n.js?v=20261122M";
-import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm } from "./board_v06_figs.js?v=20261122M";
-export { isFigStamp, isPlanFig, clampHm };
+import { t as _t } from "./i18n.js?v=20261123d";
+import { FIG_KEYS, FIGS, FIG_TONES, isFigStamp, isPlanFig, figBox, figSvg, clampHm, ensureCustom, isCustomKey } from "./board_v06_figs.js?v=20261123d";
+export { isFigStamp, isPlanFig, clampHm, isCustomKey };
 // Board v3 document model: constants, geometry, sanitizing and v1/v2 -> v3 migration (page membership, layers, guides).
 // Pure (no DOM at import time) so it can be tested in node. Everything read from outside (opened .atelier files,
 // IndexedDB records) goes through sanitizeDoc(): strings capped, numbers clamped, enums whitelisted.
-import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261122M";
-import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261122M";
+import { makeParents, DEFAULT_SWATCHES, isColorRef, SW_RE, HEX_RE, MAX_SWATCHES, pairSpreads } from "./board_v06_parent.js?v=20261123d";
+import { cleanUrl, hostOf, cleanArrows, cleanStacks, STATUSES, cleanTags, cleanSections, cleanComments, cleanMarks, isDate, todayStr } from "./board_v06_record.js?v=20261123d";
 export const DOC_VERSION = 5;
 export const LAYERS = ["bg", "art", "text"];   // stacking order, bottom to top
 export const LAYER_LABEL = { get bg() { return _t('board.doc.001'); }, get art() { return _t('board.doc.002'); }, get text() { return _t('board.doc.003'); } };
@@ -19,6 +19,9 @@ export const STD_DENS = [20, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
 export const STAMPS = ["bar_ticks", "bar_alt", "ratio", "north_arrow", "north_circle", "north_cross", ...FIG_KEYS];   // + scale figures (board_v06_figs.js)
 export const STAMP_LABEL = { get bar_ticks() { return _t('board.doc.004'); }, get bar_alt() { return _t('board.doc.005'); }, get ratio() { return _t('board.doc.006'); }, get north_arrow() { return _t('board.doc.007'); }, get north_circle() { return _t('board.doc.008'); }, get north_cross() { return _t('board.doc.009'); } };
 for (const k of FIG_KEYS) Object.defineProperty(STAMP_LABEL, k, { get: () => _t("st.fig." + k.slice(4)), enumerable: true });
+/** a stamp key the document accepts: the built-in list, or a cut figure ("my_xxxx", registered or kept as a placeholder) */
+export const isStampKey = k => STAMPS.includes(k) || ensureCustom(k);
+export const stampLabel = k => STAMP_LABEL[k] || FIGS[k]?.name || String(k);
 export const isNorthStamp = k => k === "north_arrow" || k === "north_circle" || k === "north_cross";
 export const isBarStamp = k => k === "bar_ticks" || k === "bar_alt";
 // printed scale denominator of a card: diagrams follow their width (or the locked value), images carry a manual label
@@ -85,7 +88,7 @@ export function stampSvg(st, den = st.den, opt = {}) {
 }
 
 // figure stamps carry a real height (m), a mirror flag and a tone; other stamps carry none of these
-export const cleanFig = it => isFigStamp(it.stamp) ? { hm: clampHm(it.hm, FIGS[it.stamp].hm), flip: it.flip === true, tone: FIG_TONES.includes(it.tone) ? it.tone : "ink" } : {};
+export const cleanFig = it => isFigStamp(it.stamp) ? { hm: clampHm(it.hm, FIGS[it.stamp].hm), flip: it.flip === true, tone: FIG_TONES.includes(it.tone) ? it.tone : "ink", fill: it.fill === true } : {};
 export const PAPER = { A0: [841, 1189], A1: [594, 841], A2: [420, 594], A3: [297, 420], A4: [210, 297] };   // portrait w x h (mm)
 export const SIZES = Object.keys(PAPER);
 export const ROLES = ["title", "h1", "h2", "subtitle", "body", "caption", "scale", "number"];
@@ -203,6 +206,7 @@ export function sanitizeSvgTree(root) {
       const ln = (a.localName || a.name).toLowerCase(), v = a.value, vc = strip(v);   // localName: any prefix (xlink:href, x:href, plain href)
       let bad = ln.startsWith("on") || a.name.toLowerCase().startsWith("on") || /javascript:|vbscript:/i.test(vc) || /url\(\s*['"]?(?!#)/i.test(v);
       if (!bad && ln === "href" && !(vc.startsWith("#") || /^data:image\/(png|jpeg|webp|gif)[;,]/i.test(vc))) bad = true;
+      if (ln === "src" || ln === "srcset") bad = true;   // nothing in a drawing loads by src / srcset
       if (bad) e.removeAttribute(a.name);
     }
     if (e.localName === "style") {
@@ -292,7 +296,7 @@ function cleanParents(list) {
       iid.add(k);
       const o = { id: k, kind: it.kind, x: num(it.x, 0, -2000, 2000), y: num(it.y, 0, -2000, 2000), w: num(it.w, 20, 0.05, 2000), h: num(it.h, 6, 0.05, 2000) };
       if (it.kind === "text") Object.assign(o, { role: ROLES.includes(it.role) ? it.role : "body", text: String(it.text ?? "").slice(0, 2000), align: ["left", "center", "right"].includes(it.align) ? it.align : "left" }, cleanTextExtras(it));
-      if (it.kind === "stamp" && STAMPS.includes(it.stamp)) Object.assign(o, { stamp: it.stamp, den: Math.round(num(it.den, 100, 1, 1000000)), angle: num(it.angle, 0, -360, 360), len_m: num(it.len_m, 5, 0.001, 1e7), unit: it.unit === "km" ? "km" : "m", len_auto: it.len_auto !== false, angleAuto: false, link: null }, cleanFig(it));
+      if (it.kind === "stamp" && isStampKey(it.stamp)) Object.assign(o, { stamp: it.stamp, den: Math.round(num(it.den, 100, 1, 1000000)), angle: num(it.angle, 0, -360, 360), len_m: num(it.len_m, 5, 0.001, 1e7), unit: it.unit === "km" ? "km" : "m", len_auto: it.len_auto !== false, angleAuto: false, link: null }, cleanFig(it));
       else if (it.kind === "stamp") continue;
       items.push(o);
     }
@@ -367,7 +371,7 @@ export function sanitizeDoc(raw, info = {}) {
       if (!u) { info.dropped++; continue; }   // javascript:, data:, relative and overlong URLs never become cards
       card.url = u; card.title = str(c.title, 200, hostOf(u)); card.w = num(c.w, 70, 10, 600); card.h = num(c.h, 18, 6, 300);
     } else if (c.kind === "stamp") {
-      if (!STAMPS.includes(c.stamp)) { info.dropped++; continue; }
+      if (!isStampKey(c.stamp)) { info.dropped++; continue; }
       Object.assign(card, { stamp: c.stamp, den: Math.round(num(c.den, 100, 1, 1000000)), link: c.link ? safeId(c.link, null) : null, angle: num(c.angle, 0, -360, 360), len_m: num(c.len_m, 5, 0.001, 1e7), unit: c.unit === "km" ? "km" : "m", len_auto: c.len_auto !== false, angleAuto: c.angleAuto !== false }, cleanFig(c));
       const fg = isFigStamp(c.stamp);
       card.w = num(c.w, 20, fg ? 0.05 : 1, fg ? 4000 : 500); card.h = num(c.h, 10, fg ? 0.05 : 1, fg ? 4000 : 500); card.layer = LAYERS.includes(c.layer) ? c.layer : "text";

@@ -22,12 +22,17 @@
 <h1>점경 실루엣 확인 시트</h1>
 <p class="n">전부 같은 축척(1 m = 40 px, 1:100 의 0.18 mm 선 기준)으로 나란히 놓았습니다. 아래 눈금은 1 m 단위입니다. 선택 색은 #E6B89C, 기본 색은 #1E2124 / #7D848D.</p>
 
-<h2>입면 · 인물, 자전거, 휠체어, 자동차</h2>
+<h2>입면 · 인물, 자전거, 휠체어, 자동차 — 외곽선 (기본값, 선 0.13 mm 고정)</h2>
 <div class="row" id="r1"></div>
-<h2>입면 · 나무 (높이 6 / 10 / 14 m 프리셋, 1 m = 20 px · 사람은 비교용)</h2>
+<h2>입면 · 나무 — 외곽선 (기본값) (높이 6 / 10 / 14 m 프리셋, 1 m = 20 px · 사람은 비교용)</h2>
 <div class="row" id="r2"></div>
+<h2>비교 · 같은 인물, 자동차 — 채움 옵션 (패널의 “채움”)</h2>
+<div class="row" id="r1f"></div>
+<h2>비교 · 나무 — 채움 옵션</h2>
+<div class="row" id="r2f"></div>
 <h2>평면 · 나무 (지름 6 m 기준, 1 m = 30 px, 선 굵기 0.18 mm 고정)</h2>
 <div class="row" id="r3"></div>
+<div class="row" id="r3b"></div>
 <h2>같은 인물, 1:100 카드에서의 실제 크기 (mm)</h2>
 <div class="row" id="r4"></div>
 <h2>연한 색 (#7D848D) 과 반전</h2>
@@ -39,7 +44,7 @@ const NAME = {
   fig_stand_1: "서 있는 사람 1", fig_stand_2: "서 있는 사람 2", fig_walk_1: "걷는 사람 1", fig_walk_2: "걷는 사람 2",
   fig_sit_1: "앉은 사람", fig_child: "아이", fig_bike: "자전거", fig_wheelchair: "휠체어", fig_car: "자동차 (측면)",
   fig_tree_big: "활엽수 큰", fig_tree_small: "활엽수 작은", fig_tree_conifer: "침엽수", fig_tree_street: "가로수",
-  fig_plan_circle: "평면 원", fig_plan_dash: "평면 파선 원", fig_plan_branch: "평면 가지 원"
+  fig_plan_a_s1: "평면 소 1", fig_plan_a_s2: "평면 소 2", fig_plan_a_s3: "평면 소 3", fig_plan_a_m1: "평면 중 1", fig_plan_a_m2: "평면 중 2", fig_plan_a_m3: "평면 중 3", fig_plan_a_l1: "평면 대 1", fig_plan_a_l2: "평면 대 2", fig_plan_a_l3: "평면 대 3"
 };
 const PX = 4, NS = "http://www.w3.org/2000/svg";
 // st = card size in mm; here 1 mm == 1 user unit and the figure is placed at (x, base) with its true height in "mm" = m * 1000 / den.
@@ -58,7 +63,7 @@ function row(host, keys, opt = {}) {
   let x = 12, html = "";
   for (const i of items) {
     const w = i.b.w * PX, h = i.b.h * PX;
-    const body = figSvg({ stamp: i.k, w: i.b.w, h: i.b.h, tone: i.tone, flip: i.flip }, {});
+    const body = figSvg({ stamp: i.k, w: i.b.w, h: i.b.h, tone: i.tone, flip: i.flip, fill: !!opt.fill }, {});
     html += `<g transform="translate(${x + (slot(i) - w) / 2} ${top - h}) scale(${PX})">${body}</g>`;
     html += `<text class="lab" x="${x + slot(i) / 2}" y="${top + 14}" text-anchor="middle">${NAME[i.k]}</text>`;
     html += `<text class="lab2" x="${x + slot(i) / 2}" y="${top + 26}" text-anchor="middle">${FIGS[i.k].plan ? "지름 " : ""}${i.hm} m</text>`;
@@ -72,8 +77,10 @@ function row(host, keys, opt = {}) {
 const $ = id => document.getElementById(id);
 row($("r1"), FIG_GROUPS.people.concat(["fig_car"]));
 row($("r2"), ["fig_stand_1", "fig_tree_small", "fig_tree_conifer", "fig_tree_street", "fig_tree_big"], { px: 2 });
+row($("r1f"), FIG_GROUPS.people.concat(["fig_car"]), { fill: true });
+row($("r2f"), ["fig_stand_1", "fig_tree_small", "fig_tree_conifer", "fig_tree_street", "fig_tree_big"], { px: 2, fill: true });
 { // plan trees: sit on a common baseline
-  const keys = FIG_GROUPS.plan; row($("r3"), keys, { px: 3 });
+  const keys = FIG_GROUPS.plan; row($("r3"), keys.slice(0, 6), { px: 3 }); row($("r3b"), keys.slice(6), { px: 3 });
 }
 { // 1:100 mm sizes
   const host = $("r4"), keys = ["fig_stand_1", "fig_walk_1", "fig_sit_1", "fig_child", "fig_bike", "fig_wheelchair", "fig_car"];
