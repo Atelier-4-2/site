@@ -942,6 +942,28 @@ function startFinalPanel() {
   selFrame = f.id; sel.clear();
   commit(); zoomToFrame(f);
 }
+function startPanelPreset(kind) {
+  ui.emptyDismissed = true;
+  const f = S.frames[0] || addFrame();
+  if (kind === "a0jury") {
+    f.parent = null;
+    f.size = "A0"; f.orientation = "portrait"; f.template = makeTemplate("c3", "A0"); f.cartouche = true;
+    selFrame = f.id; sel.clear(); commit(); zoomToFrame(f);
+  } else if (kind === "a1mid") {
+    f.parent = null;
+    f.size = "A1"; f.orientation = "landscape"; f.template = makeTemplate("c4", "A1"); f.cartouche = true;
+    selFrame = f.id; sel.clear(); commit(); zoomToFrame(f);
+  } else if (kind === "a3pinup") {
+    f.parent = null;
+    f.size = "A3"; f.orientation = "landscape"; f.template = makeTemplate("c3", "A3"); f.cartouche = false;
+    if (S.frames.length < 2) {
+      const f2 = addFrame({ size: "A3", orientation: "landscape" });
+      f2.parent = null;
+      f2.template = makeTemplate("c3", "A3");
+    }
+    selFrame = f.id; sel.clear(); commit(); fitAll();
+  }
+}
 
 // ---- left panel: 자료 / 페이지 ------------------------------------------------------------------------------
 let assetSig = "", pageSig = "";
@@ -1162,13 +1184,18 @@ function ctxHtml() {
       return cs("t-style", _t('board.078'), ROLES.map(r => [r, ROLE_LABEL[r] + (PR.hasOverride(c) && r === c.role ? " +" : "")]), c.role) + cs("t-field", _t('board.079'), [["", _t('board.080')], ...PR.FIELDS.map(f => [f, PR.fieldToken(f)])], "") + cb("t-cycle", al === "left" ? "alignL" : al === "center" ? "alignC" : "alignR", _t('board.084', { 0: al === "left" ? _t('board.081') : al === "center" ? _t('board.082') : _t('board.083') })) + cb("del", "trash", _t('board.076'));
     }
     const media = c.kind === "image" || c.kind === "diagram";
-    if (media) {   // 채우기 · 맞추기 · (칸 채우기) · PPI badge · ⋯
+    if (media) {   // 채우기 · 맞추기 · (칸 채우기) · PPI badge · 복제 · 삭제 · ⋯
       const pi = ppiInfo(c), badge = pi ? `<span class="bd-ppi is-${pi.cls}">${pi.text}</span>` : "";
-      return cb("cover", "cover", _t('board.085')) + cb("contain", "contain", _t('board.086')) + (frameOf(c)?.template ? cb("fill", "fill", _t('board.087')) : "") + badge + cb("more", "more", _t('board.088'));
+      return cb("cover", "cover", _t('board.085')) + cb("contain", "contain", _t('board.086')) + (frameOf(c)?.template ? cb("fill", "fill", _t('board.087')) : "") + badge + cb("dup", "dup", _t('board.090')) + cb("del", "trash", _t('board.076')) + cb("more", "more", _t('board.088'));
     }
     return cb("more", "more", _t('board.089')) + cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
   }
-  return cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
+  const hasGroup = cards.some(c => c.group);
+  const alignBtns = cb("al-l", "alignL", "왼쪽 정렬") + cb("al-c", "alignC", "가로 가운데 정렬") + cb("al-r", "alignR", "오른쪽 정렬")
+    + cb("al-t", "alignT", "위쪽 정렬") + cb("al-m", "alignM", "세로 가운데 정렬") + cb("al-b", "alignB", "아래쪽 정렬");
+  const distBtns = cards.length >= 3 ? cb("dist-h", "distH", "가로 균등 간격") + cb("dist-v", "distV", "세로 균등 간격") : "";
+  const grpBtn = hasGroup ? cb("ungrp", "ungroup", "그룹 해제") : cb("grp", "group", "그룹 묶기");
+  return alignBtns + distBtns + `<span class="bd-ctx-sep"></span>` + grpBtn + cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
 }
 function ctxSignature() {
   if (editingId || ui.preview) return "";
@@ -1226,6 +1253,16 @@ function ctxAction(act) {
     case "contain": setContentMode("contain"); break;
     case "fill": { const c = selCards()[0]; if (c) fillCells(c); break; }
     case "t-cycle": { const c = selCards()[0]; if (c) { c.align = c.align === "left" || !c.align ? "center" : c.align === "center" ? "right" : "left"; commit(); } break; }
+    case "al-l": alignSel("l"); break;
+    case "al-c": alignSel("c"); break;
+    case "al-r": alignSel("r"); break;
+    case "al-t": alignSel("t"); break;
+    case "al-m": alignSel("m"); break;
+    case "al-b": alignSel("b"); break;
+    case "dist-h": distribute("h"); break;
+    case "dist-v": distribute("v"); break;
+    case "grp": groupSel(); break;
+    case "ungrp": ungroupSel(); break;
   }
 }
 function ctxSelect(name, value) {
@@ -1593,8 +1630,23 @@ function onPointerDown(e) {
     if (e.shiftKey) { if (sel.has(id)) for (const g of grp) sel.delete(g); else for (const g of grp) sel.add(g); }
     else if (!sel.has(id)) sel = grp;
     selFrame = null;
+    if (e.altKey && !e.shiftKey) {
+      // Alt + Drag: instant clone in place and drag the clones (Figma/Illustrator muscle memory)
+      const src = selCards().filter(c => !isLocked(c));
+      if (src.length) {
+        const gmap = new Map(), cmap = new Map(), clones = [];
+        for (const c of src) {
+          const copy = addCard({ ...JSON.parse(JSON.stringify(c)), locked: false, stack: null, sg: undefined });
+          if (c.group) { if (!gmap.has(c.group)) gmap.set(c.group, "g" + S.seq++); copy.group = gmap.get(c.group); }
+          cmap.set(c.id, copy.id); clones.push(copy);
+        }
+        for (const k of clones) if (k.kind === "stamp" && cmap.has(k.link)) k.link = cmap.get(k.link);
+        sel = new Set(clones.map(c => c.id));
+        renderCards();
+      }
+    }
     const ids = new Set([...sel].filter(i => { const k = cardById(i); return k && !isLocked(k); }));   // locked cards stay put
-    drag = { type: "move", start: [wx, wy], ids, orig: new Map([...ids].map(i => { const c = cardById(i); return [i, { x: c.x, y: c.y }]; })), moved: false };
+    drag = { type: "move", start: [wx, wy], ids, orig: new Map([...ids].map(i => { const c = cardById(i); return [i, { x: c.x, y: c.y }]; })), moved: e.altKey && ids.size > 0 };
     renderSel(); renderCtx(); renderPanel(); renderProps(); renderChrome(); renderGuides();
   } else if (flabel || paperEl) {
     const f = frameById(flabel ? flabel.dataset.frameLabel : paperEl.dataset.frame);
@@ -2042,6 +2094,19 @@ function build() {
           <button id="bd-pf" class="bd-btn bd-pf" type="button" aria-haspopup="true" aria-expanded="false" aria-label="${_t("board.223")}" data-i18n-attr="aria-label:board.223"><span class="bd-pf-ic"></span><span id="bd-pf-t" data-i18n="board.027">${_t("board.027")}</span></button>
           <div id="bd-pfpop" class="bd-menu bd-menu-r bd-pfpop" hidden></div>
         </div>
+        <div class="bd-menu-wrap bd-hide-m">
+          <button id="bd-tools" class="bd-btn" type="button" aria-haspopup="true" aria-expanded="false">도구 ▾</button>
+          <div id="bd-tools-pop" class="bd-menu bd-menu-r" hidden>
+            <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
+            <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
+            <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
+            <button type="button" data-m="photo">모형 사진 정리</button>
+            <button type="button" data-m="axo">평면 → 분해 액소</button>
+            <span class="bd-msep" role="separator"></span>
+            <button type="button" data-m="cloud">Drive 프로젝트 저장 · 열기</button>
+            <button type="button" data-m="collab">실시간 같이 편집 (Beta)</button>
+          </div>
+        </div>
         <button id="bd-undo" class="bd-ib bd-hide-m" type="button" aria-label="${_t("board.158")}" data-tip="${_t("board.224")}" data-i18n-attr="aria-label:board.158;data-tip:board.224">${icon("undo")}</button>
         <button id="bd-redo" class="bd-ib bd-hide-m" type="button" aria-label="${_t("board.159")}" data-tip="${_t("board.225")}" data-i18n-attr="aria-label:board.159;data-tip:board.225">${icon("redo")}</button>
         <button id="bd-export" class="bd-primary" type="button" data-i18n="board.226">${_t("board.226")}</button>
@@ -2056,19 +2121,10 @@ function build() {
             <button type="button" data-m="palette" data-i18n-html="board.230">${_t("board.230")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="lang">Langue / 언어<kbd>FR · KO</kbd></button>
-            <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="dates" data-i18n="board.037">${_t("board.037")}</button>
             <button type="button" data-m="annos" data-i18n-html="board.231">${_t("board.231")}</button>
             <button type="button" data-m="snap" data-i18n="board.125">${_t("board.125")}</button>
             <button type="button" data-m="week" data-i18n="board.123">${_t("board.123")}</button>
-            <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
-            <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
-            <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
-            <button type="button" data-m="photo">모형 사진 정리</button>
-            <button type="button" data-m="axo">평면 → 분해 액소</button>
-            <span class="bd-msep" role="separator"></span>
-            <button type="button" data-m="cloud">Drive 프로젝트 저장 · 열기</button>
-            <button type="button" data-m="collab">실시간 같이 편집 (Beta)</button>
             <button type="button" data-m="promote" data-i18n="board.232">${_t("board.232")}</button>
             <span class="bd-msep" role="separator"></span>
             <button type="button" data-m="gh" data-i18n="board.033">${_t("board.033")}</button>
@@ -2162,11 +2218,15 @@ function build() {
           <button type="button" data-act="lock" data-i18n="board.273">${_t("board.273")}</button>
           <button type="button" data-act="del" data-i18n="board.076">${_t("board.076")}</button>
         </div>
+        <div id="bd-rcmenu" class="bd-menu bd-rcmenu" hidden></div>
         <div id="bd-stamps" class="bd-stamps" role="dialog" aria-label="${_t("board.274")}" hidden data-i18n-attr="aria-label:board.274"></div>
         <div id="bd-empty" class="bd-emptycard" hidden>
           <h2 data-i18n="board.275">${_t("board.275")}</h2>
           <p data-i18n="board.276">${_t("board.276")}</p>
           <button type="button" class="bd-btn bd-strong" data-empty="blank" data-i18n-html="board.blank">${_t("board.blank")}</button>
+          <button type="button" class="bd-btn" data-empty="a0jury">A0 세로 3단 주리 패널</button>
+          <button type="button" class="bd-btn" data-empty="a1mid">A1 2×2 중간 발표 패널</button>
+          <button type="button" class="bd-btn" data-empty="a3pinup">A3 크리틱 핀업 2장</button>
           <button type="button" class="bd-btn" data-empty="diagrams" data-i18n="board.253">${_t("board.253")}</button>
           <button type="button" class="bd-btn" data-empty="image" data-i18n-html="board.277">${_t("board.277")}</button>
           <button type="button" class="bd-btn" data-empty="semester" data-i18n-html="board.278">${_t("board.278")}</button>
@@ -2177,6 +2237,7 @@ function build() {
           <button id="bd-zoom-out" class="bd-ib" type="button" aria-label="${_t("board.282")}" data-tip="${_t("board.282")}" data-i18n-attr="aria-label:board.282;data-tip:board.282">${icon("minus")}</button>
           <button id="bd-zoom" class="bd-zoom" type="button" data-tip="${_t("board.283")}" aria-label="${_t("board.284")}" data-i18n-attr="data-tip:board.283;aria-label:board.284">100%</button>
           <button id="bd-zoom-in" class="bd-ib" type="button" aria-label="${_t("board.285")}" data-tip="${_t("board.285")}" data-i18n-attr="aria-label:board.285;data-tip:board.285">${icon("plus")}</button>
+          <button id="bd-zoom-fit" class="bd-ib" type="button" aria-label="화면에 맞추기 (Fit)" data-tip="화면에 맞추기 (0)">${icon("fit")}</button>
         </div>
         <div id="bd-readout" class="bd-readout" hidden></div>
         <div id="bd-gpop" class="bd-gpop" hidden role="dialog" aria-label="${_t("board.286")}" data-i18n-attr="aria-label:board.286"><label><span id="bd-gpop-l">Y</span><input id="bd-gpop-in" type="text" inputmode="decimal" aria-label="${_t("board.287")}" autocomplete="off" data-i18n-attr="aria-label:board.287"><span class="bd-nf-u">mm</span></label></div>
@@ -2233,7 +2294,78 @@ function wire() {
     const gd = e.target.closest("[data-guide]");
     if (gd) { openGuidePop(gd.dataset.guide); return; }
     const g = e.target.closest(".bd-card");
-    if (g) { const c = cardById(g.dataset.id); if (c && (c.kind === "image" || c.kind === "diagram")) enterContent(c.id); else if (c && c.kind === "link") editLink(c.id); else startEdit(g.dataset.id); }
+    if (g) { const c = cardById(g.dataset.id); if (c && (c.kind === "image" || c.kind === "diagram")) enterContent(c.id); else if (c && c.kind === "link") editLink(c.id); else startEdit(g.dataset.id); return; }
+    if (!ui.preview && ui.tool === "v") {
+      const [wx, wy] = toWorld(e);
+      const B = ROLE_BOX.body || { w: 70, h: 16 };
+      const c = addCard({ kind: "text", role: "body", text: "", align: "left", x: r2(wx - B.w / 2), y: r2(wy - B.h / 2), w: B.w, h: B.h });
+      sel = new Set([c.id]); selFrame = null;
+      commit(); startEdit(c.id);
+    }
+  });
+  // Right-click context menu on cards or empty canvas
+  let rcWorld = [0, 0];
+  svg.addEventListener("contextmenu", e => {
+    if (ui.preview) return;
+    e.preventDefault();
+    closeMenus();
+    rcWorld = toWorld(e);
+    const g = e.target.closest(".bd-card");
+    const m = $("#bd-rcmenu");
+    if (g) {
+      const id = g.dataset.id;
+      if (!sel.has(id)) { sel = expandGroups(new Set([id])); selFrame = null; renderSel(); renderCtx(); renderProps(); }
+      const cards = selCards();
+      const allLocked = cards.every(c => c.locked);
+      const multi = cards.length >= 2;
+      const hasGrp = cards.some(c => c.group);
+      m.innerHTML =
+        `<button type="button" data-rc="dup">복제 <kbd>⌘D</kbd></button>` +
+        `<button type="button" data-rc="del">삭제 <kbd>Del</kbd></button>` +
+        `<span class="bd-msep" role="separator"></span>` +
+        `<button type="button" data-rc="front">앞으로 가져오기</button>` +
+        `<button type="button" data-rc="back">뒤로 보내기</button>` +
+        `<button type="button" data-rc="tofront">맨 앞으로</button>` +
+        `<button type="button" data-rc="toback">맨 뒤로</button>` +
+        `<span class="bd-msep" role="separator"></span>` +
+        `<button type="button" data-rc="lock">${allLocked ? "잠금 해제" : "잠금"}</button>` +
+        (multi ? `<button type="button" data-rc="${hasGrp ? "ungrp" : "grp"}">${hasGrp ? "그룹 해제" : "그룹 묶기"}</button>` +
+          `<span class="bd-msep" role="separator"></span>` +
+          `<button type="button" data-rc="al-c">가로 가운데 정렬</button>` +
+          `<button type="button" data-rc="al-m">세로 가운데 정렬</button>` +
+          (cards.length >= 3 ? `<button type="button" data-rc="dist-h">가로 균등 간격</button><button type="button" data-rc="dist-v">세로 균등 간격</button>` : "") : "");
+    } else {
+      m.innerHTML =
+        `<button type="button" data-rc="add-img">이미지 · PDF 추가</button>` +
+        `<button type="button" data-rc="add-txt">여기에 텍스트 추가</button>` +
+        `<button type="button" data-rc="add-page">새 페이지 추가</button>` +
+        `<span class="bd-msep" role="separator"></span>` +
+        `<button type="button" data-rc="fit">화면에 맞추기 <kbd>0</kbd></button>` +
+        `<button type="button" data-rc="minimap">미니맵 켜기 / 끄기</button>`;
+    }
+    const st = $("#bd-stage").getBoundingClientRect();
+    m.hidden = false;
+    const x = clamp(e.clientX - st.left, 8, Math.max(8, st.width - m.offsetWidth - 8));
+    const y = clamp(e.clientY - st.top, 8, Math.max(8, st.height - m.offsetHeight - 8));
+    m.style.left = Math.round(x) + "px";
+    m.style.top = Math.round(y) + "px";
+  });
+  $("#bd-rcmenu").addEventListener("pointerdown", e => e.stopPropagation());
+  $("#bd-rcmenu").addEventListener("click", e => {
+    const b = e.target.closest("[data-rc]");
+    if (!b) return;
+    $("#bd-rcmenu").hidden = true;
+    const a = b.dataset.rc;
+    if (a === "add-img") $("#bd-file-img").click();
+    else if (a === "add-txt") {
+      const B = ROLE_BOX.body || { w: 70, h: 16 };
+      const c = addCard({ kind: "text", role: "body", text: "", align: "left", x: r2(rcWorld[0] - B.w / 2), y: r2(rcWorld[1] - B.h / 2), w: B.w, h: B.h });
+      sel = new Set([c.id]); selFrame = null; commit(); startEdit(c.id);
+    } else if (a === "add-page") {
+      const f = addFrame(); selFrame = f.id; sel.clear(); commit(); zoomToFrame(f);
+    } else if (a === "fit") fitAll();
+    else if (a === "minimap") { ui.minimap = !ui.minimap; renderChrome(); scheduleMini(); }
+    else ctxAction(a);
   });
   svg.addEventListener("input", e => { if (e.target.classList?.contains("bd-text") && editingId) { syncEditText(); scheduleSave(); } });
   svg.addEventListener("focusout", e => { if (e.target.classList?.contains("bd-text")) finishEdit(); });
@@ -2280,6 +2412,15 @@ function wire() {
     pop.addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b || b.disabled) return; closeMenus(); on(b.dataset.m); });
   };
   menu("#bd-name-menu", "#bd-name-pop", m => { if (m === "new") newBoard(); else if (m === "open") $("#bd-file-proj").click(); else if (m === "save") saveFile(); else if (m === "img") $("#bd-file-img").click(); else if (m === "ent") openEntourage(); });
+  menu("#bd-tools", "#bd-tools-pop", m => {
+    if (m === "pdf") $("#bd-file-img").click();
+    else if (m === "lw") $("#bd-file-lw").click();
+    else if (m === "ent") openEntourage();
+    else if (m === "photo") openPhotoTool();
+    else if (m === "axo") openAxoTool();
+    else if (m === "cloud") openCloudTool();
+    else if (m === "collab") openCollabTool();
+  });
   menu("#bd-more", "#bd-more-pop", m => {
     if (m === "present") present();
     else if (m === "minimap") { ui.minimap = !ui.minimap; renderChrome(); scheduleMini(); }
@@ -2436,6 +2577,7 @@ function wire() {
     if (!b) return;
     ui.emptyDismissed = true;
     if (b.dataset.empty === "blank") { renderEmpty(); if (S.frames[0]) zoomToFrame(S.frames[0]); }
+    else if (b.dataset.empty === "a0jury" || b.dataset.empty === "a1mid" || b.dataset.empty === "a3pinup") startPanelPreset(b.dataset.empty);
     else if (b.dataset.empty === "diagrams") gotoMode("diagrams");
     else if (b.dataset.empty === "image") { $("#bd-file-img").click(); renderEmpty(); }
     else if (b.dataset.empty === "semester") startSemester();
@@ -2446,6 +2588,7 @@ function wire() {
   $("#bd-zoom-in").onclick = () => zoomAt(1.25, ...mid());
   $("#bd-zoom-out").onclick = () => zoomAt(0.8, ...mid());
   $("#bd-zoom").onclick = () => zoomAt(PX_PER_MM / view.z, ...mid());
+  $("#bd-zoom-fit").onclick = () => fitAll();
 
   const mini = $("#bd-mini");
   mini.addEventListener("pointerdown", e => { try { mini.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ } mini.dataset.drag = "1"; miniMove(e); });

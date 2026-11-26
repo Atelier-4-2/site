@@ -576,3 +576,7 @@ html.bd-open, html.bd-open body { overflow: hidden; }
   #board .en-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #board .en-tab { padding: 0 8px; font-size: 12px; }
 }
+
+/* Board UX v07: floating bar separator & right-click context menu */
+.bd-ctx-sep { display: inline-block; width: 1px; height: 18px; background: var(--bd-line, #d2d2d7); margin: 0 3px; vertical-align: middle; }
+.bd-rcmenu { position: absolute; z-index: 40; min-width: 184px; }
