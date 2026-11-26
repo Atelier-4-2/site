@@ -16,7 +16,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --ink: #f5f5f7;
     --muted: #a1a1a6;
@@ -31,6 +31,22 @@
     --focus: #f5f5f7;
     --error: #f5f5f7;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f5f5f7;
+  --muted: #a1a1a6;
+  --paper: #000000;
+  --background: #000000;
+  --surface: #1d1d1f;
+  --canvas: #000000;
+  --line: #48484a;
+  --nav: rgb(0 0 0 / 80%);
+  --toast: rgb(29 29 31 / 96%);
+  --on-primary: #1d1d1f;
+  --focus: #f5f5f7;
+  --error: #f5f5f7;
 }
 
 * { box-sizing: border-box; }
@@ -981,7 +997,8 @@ body[data-page="0"] .status-card { display: none; }
   border: 1px solid var(--line, #d2d2d7); background: transparent; color: inherit; font: inherit; cursor: pointer;
 }
 body.is-loading .status-card { visibility: hidden; }
-@media (prefers-color-scheme: dark) { .loading-overlay { background: rgba(0, 0, 0, 0.8); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .loading-overlay { background: rgba(0, 0, 0, 0.8); } }
+:root[data-theme="dark"] .loading-overlay { background: rgba(0, 0, 0, 0.8); }
 
 /* ------------------------------------------------------------------
    One screen per step on desktop: no page scroll, compact headings,

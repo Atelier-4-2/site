@@ -39,6 +39,7 @@ const el = (tag, attrs = {}, parent) => {
 };
 const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const tr = (ko, fr) => getLang() === "fr" ? fr : ko;
 
 // ---- state -------------------------------------------------------------------------------------
 // S is the document (snapshotted for undo). payloads hold the heavy strings, keyed by asset id. ui is not undoable.
@@ -1191,10 +1192,10 @@ function ctxHtml() {
     return cb("more", "more", _t('board.089')) + cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
   }
   const hasGroup = cards.some(c => c.group);
-  const alignBtns = cb("al-l", "alignL", "왼쪽 정렬") + cb("al-c", "alignC", "가로 가운데 정렬") + cb("al-r", "alignR", "오른쪽 정렬")
-    + cb("al-t", "alignT", "위쪽 정렬") + cb("al-m", "alignM", "세로 가운데 정렬") + cb("al-b", "alignB", "아래쪽 정렬");
-  const distBtns = cards.length >= 3 ? cb("dist-h", "distH", "가로 균등 간격") + cb("dist-v", "distV", "세로 균등 간격") : "";
-  const grpBtn = hasGroup ? cb("ungrp", "ungroup", "그룹 해제") : cb("grp", "group", "그룹 묶기");
+  const alignBtns = cb("al-l", "alignL", tr("왼쪽 정렬", "Aligner à gauche")) + cb("al-c", "alignC", tr("가로 가운데 정렬", "Centrer horizontalement")) + cb("al-r", "alignR", tr("오른쪽 정렬", "Aligner à droite"))
+    + cb("al-t", "alignT", tr("위쪽 정렬", "Aligner en haut")) + cb("al-m", "alignM", tr("세로 가운데 정렬", "Centrer verticalement")) + cb("al-b", "alignB", tr("아래쪽 정렬", "Aligner en bas"));
+  const distBtns = cards.length >= 3 ? cb("dist-h", "distH", tr("가로 균등 간격", "Répartir horizontalement")) + cb("dist-v", "distV", tr("세로 균등 간격", "Répartir verticalement")) : "";
+  const grpBtn = hasGroup ? cb("ungrp", "ungroup", tr("그룹 해제", "Dissocier")) : cb("grp", "group", tr("그룹 묶기", "Grouper"));
   return alignBtns + distBtns + `<span class="bd-ctx-sep"></span>` + grpBtn + cb("dup", "dup", _t('board.090')) + lock + cb("del", "trash", _t('board.076'));
 }
 function ctxSignature() {
@@ -2095,16 +2096,16 @@ function build() {
           <div id="bd-pfpop" class="bd-menu bd-menu-r bd-pfpop" hidden></div>
         </div>
         <div class="bd-menu-wrap bd-hide-m">
-          <button id="bd-tools" class="bd-btn" type="button" aria-haspopup="true" aria-expanded="false">도구 ▾</button>
+          <button id="bd-tools" class="bd-btn" type="button" aria-haspopup="true" aria-expanded="false">${tr("도구 ▾", "Outils ▾")}</button>
           <div id="bd-tools-pop" class="bd-menu bd-menu-r" hidden>
             <button type="button" data-m="pdf" data-i18n="board.111">${_t("board.111")}</button>
             <button type="button" data-m="lw" data-i18n="lw.menu">${_t("lw.menu")}</button>
             <button type="button" data-m="ent" data-i18n="ent.menu">${_t("ent.menu")}</button>
-            <button type="button" data-m="photo">모형 사진 정리</button>
-            <button type="button" data-m="axo">평면 → 분해 액소</button>
+            <button type="button" data-m="photo">${tr("모형 사진 정리", "Retouche photo maquette")}</button>
+            <button type="button" data-m="axo">${tr("평면 → 분해 액소", "Plan → Axo éclatée")}</button>
             <span class="bd-msep" role="separator"></span>
-            <button type="button" data-m="cloud">Drive 프로젝트 저장 · 열기</button>
-            <button type="button" data-m="collab">실시간 같이 편집 (Beta)</button>
+            <button type="button" data-m="cloud">${tr("Drive 프로젝트 저장 · 열기", "Enregistrer / ouvrir sur Drive")}</button>
+            <button type="button" data-m="collab">${tr("실시간 같이 편집 (Beta)", "Édition collaborative (Beta)")}</button>
           </div>
         </div>
         <button id="bd-undo" class="bd-ib bd-hide-m" type="button" aria-label="${_t("board.158")}" data-tip="${_t("board.224")}" data-i18n-attr="aria-label:board.158;data-tip:board.224">${icon("undo")}</button>
@@ -2224,9 +2225,9 @@ function build() {
           <h2 data-i18n="board.275">${_t("board.275")}</h2>
           <p data-i18n="board.276">${_t("board.276")}</p>
           <button type="button" class="bd-btn bd-strong" data-empty="blank" data-i18n-html="board.blank">${_t("board.blank")}</button>
-          <button type="button" class="bd-btn" data-empty="a0jury">A0 세로 3단 주리 패널</button>
-          <button type="button" class="bd-btn" data-empty="a1mid">A1 2×2 중간 발표 패널</button>
-          <button type="button" class="bd-btn" data-empty="a3pinup">A3 크리틱 핀업 2장</button>
+          <button type="button" class="bd-btn" data-empty="a0jury">${tr("A0 세로 3단 주리 패널", "Panneau jury A0 portrait 3 col.")}</button>
+          <button type="button" class="bd-btn" data-empty="a1mid">${tr("A1 2×2 중간 발표 패널", "Panneau rendu A1 2×2")}</button>
+          <button type="button" class="bd-btn" data-empty="a3pinup">${tr("A3 크리틱 핀업 2장", "2 planches A3 critique")}</button>
           <button type="button" class="bd-btn" data-empty="diagrams" data-i18n="board.253">${_t("board.253")}</button>
           <button type="button" class="bd-btn" data-empty="image" data-i18n-html="board.277">${_t("board.277")}</button>
           <button type="button" class="bd-btn" data-empty="semester" data-i18n-html="board.278">${_t("board.278")}</button>
@@ -2237,7 +2238,7 @@ function build() {
           <button id="bd-zoom-out" class="bd-ib" type="button" aria-label="${_t("board.282")}" data-tip="${_t("board.282")}" data-i18n-attr="aria-label:board.282;data-tip:board.282">${icon("minus")}</button>
           <button id="bd-zoom" class="bd-zoom" type="button" data-tip="${_t("board.283")}" aria-label="${_t("board.284")}" data-i18n-attr="data-tip:board.283;aria-label:board.284">100%</button>
           <button id="bd-zoom-in" class="bd-ib" type="button" aria-label="${_t("board.285")}" data-tip="${_t("board.285")}" data-i18n-attr="aria-label:board.285;data-tip:board.285">${icon("plus")}</button>
-          <button id="bd-zoom-fit" class="bd-ib" type="button" aria-label="화면에 맞추기 (Fit)" data-tip="화면에 맞추기 (0)">${icon("fit")}</button>
+          <button id="bd-zoom-fit" class="bd-ib" type="button" aria-label="${tr("화면에 맞추기 (Fit)", "Ajuster à l’écran (Fit)")}" data-tip="${tr("화면에 맞추기 (0)", "Ajuster à l’écran (0)")}">${icon("fit")}</button>
         </div>
         <div id="bd-readout" class="bd-readout" hidden></div>
         <div id="bd-gpop" class="bd-gpop" hidden role="dialog" aria-label="${_t("board.286")}" data-i18n-attr="aria-label:board.286"><label><span id="bd-gpop-l">Y</span><input id="bd-gpop-in" type="text" inputmode="decimal" aria-label="${_t("board.287")}" autocomplete="off" data-i18n-attr="aria-label:board.287"><span class="bd-nf-u">mm</span></label></div>
@@ -2263,7 +2264,25 @@ function build() {
   });
   wire();
   initTips();
+  const syncV07Labels = () => {
+    const b = (s, ko, fr) => { const n = $(s); if (n) n.textContent = tr(ko, fr); };
+    b("#bd-tools", "도구 ▾", "Outils ▾");
+    b('#bd-tools-pop [data-m="photo"]', "모형 사진 정리", "Retouche photo maquette");
+    b('#bd-tools-pop [data-m="axo"]', "평면 → 분해 액소", "Plan → Axo éclatée");
+    b('#bd-tools-pop [data-m="cloud"]', "Drive 프로젝트 저장 · 열기", "Enregistrer / ouvrir sur Drive");
+    b('#bd-tools-pop [data-m="collab"]', "실시간 같이 편집 (Beta)", "Édition collaborative (Beta)");
+    b('#bd-empty [data-empty="a0jury"]', "A0 세로 3단 주리 패널", "Panneau jury A0 portrait 3 col.");
+    b('#bd-empty [data-empty="a1mid"]', "A1 2×2 중간 발표 패널", "Panneau rendu A1 2×2");
+    b('#bd-empty [data-empty="a3pinup"]', "A3 크리틱 핀업 2장", "2 planches A3 critique");
+    const zf = $("#bd-zoom-fit");
+    if (zf) {
+      zf.setAttribute("aria-label", tr("화면에 맞추기 (Fit)", "Ajuster à l’écran (Fit)"));
+      zf.dataset.tip = tr("화면에 맞추기 (0)", "Ajuster à l’écran (0)");
+    }
+  };
   onLang(() => {   // live language switch: static markup is re-applied by i18n.js; everything built by script is rebuilt here
+    syncV07Labels();
+    const rc = $("#bd-rcmenu"); if (rc) rc.hidden = true;
     const tl = tools();
     for (const b of document.querySelectorAll("#board .bd-rail [data-tool]")) { const d = tl.find(x => x[0] === b.dataset.tool); if (d) { b.dataset.tip = `${d[2]} (${d[3]})`; b.setAttribute("aria-label", `${d[2]} (${d[3]})`); } }
     assetSig = ""; pageSig = ""; parentSig = ""; ctxSig = ""; $("#bd-layer-list").dataset.sig = ""; $("#bd-props").dataset.sig = ""; closePinPop();
@@ -2320,28 +2339,28 @@ function wire() {
       const multi = cards.length >= 2;
       const hasGrp = cards.some(c => c.group);
       m.innerHTML =
-        `<button type="button" data-rc="dup">복제 <kbd>⌘D</kbd></button>` +
-        `<button type="button" data-rc="del">삭제 <kbd>Del</kbd></button>` +
+        `<button type="button" data-rc="dup">${tr("복제", "Dupliquer")} <kbd>⌘D</kbd></button>` +
+        `<button type="button" data-rc="del">${tr("삭제", "Supprimer")} <kbd>Del</kbd></button>` +
         `<span class="bd-msep" role="separator"></span>` +
-        `<button type="button" data-rc="front">앞으로 가져오기</button>` +
-        `<button type="button" data-rc="back">뒤로 보내기</button>` +
-        `<button type="button" data-rc="tofront">맨 앞으로</button>` +
-        `<button type="button" data-rc="toback">맨 뒤로</button>` +
+        `<button type="button" data-rc="front">${tr("앞으로 가져오기", "Avancer")}</button>` +
+        `<button type="button" data-rc="back">${tr("뒤로 보내기", "Reculer")}</button>` +
+        `<button type="button" data-rc="tofront">${tr("맨 앞으로", "Premier plan")}</button>` +
+        `<button type="button" data-rc="toback">${tr("맨 뒤로", "Arrière-plan")}</button>` +
         `<span class="bd-msep" role="separator"></span>` +
-        `<button type="button" data-rc="lock">${allLocked ? "잠금 해제" : "잠금"}</button>` +
-        (multi ? `<button type="button" data-rc="${hasGrp ? "ungrp" : "grp"}">${hasGrp ? "그룹 해제" : "그룹 묶기"}</button>` +
+        `<button type="button" data-rc="lock">${allLocked ? tr("잠금 해제", "Déverrouiller") : tr("잠금", "Verrouiller")}</button>` +
+        (multi ? `<button type="button" data-rc="${hasGrp ? "ungrp" : "grp"}">${hasGrp ? tr("그룹 해제", "Dissocier") : tr("그룹 묶기", "Grouper")}</button>` +
           `<span class="bd-msep" role="separator"></span>` +
-          `<button type="button" data-rc="al-c">가로 가운데 정렬</button>` +
-          `<button type="button" data-rc="al-m">세로 가운데 정렬</button>` +
-          (cards.length >= 3 ? `<button type="button" data-rc="dist-h">가로 균등 간격</button><button type="button" data-rc="dist-v">세로 균등 간격</button>` : "") : "");
+          `<button type="button" data-rc="al-c">${tr("가로 가운데 정렬", "Centrer horizontalement")}</button>` +
+          `<button type="button" data-rc="al-m">${tr("세로 가운데 정렬", "Centrer verticalement")}</button>` +
+          (cards.length >= 3 ? `<button type="button" data-rc="dist-h">${tr("가로 균등 간격", "Répartir horizontalement")}</button><button type="button" data-rc="dist-v">${tr("세로 균등 간격", "Répartir verticalement")}</button>` : "") : "");
     } else {
       m.innerHTML =
-        `<button type="button" data-rc="add-img">이미지 · PDF 추가</button>` +
-        `<button type="button" data-rc="add-txt">여기에 텍스트 추가</button>` +
-        `<button type="button" data-rc="add-page">새 페이지 추가</button>` +
+        `<button type="button" data-rc="add-img">${tr("이미지 · PDF 추가", "Ajouter image · PDF")}</button>` +
+        `<button type="button" data-rc="add-txt">${tr("여기에 텍스트 추가", "Ajouter du texte ici")}</button>` +
+        `<button type="button" data-rc="add-page">${tr("새 페이지 추가", "Nouvelle page")}</button>` +
         `<span class="bd-msep" role="separator"></span>` +
-        `<button type="button" data-rc="fit">화면에 맞추기 <kbd>0</kbd></button>` +
-        `<button type="button" data-rc="minimap">미니맵 켜기 / 끄기</button>`;
+        `<button type="button" data-rc="fit">${tr("화면에 맞추기", "Ajuster à l’écran")} <kbd>0</kbd></button>` +
+        `<button type="button" data-rc="minimap">${tr("미니맵 켜기 / 끄기", "Afficher / masquer la minicarte")}</button>`;
     }
     const st = $("#bd-stage").getBoundingClientRect();
     m.hidden = false;

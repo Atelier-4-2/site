@@ -12,7 +12,8 @@ html.bd-open, html.bd-open body { overflow: hidden; }
   font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; font-size: 12px; line-height: 1.4;
   overflow: hidden;
 }
-@media (prefers-color-scheme: dark) { #board { --bd-paste: #1c1c1e; --bd-pop: 0 4px 16px rgb(0 0 0 / 40%); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #board { --bd-paste: #1c1c1e; --bd-pop: 0 4px 16px rgb(0 0 0 / 40%); } }
+:root[data-theme="dark"] #board { --bd-paste: #1c1c1e; --bd-pop: 0 4px 16px rgb(0 0 0 / 40%); }
 #board[hidden] { display: none; }
 #board :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 #board h2, #board h3, #board p { margin: 0; }
@@ -195,7 +196,8 @@ html.bd-open, html.bd-open body { overflow: hidden; }
 #board .bd-emptycard .bd-btn { height: auto; min-height: 36px; padding: 6px 12px; flex-direction: column; gap: 0; }
 
 /* zoom pill + minimap (hidden until ⋯ > 미니맵 보기) */
-#board .bd-zoombar { position: absolute; right: 12px; bottom: 12px; z-index: 5; display: flex; align-items: center; gap: 0; padding: 2px; background: var(--background); border: 1px solid var(--line); border-radius: 8px; }
+#board .bd-zoombar { position: absolute; left: 12px; bottom: 12px; z-index: 5; display: flex; align-items: center; gap: 0; padding: 2px; background: var(--background); border: 1px solid var(--line); border-radius: 8px; }
+#board .bd-stage.has-rulers .bd-zoombar { left: 28px; }
 #board .bd-zoom { min-width: 48px; height: 28px; padding: 0 6px; font-variant-numeric: tabular-nums; font-weight: 500; }
 #board .bd-minimap { position: absolute; right: 12px; bottom: 52px; z-index: 5; width: 176px; height: 116px; background: var(--background); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 #board .bd-minimap svg { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
